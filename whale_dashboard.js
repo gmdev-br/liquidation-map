@@ -208,6 +208,27 @@ function setWindow(el) {
 
 // Persistence
 const STORAGE_KEY = 'whaleWatcherSettings';
+const DATA_KEY = 'whaleWatcherData';
+
+function saveTableData() {
+    try {
+        localStorage.setItem(DATA_KEY, JSON.stringify(allRows));
+    } catch (e) {
+        console.warn('Failed to save table data (quota exceeded?)', e);
+    }
+}
+
+function loadTableData() {
+    try {
+        const saved = localStorage.getItem(DATA_KEY);
+        if (saved) {
+            allRows = JSON.parse(saved);
+        }
+    } catch (e) {
+        console.warn('Failed to parse saved table data', e);
+    }
+}
+
 function saveSettings() {
     const settings = {
         minValue: document.getElementById('minValue').value,
@@ -459,6 +480,8 @@ function processState(whale, state) {
 
 // Throttled UI refresh — at most once every 400ms to avoid reflow spam
 let renderPending = false;
+let lastSaveTime = 0;
+
 function scheduleRender() {
     if (renderPending) return;
     renderPending = true;
@@ -467,6 +490,13 @@ function scheduleRender() {
         updateStats();
         updateCoinFilter();
         renderTable();
+
+        // Periodic save to handle mid-scan refreshes
+        const now = Date.now();
+        if (now - lastSaveTime > 2000) {
+            saveTableData();
+            lastSaveTime = now;
+        }
     }, 400);
 }
 
@@ -1115,6 +1145,14 @@ async function init() {
             updateCoinFilter(allCoins);
         }
         loadSettings();
+        loadTableData(); // Load persisted data
+        if (allRows.length > 0) {
+            updateStats();
+            updateCoinFilter();
+            renderTable();
+            setStatus(`Restored ${allRows.length} positions`, 'done');
+        }
+
         fetchMarketCapRanking();
         startRankingTicker();
         setStatus('Ready', 'idle');
