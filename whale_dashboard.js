@@ -14,6 +14,7 @@ const COLUMN_DEFS = [
     { key: 'col-entryCcy', label: 'Avg Entry (Corr)' },
     { key: 'col-unrealizedPnl', label: 'UPNL' },
     { key: 'col-funding', label: 'Funding' },
+    { key: 'col-liqPx', label: 'Liq. Price' },
     { key: 'col-distToLiq', label: 'Dist. to Liq.' },
     { key: 'col-accountValue', label: 'Acct. Value' }
 ];
@@ -117,21 +118,21 @@ function fmtCcy(value, overrideCcy = null) {
     return sign + sym + abs.toFixed(0);
 }
 
-function getCorrelatedEntry(row) {
+function getCorrelatedPrice(row, rawPrice) {
     const targetCcy = activeEntryCurrency || 'USD';
 
     // 1. Calculate Base Correlated Price (The "Holy Grail" Logic)
-    // Formula: Entry * (BTC_Price / Coin_Price)
-    // This projects the entry price to the equivalent BTC price level.
+    // Formula: Price * (BTC_Price / Coin_Price)
+    // This projects the price to the equivalent BTC price level.
     const btcPrice = parseFloat(currentPrices['BTC'] || 0);
     const coinPrice = parseFloat(currentPrices[row.coin] || 0);
     
-    let correlatedVal = row.entryPx; // Default to raw entry if data missing
+    let correlatedVal = rawPrice; // Default to raw price if data missing
     
     if (row.coin !== 'BTC' && btcPrice > 0 && coinPrice > 0) {
-        correlatedVal = row.entryPx * (btcPrice / coinPrice);
+        correlatedVal = rawPrice * (btcPrice / coinPrice);
     } else if (row.coin === 'BTC') {
-        correlatedVal = row.entryPx;
+        correlatedVal = rawPrice;
     }
 
     // 2. If target is USD, return the correlated value (which is in USD)
@@ -139,17 +140,21 @@ function getCorrelatedEntry(row) {
         return correlatedVal;
     }
 
-    // 3. If target is BTC, user likely wants "Entry Price in BTC terms"
+    // 3. If target is BTC, user likely wants "Price in BTC terms"
     // Since correlatedVal is "The BTC Price equivalent", converting it to BTC = 1 (useless).
-    // So for BTC selection, we return the raw entry price converted to BTC.
+    // So for BTC selection, we return the raw price converted to BTC.
     if (targetCcy === 'BTC') {
-        if (btcPrice > 0) return row.entryPx / btcPrice;
+        if (btcPrice > 0) return rawPrice / btcPrice;
         return 0;
     }
 
     // 4. If target is Fiat (BRL, EUR, etc), convert the Correlated USD Value to that Fiat
     const rate = fxRates[targetCcy] || 1;
     return correlatedVal * rate;
+}
+
+function getCorrelatedEntry(row) {
+    return getCorrelatedPrice(row, row.entryPx);
 }
 
 function fmtPriceCcy(value, overrideCcy = null) {
@@ -179,6 +184,8 @@ function onCurrencyChange() {
     if (thVal) thVal.textContent = `Value (${activeCurrency}) ↕`;
     const thEntry = document.getElementById('th-entryCcy');
     if (thEntry) thEntry.textContent = `Entry Corr (${activeEntryCurrency}) ↕`;
+    const thLiq = document.getElementById('th-liqPx');
+    if (thLiq) thLiq.textContent = `Liq. Price Corr (${activeEntryCurrency}) ↕`;
 
     renderTable();
 }
@@ -301,10 +308,33 @@ function loadSettings() {
         const s = JSON.parse(saved);
         if (s.columnOrder) {
             columnOrder = s.columnOrder;
+            // Merge new columns from COLUMN_DEFS that are missing in saved order
+            const currentKeys = COLUMN_DEFS.map(c => c.key);
+            const savedKeys = new Set(columnOrder);
+            currentKeys.forEach(key => {
+                if (!savedKeys.has(key)) {
+                    // Insert before col-distToLiq if possible, else append
+                    if (key === 'col-liqPx') {
+                        const idx = columnOrder.indexOf('col-distToLiq');
+                        if (idx > -1) columnOrder.splice(idx, 0, key);
+                        else columnOrder.push(key);
+                    } else {
+                        columnOrder.push(key);
+                    }
+                }
+            });
             applyColumnOrder();
         }
         if (s.visibleColumns) {
             visibleColumns = s.visibleColumns;
+            // Merge new columns
+            const currentKeys = COLUMN_DEFS.map(c => c.key);
+            const savedKeys = new Set(visibleColumns);
+            currentKeys.forEach(key => {
+                if (!savedKeys.has(key)) {
+                    visibleColumns.push(key);
+                }
+            });
             applyColumnVisibility();
             updateColumnSelectDisplay();
         }
@@ -1720,6 +1750,9 @@ function renderTable() {
         } else if (sortKey === 'entryCcy') {
             va = getCorrelatedEntry(a);
             vb = getCorrelatedEntry(b);
+        } else if (sortKey === 'liqPx') {
+            va = a.liquidationPx > 0 ? getCorrelatedPrice(a, a.liquidationPx) : 0;
+            vb = b.liquidationPx > 0 ? getCorrelatedPrice(b, b.liquidationPx) : 0;
         } else {
             va = a[sortKey] ?? 0;
             vb = b[sortKey] ?? 0;
@@ -1744,6 +1777,15 @@ function renderTable() {
         // Leverage label
         const levType = r.leverageType === 'isolated' ? 'Isolated' : 'Cross';
         const levLabel = `${r.leverageValue}x ${levType}`;
+
+        // Liquidation Price (Correlated)
+        const liqPrice = r.liquidationPx > 0 ? getCorrelatedPrice(r, r.liquidationPx) : 0;
+        let liqPriceFormatted = '—';
+        if (r.liquidationPx > 0) {
+            const entMeta = CURRENCY_META[activeEntryCurrency] || CURRENCY_META.USD;
+            const sym = showSymbols ? entMeta.symbol : '';
+            liqPriceFormatted = sym + liqPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
 
         // Distance to liq
         let distHtml = '<span class="muted">—</span>';
@@ -1802,6 +1844,7 @@ function renderTable() {
             'col-entryCcy': `<td class="mono col-entryCcy" style="color:var(--gold);font-weight:600">${entStr}</td>`,
             'col-unrealizedPnl': `<td class="mono col-unrealizedPnl ${pnlClass}" style="font-weight:600">${fmtUSD(r.unrealizedPnl)}</td>`,
             'col-funding': `<td class="mono col-funding ${fundClass}">${fmtUSD(r.funding)}</td>`,
+            'col-liqPx': `<td class="mono col-liqPx" style="color:var(--orange);font-weight:600">${liqPriceFormatted}</td>`,
             'col-distToLiq': `<td class="col-distToLiq">${distHtml}</td>`,
             'col-accountValue': `<td class="mono col-accountValue">${usdSym}${fmt(r.accountValue)}</td>`
         };

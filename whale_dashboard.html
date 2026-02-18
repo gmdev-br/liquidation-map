@@ -198,6 +198,9 @@
                     <th id="th-funding" class="col-funding" onclick="sortBy('funding')"><span class="th-label">Funding ↕</span>
                         <div class="resizer" onmousedown="startResizing(event, this)"></div>
                     </th>
+                    <th id="th-liqPx" class="col-liqPx" onclick="sortBy('liqPx')" style="color:var(--orange)"><span class="th-label">Liq. Price Corr (USD) ↕</span>
+                        <div class="resizer" onmousedown="startResizing(event, this)"></div>
+                    </th>
                     <th id="th-distToLiq" class="col-distToLiq"><span class="th-label">Dist. to Liq.</span>
                         <div class="resizer" onmousedown="startResizing(event, this)">
                         </div>
@@ -312,6 +315,8 @@
                         <input type="number" id="minFunding" value="" step="1000" min="0" placeholder="Min |$|"
                             class="col-filter" oninput="renderTable()">
                     </th>
+                    <!-- Liq. Price -->
+                    <th class="filter-cell col-liqPx"></th>
                     <!-- Dist. to Liq. -->
                     <th class="filter-cell col-distToLiq"></th>
                     <!-- Acct. Value -->
