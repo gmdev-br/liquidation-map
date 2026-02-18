@@ -151,6 +151,32 @@
             transform: none;
         }
 
+        .btn-stop {
+            background: linear-gradient(135deg, #dc2626, #b91c1c);
+            color: #fff;
+            border: none;
+            padding: 7px 18px;
+            border-radius: 7px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity .2s, transform .1s;
+            font-family: inherit;
+            display: none;
+        }
+
+        .btn-stop:hover {
+            opacity: .9;
+            transform: translateY(-1px);
+        }
+
+        .filter-sep {
+            width: 1px;
+            height: 28px;
+            background: var(--border);
+            margin: 0 4px;
+        }
+
         /* ── Controls ── */
         .controls {
             padding: 12px 24px;
@@ -553,6 +579,7 @@
                 <span id="statusText">Ready</span>
             </div>
             <button class="btn" id="scanBtn" onclick="startScan()">🔍 Scan Whales</button>
+            <button class="btn-stop" id="stopBtn" onclick="stopScan()">⏹ Stop</button>
         </div>
     </div>
 
@@ -561,6 +588,7 @@
             <label>Min Account ($)</label>
             <input type="number" id="minValue" value="2500000" step="500000" min="0">
         </div>
+        <div class="filter-sep"></div>
         <div class="ctrl">
             <label>Coin Filter</label>
             <select id="coinFilter" onchange="renderTable()">
@@ -575,6 +603,38 @@
                 <option value="short">Short Only</option>
             </select>
         </div>
+        <div class="filter-sep"></div>
+        <div class="ctrl">
+            <label>Min Leverage (x)</label>
+            <input type="number" id="minLev" value="" step="1" min="1" placeholder="Any" style="width:90px"
+                oninput="renderTable()">
+        </div>
+        <div class="ctrl">
+            <label>Max Leverage (x)</label>
+            <input type="number" id="maxLev" value="" step="1" min="1" placeholder="Any" style="width:90px"
+                oninput="renderTable()">
+        </div>
+        <div class="filter-sep"></div>
+        <div class="ctrl">
+            <label>Min Size ($)</label>
+            <input type="number" id="minSize" value="" step="100000" min="0" placeholder="Any" style="width:110px"
+                oninput="renderTable()">
+        </div>
+        <div class="ctrl">
+            <label>Min |Funding| ($)</label>
+            <input type="number" id="minFunding" value="" step="1000" min="0" placeholder="Any" style="width:110px"
+                oninput="renderTable()">
+        </div>
+        <div class="filter-sep"></div>
+        <div class="ctrl">
+            <label>Lev. Type</label>
+            <select id="levTypeFilter" onchange="renderTable()">
+                <option value="">All</option>
+                <option value="isolated">Isolated</option>
+                <option value="cross">Cross</option>
+            </select>
+        </div>
+        <div class="filter-sep"></div>
         <div class="ctrl">
             <label>Sort PnL window</label>
             <div class="tabs">
@@ -845,6 +905,7 @@
 
         async function streamPositions(minVal) {
             document.getElementById('autoLoading').style.display = 'block';
+            document.getElementById('stopBtn').style.display = 'inline-block';
             const queue = [...whaleList];
             let active = 0;
             let done = 0;
@@ -852,8 +913,13 @@
 
             await new Promise(resolve => {
                 function dispatch() {
+                    // Stop if user requested
+                    if (!scanning) {
+                        if (active === 0) resolve();
+                        return;
+                    }
                     // Fill up to MAX_CONCURRENCY slots
-                    while (active < MAX_CONCURRENCY && queue.length > 0) {
+                    while (scanning && active < MAX_CONCURRENCY && queue.length > 0) {
                         const whale = queue.shift();
                         active++;
                         fetchWithRetry(whale).then(state => {
@@ -865,7 +931,9 @@
                             setProgress(Math.min(pct, 95));
                             setStatus(`Loading ${done}/${total} whales…`, 'scanning');
                             scheduleRender();
-                            if (queue.length > 0) {
+                            if (!scanning) {
+                                if (active === 0) resolve();
+                            } else if (queue.length > 0) {
                                 dispatch(); // refill the slot immediately
                             } else if (active === 0) {
                                 resolve(); // all done
@@ -877,6 +945,7 @@
             });
 
             document.getElementById('autoLoading').style.display = 'none';
+            document.getElementById('stopBtn').style.display = 'none';
             // Final render to make sure everything is shown
             updateStats();
             updateCoinFilter();
@@ -884,9 +953,18 @@
             finishScan();
         }
 
+        function stopScan() {
+            scanning = false;
+            document.getElementById('stopBtn').style.display = 'none';
+            setStatus('Stopping…', 'scanning');
+        }
+
         function finishScan() {
             setProgress(100);
-            setStatus(`${allRows.length} positions from ${Math.min(loadedCount, whaleList.length)} whales`, 'done');
+            const stoppedEarly = !scanning;
+            const label = stoppedEarly ? '⏹ Stopped' : '✓ Done';
+            setStatus(`${label} — ${allRows.length} positions from ${Math.min(loadedCount, whaleList.length)} whales`, 'done');
+            scanning = false;
             document.getElementById('scanBtn').disabled = false;
             setTimeout(() => setProgress(0), 1500);
         }
@@ -925,10 +1003,20 @@
         function renderTable() {
             const coinFilter = document.getElementById('coinFilter').value;
             const sideFilter = document.getElementById('sideFilter').value;
+            const minLev = parseFloat(document.getElementById('minLev').value);
+            const maxLev = parseFloat(document.getElementById('maxLev').value);
+            const minSize = parseFloat(document.getElementById('minSize').value);
+            const minFunding = parseFloat(document.getElementById('minFunding').value);
+            const levTypeFilter = document.getElementById('levTypeFilter').value;
 
             let rows = allRows.filter(r => {
                 if (coinFilter && r.coin !== coinFilter) return false;
                 if (sideFilter && r.side !== sideFilter) return false;
+                if (!isNaN(minLev) && r.leverageValue < minLev) return false;
+                if (!isNaN(maxLev) && r.leverageValue > maxLev) return false;
+                if (!isNaN(minSize) && r.positionValue < minSize) return false;
+                if (!isNaN(minFunding) && Math.abs(r.funding) < minFunding) return false;
+                if (levTypeFilter && r.leverageType !== levTypeFilter) return false;
                 return true;
             });
 
