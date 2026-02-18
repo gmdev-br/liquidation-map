@@ -1153,8 +1153,7 @@ async function init() {
             setStatus(`Restored ${allRows.length} positions`, 'done');
         }
 
-        fetchMarketCapRanking();
-        startRankingTicker();
+        fetchMarketCapRanking(true);
         setStatus('Ready', 'idle');
     } catch (e) {
         console.warn('Init failed', e);
@@ -1561,21 +1560,23 @@ function updateRankingLimit() {
     if (!isNaN(val) && val > 0) {
         rankingLimit = val;
         saveSettings();
-        fetchMarketCapRanking();
+        fetchMarketCapRanking(true);
     }
 }
 
-async function fetchMarketCapRanking() {
+async function fetchMarketCapRanking(force = false) {
     const panel = document.getElementById('ranking-panel');
     if (!panel) return;
 
     try {
-        const url = `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=${rankingLimit}&page=1&sparkline=false&price_change_percentage=24h`;
-        const resp = await fetch(url);
-        if (!resp.ok) throw new Error('CoinGecko API error');
-        const data = await resp.json();
+        if (force || marketCapData.length === 0) {
+            const url = `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=${rankingLimit}&page=1&sparkline=false&price_change_percentage=24h`;
+            const resp = await fetch(url);
+            if (!resp.ok) throw new Error('CoinGecko API error');
+            marketCapData = await resp.json();
+        }
 
-        panel.innerHTML = data.map(coin => {
+        panel.innerHTML = marketCapData.map(coin => {
             const sym = coin.symbol.toUpperCase();
             const isSel = selectedCoins.includes(sym);
             const mcap = coin.market_cap >= 1e9
@@ -1597,13 +1598,10 @@ async function fetchMarketCapRanking() {
         }).join('');
     } catch (e) {
         console.warn('Market Cap fetch failed', e);
-        panel.innerHTML = `<div style="padding:10px; font-size:11px; color:var(--muted)">Ranking unavailable (Rate limited)</div>`;
+        if (marketCapData.length === 0) {
+            panel.innerHTML = `<div style="padding:10px; font-size:11px; color:var(--muted)">Ranking unavailable (Rate limited)</div>`;
+        }
     }
-}
-
-function startRankingTicker() {
-    if (rankingTicker) clearInterval(rankingTicker);
-    rankingTicker = setInterval(fetchMarketCapRanking, 600000); // Poll every 10 mins
 }
 
 // Initialize
