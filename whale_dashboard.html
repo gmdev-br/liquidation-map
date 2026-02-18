@@ -28,6 +28,7 @@
                 <span id="statusText">Ready</span>
             </div>
             <button class="btn" id="scanBtn" onclick="startScan()">🔍 Scan Whales</button>
+            <button class="btn-pause" id="pauseBtn" onclick="togglePause()" style="display:none">⏸ Pause</button>
             <button class="btn-stop" id="stopBtn" onclick="stopScan()">⏹ Stop</button>
         </div>
     </div>
@@ -35,31 +36,31 @@
     <div class="controls">
         <div class="ctrl">
             <label>Currency</label>
-            <select id="currencySelect" onchange="onCurrencyChange()" style="width:80px">
-                <option value="USD">USD $</option>
-                <option value="BRL">BRL R$</option>
-                <option value="EUR">EUR €</option>
-                <option value="GBP">GBP £</option>
-                <option value="JPY">JPY ¥</option>
-                <option value="ARS">ARS $</option>
-                <option value="CAD">CAD $</option>
-                <option value="AUD">AUD $</option>
-                <option value="BTC">BTC ₿</option>
-            </select>
+            <!-- combobox: currencySelect -->
+            <div class="combobox" id="cb-currencySelect" style="width:110px">
+                <div class="combobox-input-wrap">
+                    <input type="text" id="cb-currencySelect-search" class="combobox-input" placeholder="USD $"
+                        autocomplete="off" readonly onfocus="cbOpen('currencySelect')"
+                        onblur="cbCloseDelayed('currencySelect')">
+                    <span class="combobox-arrow">▾</span>
+                </div>
+                <div class="combobox-dropdown" id="cb-currencySelect-dropdown"></div>
+            </div>
+            <input type="hidden" id="currencySelect" value="USD">
         </div>
         <div class="ctrl">
             <label>Entry Currency</label>
-            <select id="entryCurrencySelect" onchange="onCurrencyChange()" style="width:80px">
-                <option value="USD">USD $</option>
-                <option value="BRL">BRL R$</option>
-                <option value="EUR">EUR €</option>
-                <option value="GBP">GBP £</option>
-                <option value="JPY">JPY ¥</option>
-                <option value="ARS">ARS $</option>
-                <option value="CAD">CAD $</option>
-                <option value="AUD">AUD $</option>
-                <option value="BTC">BTC ₿</option>
-            </select>
+            <!-- combobox: entryCurrencySelect -->
+            <div class="combobox" id="cb-entryCurrencySelect" style="width:110px">
+                <div class="combobox-input-wrap">
+                    <input type="text" id="cb-entryCurrencySelect-search" class="combobox-input" placeholder="USD $"
+                        autocomplete="off" readonly onfocus="cbOpen('entryCurrencySelect')"
+                        onblur="cbCloseDelayed('entryCurrencySelect')">
+                    <span class="combobox-arrow">▾</span>
+                </div>
+                <div class="combobox-dropdown" id="cb-entryCurrencySelect-dropdown"></div>
+            </div>
+            <input type="hidden" id="entryCurrencySelect" value="USD">
         </div>
         <div class="filter-sep"></div>
         <div class="ctrl">
@@ -122,17 +123,34 @@
                     <!-- # -->
                     <th class="filter-cell"></th>
                     <!-- Address -->
-                    <th class="filter-cell"></th>
+                    <th class="filter-cell">
+                        <input type="text" id="addressFilter" placeholder="Filter address…" class="col-filter"
+                            oninput="renderTable()">
+                    </th>
                     <!-- Coin -->
                     <th class="filter-cell">
-                        <select id="coinFilter" onchange="renderTable()" class="col-filter">
-                            <option value="">All</option>
-                        </select>
-                        <select id="sideFilter" onchange="renderTable()" class="col-filter" style="margin-top:3px">
-                            <option value="">L+S</option>
-                            <option value="long">Long</option>
-                            <option value="short">Short</option>
-                        </select>
+                        <!-- searchable coin combobox -->
+                        <div class="combobox" id="coinCombobox">
+                            <div class="combobox-input-wrap">
+                                <input type="text" id="coinSearch" class="col-filter combobox-input"
+                                    placeholder="Select coins…" autocomplete="off" oninput="onCoinSearch()"
+                                    onfocus="openCombobox()" onblur="closeComboboxDelayed()">
+                                <span class="combobox-arrow">▾</span>
+                            </div>
+                            <div class="combobox-dropdown" id="coinDropdown"></div>
+                        </div>
+                        <input type="hidden" id="coinFilter" value="">
+                        <!-- side combobox -->
+                        <div class="combobox col-filter" id="cb-sideFilter" style="margin-top:4px">
+                            <div class="combobox-input-wrap">
+                                <input type="text" id="cb-sideFilter-search" class="combobox-input col-filter"
+                                    placeholder="L + S" autocomplete="off" readonly onfocus="cbOpen('sideFilter')"
+                                    onblur="cbCloseDelayed('sideFilter')">
+                                <span class="combobox-arrow">▾</span>
+                            </div>
+                            <div class="combobox-dropdown" id="cb-sideFilter-dropdown"></div>
+                        </div>
+                        <input type="hidden" id="sideFilter" value="">
                     </th>
                     <!-- Size -->
                     <th class="filter-cell">
@@ -145,11 +163,17 @@
                             class="col-filter" oninput="renderTable()">
                         <input type="number" id="maxLev" value="" step="1" min="1" placeholder="Max x"
                             class="col-filter" style="margin-top:3px" oninput="renderTable()">
-                        <select id="levTypeFilter" onchange="renderTable()" class="col-filter" style="margin-top:3px">
-                            <option value="">All types</option>
-                            <option value="isolated">Isolated</option>
-                            <option value="cross">Cross</option>
-                        </select>
+                        <!-- lev type combobox -->
+                        <div class="combobox col-filter" id="cb-levTypeFilter" style="margin-top:4px">
+                            <div class="combobox-input-wrap">
+                                <input type="text" id="cb-levTypeFilter-search" class="combobox-input col-filter"
+                                    placeholder="All types" autocomplete="off" readonly
+                                    onfocus="cbOpen('levTypeFilter')" onblur="cbCloseDelayed('levTypeFilter')">
+                                <span class="combobox-arrow">▾</span>
+                            </div>
+                            <div class="combobox-dropdown" id="cb-levTypeFilter-dropdown"></div>
+                        </div>
+                        <input type="hidden" id="levTypeFilter" value="">
                     </th>
                     <!-- Value -->
                     <th class="filter-cell">
@@ -204,4 +228,4 @@
 
 </body>
 
-</html>```
+</html>

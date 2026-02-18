@@ -11,6 +11,8 @@ let sortDir = -1;
 let activeWindow = 'allTime';
 let loadedCount = 0;
 let scanning = false;
+let isPaused = false;
+let selectedCoins = [];   // Array for multi-select
 
 // Currency conversion
 const CURRENCY_META = {
@@ -108,23 +110,11 @@ function onCurrencyChange() {
     activeCurrency = document.getElementById('currencySelect').value;
     activeEntryCurrency = document.getElementById('entryCurrencySelect').value;
 
-    const metaVal = CURRENCY_META[activeCurrency] || CURRENCY_META.USD;
-    const symVal = metaVal.symbol;
-
-    const metaEntry = CURRENCY_META[activeEntryCurrency] || CURRENCY_META.USD;
-    const symEntry = metaEntry.symbol;
-
     // Update column headers
     const thVal = document.getElementById('th-valueCcy');
     if (thVal) thVal.textContent = `Value (${activeCurrency}) ↕`;
     const thEntry = document.getElementById('th-entryCcy');
     if (thEntry) thEntry.textContent = `Entry Corr (USD) ↕`;
-
-    // Update filter labels
-    document.getElementById('minValueCcyLabel').textContent = `Min Value (${symVal})`;
-    document.getElementById('maxValueCcyLabel').textContent = `Max Value (${symVal})`;
-    document.getElementById('minEntryCcyLabel').textContent = `Min Entry Corr (USD)`;
-    document.getElementById('maxEntryCcyLabel').textContent = `Max Entry Corr (USD)`;
 
     renderTable();
 }
@@ -185,6 +175,8 @@ function saveSettings() {
         maxValueCcy: document.getElementById('maxValueCcy').value,
         minEntryCcy: document.getElementById('minEntryCcy').value,
         maxEntryCcy: document.getElementById('maxEntryCcy').value,
+        addressFilter: document.getElementById('addressFilter').value,
+        selectedCoins: selectedCoins,
         activeWindow: activeWindow,
         sortKey: sortKey,
         sortDir: sortDir
@@ -197,25 +189,29 @@ function loadSettings() {
     if (!saved) return;
     try {
         const s = JSON.parse(saved);
-        if (s.minValue) document.getElementById('minValue.value') = s.minValue;
-        if (s.coinFilter) document.getElementById('coinFilter.value') = s.coinFilter;
-        if (s.sideFilter) document.getElementById('sideFilter.value') = s.sideFilter;
-        if (s.minLev) document.getElementById('minLev.value') = s.minLev;
-        if (s.maxLev) document.getElementById('maxLev.value') = s.maxLev;
-        if (s.minSize) document.getElementById('minSize.value') = s.minSize;
-        if (s.minFunding) document.getElementById('minFunding.value') = s.minFunding;
-        if (s.levTypeFilter) document.getElementById('levTypeFilter').value = s.levTypeFilter;
-        if (s.currencySelect) {
-            document.getElementById('currencySelect').value = s.currencySelect;
+        if (s.minValue) document.getElementById('minValue').value = s.minValue;
+        if (s.coinFilter) {
+            document.getElementById('coinFilter').value = s.coinFilter;
+            document.getElementById('coinSearch').value = s.coinFilter;
         }
-        if (s.entryCurrencySelect) {
-            document.getElementById('entryCurrencySelect').value = s.entryCurrencySelect;
-        }
-        onCurrencyChange(); // update labels for both
+        if (s.sideFilter) cbSetValue('sideFilter', s.sideFilter);
+        if (s.minLev) document.getElementById('minLev').value = s.minLev;
+        if (s.maxLev) document.getElementById('maxLev').value = s.maxLev;
+        if (s.minSize) document.getElementById('minSize').value = s.minSize;
+        if (s.minFunding) document.getElementById('minFunding').value = s.minFunding;
+        if (s.levTypeFilter) cbSetValue('levTypeFilter', s.levTypeFilter);
+        if (s.currencySelect) cbSetValue('currencySelect', s.currencySelect);
+        if (s.entryCurrencySelect) cbSetValue('entryCurrencySelect', s.entryCurrencySelect);
+        onCurrencyChange();
         if (s.minValueCcy) document.getElementById('minValueCcy').value = s.minValueCcy;
         if (s.maxValueCcy) document.getElementById('maxValueCcy').value = s.maxValueCcy;
         if (s.minEntryCcy) document.getElementById('minEntryCcy').value = s.minEntryCcy;
         if (s.maxEntryCcy) document.getElementById('maxEntryCcy').value = s.maxEntryCcy;
+        if (s.addressFilter) document.getElementById('addressFilter').value = s.addressFilter;
+        if (s.selectedCoins) {
+            selectedCoins = s.selectedCoins;
+            updateCoinSearchLabel();
+        }
         if (s.activeWindow) {
             activeWindow = s.activeWindow;
             document.querySelectorAll('.tab').forEach(t => {
@@ -259,6 +255,9 @@ async function fetchAllMids() {
 async function startScan() {
     const minVal = parseFloat(document.getElementById('minValue').value) || 2500000;
     document.getElementById('scanBtn').disabled = true;
+    document.getElementById('pauseBtn').style.display = 'inline-block';
+    document.getElementById('pauseBtn').textContent = '⏸ Pause';
+    isPaused = false;
     document.getElementById('tableBody').innerHTML = `<tr><td colspan="13" class="empty-cell"><span class="spinner"></span> Fetching leaderboard…</td></tr>`;
     allRows = [];
     loadedCount = 0;
@@ -380,7 +379,7 @@ async function streamPositions(minVal) {
     const total = queue.length;
 
     await new Promise(resolve => {
-        function dispatch() {
+        async function dispatch() {
             // Stop if user requested
             if (!scanning) {
                 if (active === 0) resolve();
@@ -390,6 +389,12 @@ async function streamPositions(minVal) {
             while (scanning && active < MAX_CONCURRENCY && queue.length > 0) {
                 const whale = queue.shift();
                 active++;
+
+                // If paused, wait before fetching
+                while (scanning && isPaused) {
+                    await new Promise(r => setTimeout(r, 500));
+                }
+
                 fetchWithRetry(whale).then(state => {
                     processState(whale, state);
                     active--;
@@ -414,6 +419,7 @@ async function streamPositions(minVal) {
 
     document.getElementById('autoLoading').style.display = 'none';
     document.getElementById('stopBtn').style.display = 'none';
+    document.getElementById('pauseBtn').style.display = 'none';
     // Final render to make sure everything is shown
     updateStats();
     updateCoinFilter();
@@ -423,8 +429,18 @@ async function streamPositions(minVal) {
 
 function stopScan() {
     scanning = false;
+    isPaused = false;
     document.getElementById('stopBtn').style.display = 'none';
+    document.getElementById('pauseBtn').style.display = 'none';
     setStatus('Stopping…', 'scanning');
+}
+
+function togglePause() {
+    isPaused = !isPaused;
+    const btn = document.getElementById('pauseBtn');
+    btn.textContent = isPaused ? '▶ Continue' : '⏸ Pause';
+    btn.className = isPaused ? 'btn' : 'btn-pause';
+    setStatus(isPaused ? 'Paused' : 'Resuming...', 'scanning');
 }
 
 function finishScan() {
@@ -455,29 +471,226 @@ function updateStats() {
     document.getElementById('sLargest').textContent = '$' + fmt(largest);
 }
 
+// ── Generic Combobox Engine ──────────────────────────────────────────
+// Each combobox is identified by its base id (e.g. 'sideFilter').
+// HTML structure expected:
+//   <div class="combobox" id="cb-{id}">
+//     <div class="combobox-input-wrap">
+//       <input type="text" id="cb-{id}-search" ...>
+//       <span class="combobox-arrow">▾</span>
+//     </div>
+//     <div class="combobox-dropdown" id="cb-{id}-dropdown"></div>
+//   </div>
+//   <input type="hidden" id="{id}" value="">
+
+const CB_OPTIONS = {}; // id -> [{value, label}]
+const CB_TIMERS = {};  // id -> timeout
+
+function cbInit(id, options, onChangeFn) {
+    CB_OPTIONS[id] = options; // [{value, label}]
+    cbRender(id);
+    // Set display to match current hidden value
+    const hidden = document.getElementById(id);
+    if (hidden && hidden.value) {
+        const opt = options.find(o => o.value === hidden.value);
+        const search = document.getElementById(`cb-${id}-search`);
+        if (search && opt) search.value = opt.label;
+    }
+}
+
+function cbOpen(id) {
+    // Close all other comboboxes first
+    Object.keys(CB_OPTIONS).forEach(otherId => {
+        if (otherId !== id) cbClose(otherId);
+    });
+    const cb = document.getElementById(`cb-${id}`);
+    if (!cb) return;
+    cb.classList.add('open');
+    cbRender(id);
+}
+
+function cbCloseDelayed(id) {
+    CB_TIMERS[id] = setTimeout(() => cbClose(id), 180);
+}
+
+function cbClose(id) {
+    const cb = document.getElementById(`cb-${id}`);
+    if (cb) cb.classList.remove('open');
+}
+
+function cbRender(id) {
+    const dd = document.getElementById(`cb-${id}-dropdown`);
+    if (!dd) return;
+    const options = CB_OPTIONS[id] || [];
+    const current = document.getElementById(id)?.value || '';
+
+    const html = options.map(o => {
+        const isSel = o.value === current;
+        const isAll = o.value === '';
+        return `<div class="combobox-item${isSel ? ' selected' : ''}${isAll ? ' all-item' : ''}" onmousedown="cbSelect('${id}','${o.value}','${o.label.replace(/'/g, "\\'")}')">` +
+            `${o.label}</div>`;
+    }).join('');
+
+    dd.innerHTML = html || `<div class="combobox-empty">No options</div>`;
+}
+
+function cbSelect(id, value, label) {
+    if (CB_TIMERS[id]) { clearTimeout(CB_TIMERS[id]); delete CB_TIMERS[id]; }
+    const hidden = document.getElementById(id);
+    if (hidden) hidden.value = value;
+    const search = document.getElementById(`cb-${id}-search`);
+    if (search) search.value = label;
+    cbClose(id);
+    // Fire the appropriate callback
+    if (id === 'currencySelect' || id === 'entryCurrencySelect') {
+        onCurrencyChange();
+    } else {
+        renderTable();
+    }
+}
+
+function cbSetValue(id, value) {
+    const options = CB_OPTIONS[id] || [];
+    const opt = options.find(o => o.value === value);
+    if (!opt) return;
+    const hidden = document.getElementById(id);
+    if (hidden) hidden.value = value;
+    const search = document.getElementById(`cb-${id}-search`);
+    if (search) search.value = opt.label;
+}
+
+// ── Coin Combobox (searchable) ──────────────────────────────────────────
+let _coinOptions = [];
+let _closeTimer = null;
+
+function openCombobox() {
+    // Close generic comboboxes
+    Object.keys(CB_OPTIONS).forEach(id => cbClose(id));
+    const cb = document.getElementById('coinCombobox');
+    if (!cb) return;
+    cb.classList.add('open');
+    renderCoinDropdown(document.getElementById('coinSearch').value);
+}
+
+function closeComboboxDelayed() {
+    _closeTimer = setTimeout(() => {
+        const cb = document.getElementById('coinCombobox');
+        if (cb) cb.classList.remove('open');
+    }, 180);
+}
+
+function onCoinSearch() {
+    const cb = document.getElementById('coinCombobox');
+    if (cb) cb.classList.add('open');
+    const query = document.getElementById('coinSearch').value;
+    if (!query) selectCoin('', '');
+    renderCoinDropdown(query);
+}
+
+function renderCoinDropdown(query = '') {
+    const dd = document.getElementById('coinDropdown');
+    if (!dd) return;
+    const q = query.trim().toUpperCase();
+    const filtered = q ? _coinOptions.filter(c => c.toUpperCase().includes(q)) : _coinOptions;
+
+    let html = `<div class="combobox-item all-item ${selectedCoins.length === 0 ? 'selected' : ''}" onmousedown="selectCoin('','')">All coins</div>`;
+    if (filtered.length === 0) {
+        html += `<div class="combobox-empty">No match</div>`;
+    } else {
+        html += filtered.map(c => {
+            const isSel = selectedCoins.includes(c);
+            return `<div class="combobox-item${isSel ? ' selected' : ''}" onmousedown="selectCoin('${c}','${c}')">` +
+                `${isSel ? '✓ ' : ''}${c}</div>`;
+        }).join('');
+    }
+    dd.innerHTML = html;
+}
+
+function selectCoin(value, label) {
+    if (_closeTimer) { clearTimeout(_closeTimer); _closeTimer = null; }
+
+    if (value === '') {
+        selectedCoins = [];
+    } else {
+        const idx = selectedCoins.indexOf(value);
+        if (idx > -1) {
+            selectedCoins.splice(idx, 1);
+        } else {
+            selectedCoins.push(value);
+        }
+    }
+
+    updateCoinSearchLabel();
+    renderCoinDropdown(document.getElementById('coinSearch').value);
+    renderTable();
+    // Do not close the combobox for multi-select, unless it's a reset
+    if (value === '') {
+        const cb = document.getElementById('coinCombobox');
+        if (cb) cb.classList.remove('open');
+    }
+}
+
+function updateCoinSearchLabel() {
+    const search = document.getElementById('coinSearch');
+    if (selectedCoins.length === 0) {
+        search.value = '';
+        search.placeholder = 'Select coins…';
+    } else if (selectedCoins.length === 1) {
+        search.value = selectedCoins[0];
+    } else {
+        search.value = `${selectedCoins.length} coins selected`;
+    }
+}
+
 function updateCoinFilter(initialCoins = null) {
     let coins = initialCoins || [...new Set(allRows.map(r => r.coin))].sort();
-    const sel = document.getElementById('coinFilter');
-    if (!sel) return;
-    const current = sel.value;
-
-    // Preserve current selection if it's not in the new list (to avoid resetting persistent filters)
+    const current = document.getElementById('coinFilter').value;
     if (!initialCoins && current && !coins.includes(current)) {
         coins.push(current);
         coins.sort();
     }
-
-    sel.innerHTML = '<option value="">All Coins</option>';
-    coins.forEach(c => {
-        const opt = document.createElement('option');
-        opt.value = c; opt.textContent = c;
-        if (c === current) opt.selected = true;
-        sel.appendChild(opt);
-    });
+    _coinOptions = coins;
+    const cb = document.getElementById('coinCombobox');
+    if (cb && cb.classList.contains('open')) {
+        renderCoinDropdown(document.getElementById('coinSearch').value);
+    }
 }
 
 async function init() {
     setStatus('Initializing...', 'scanning');
+
+    // Initialize all fixed-option comboboxes
+    const CURRENCIES = [
+        { value: '', label: 'Currency…' },
+        { value: 'USD', label: 'USD $' },
+        { value: 'BRL', label: 'BRL R$' },
+        { value: 'EUR', label: 'EUR €' },
+        { value: 'GBP', label: 'GBP £' },
+        { value: 'JPY', label: 'JPY ¥' },
+        { value: 'ARS', label: 'ARS $' },
+        { value: 'CAD', label: 'CAD $' },
+        { value: 'AUD', label: 'AUD $' },
+        { value: 'BTC', label: 'BTC ₿' },
+    ];
+    cbInit('currencySelect', CURRENCIES);
+    cbInit('entryCurrencySelect', CURRENCIES);
+    cbSetValue('currencySelect', 'USD');
+    cbSetValue('entryCurrencySelect', 'USD');
+
+    cbInit('sideFilter', [
+        { value: '', label: 'L + S' },
+        { value: 'long', label: '▲ Long' },
+        { value: 'short', label: '▼ Short' },
+    ]);
+    cbSetValue('sideFilter', '');
+
+    cbInit('levTypeFilter', [
+        { value: '', label: 'All types' },
+        { value: 'isolated', label: 'Isolated' },
+        { value: 'cross', label: 'Cross' },
+    ]);
+    cbSetValue('levTypeFilter', '');
+
     try {
         await Promise.all([fetchExchangeRates(), fetchAllMids()]);
         const allCoins = Object.keys(currentPrices).sort();
@@ -494,8 +707,8 @@ async function init() {
 }
 
 function renderTable() {
-    const coinFilter = document.getElementById('coinFilter').value;
     const sideFilter = document.getElementById('sideFilter').value;
+    const addressFilter = document.getElementById('addressFilter').value.trim().toLowerCase();
     const minLev = parseFloat(document.getElementById('minLev').value);
     const maxLev = parseFloat(document.getElementById('maxLev').value);
     const minSize = parseFloat(document.getElementById('minSize').value);
@@ -509,7 +722,12 @@ function renderTable() {
     saveSettings();
 
     let rows = allRows.filter(r => {
-        if (coinFilter && r.coin !== coinFilter) return false;
+        if (selectedCoins.length > 0 && !selectedCoins.includes(r.coin)) return false;
+        if (addressFilter) {
+            const addr = r.address.toLowerCase();
+            const disp = (r.displayName || '').toLowerCase();
+            if (!addr.includes(addressFilter) && !disp.includes(addressFilter)) return false;
+        }
         if (sideFilter && r.side !== sideFilter) return false;
         if (!isNaN(minLev) && r.leverageValue < minLev) return false;
         if (!isNaN(maxLev) && r.leverageValue > maxLev) return false;
