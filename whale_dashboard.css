@@ -1,42 +1,122 @@
+/* ═══════════════════════════════════════════════════════════
+   LIQUID GLASS — iOS 26 Design System
+   ═══════════════════════════════════════════════════════════ */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
 :root {
-    --bg: #0b0f1a;
-    --surface: #111827;
-    --surface2: #161d2e;
-    --border: #1e2d45;
-    --text: #d1d9e6;
-    --muted: #4b5a72;
+    /* Core palette */
+    --bg-deep: #04060f;
+    --bg-mid: #070c1a;
     --accent: #3b82f6;
+    --accent2: #8b5cf6;
     --green: #22c55e;
     --red: #ef4444;
     --gold: #f59e0b;
     --orange: #f97316;
+    --text: #e2e8f4;
+    --muted: #5a6a88;
     --mono: 'JetBrains Mono', monospace;
+
+    /* Glass tokens */
+    --glass-bg: rgba(255, 255, 255, 0.04);
+    --glass-bg-hover: rgba(255, 255, 255, 0.07);
+    --glass-bg-strong: rgba(255, 255, 255, 0.08);
+    --glass-border: rgba(255, 255, 255, 0.10);
+    --glass-border-hi: rgba(255, 255, 255, 0.18);
+    --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.45), 0 1.5px 0 rgba(255, 255, 255, 0.06) inset;
+    --glass-blur: blur(22px) saturate(180%);
+    --glass-blur-sm: blur(12px) saturate(160%);
+
+    /* Neon glows */
+    --glow-blue: 0 0 16px rgba(59, 130, 246, 0.35);
+    --glow-purple: 0 0 16px rgba(139, 92, 246, 0.35);
+    --glow-gold: 0 0 12px rgba(245, 158, 11, 0.30);
+    --glow-green: 0 0 12px rgba(34, 197, 94, 0.30);
+    --glow-red: 0 0 12px rgba(239, 68, 68, 0.30);
+
+    /* Radius */
+    --r-sm: 8px;
+    --r-md: 14px;
+    --r-lg: 20px;
+    --r-xl: 28px;
+    --r-pill: 999px;
 }
 
-* {
+/* ── Reset ── */
+*,
+*::before,
+*::after {
     box-sizing: border-box;
     margin: 0;
     padding: 0;
 }
 
+/* ── Body & Background ── */
 body {
-    background: var(--bg);
+    background: var(--bg-deep);
     color: var(--text);
     font-family: 'Inter', sans-serif;
     font-size: 13px;
     min-height: 100vh;
+    overflow-x: hidden;
+    position: relative;
+}
+
+/* Ambient background orbs */
+body::before,
+body::after {
+    content: '';
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(120px);
+    pointer-events: none;
+    z-index: 0;
+}
+
+body::before {
+    width: 700px;
+    height: 700px;
+    top: -200px;
+    left: -200px;
+    background: radial-gradient(circle, rgba(59, 130, 246, 0.12) 0%, transparent 70%);
+}
+
+body::after {
+    width: 600px;
+    height: 600px;
+    bottom: -150px;
+    right: -150px;
+    background: radial-gradient(circle, rgba(139, 92, 246, 0.10) 0%, transparent 70%);
+}
+
+/* Ensure content sits above orbs */
+.header,
+.controls,
+.progress-bar,
+.stats-row,
+.table-wrap,
+.auto-loading {
+    position: relative;
+    z-index: 1;
 }
 
 /* ── Header ── */
 .header {
-    background: linear-gradient(180deg, #0d1526 0%, #0b0f1a 100%);
-    border-bottom: 1px solid var(--border);
-    padding: 16px 24px;
+    background: rgba(7, 12, 26, 0.75);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border-bottom: 1px solid var(--glass-border);
+    padding: 14px 24px;
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 12px;
     flex-wrap: wrap;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
 }
 
 .logo {
@@ -47,12 +127,14 @@ body {
 
 .logo-icon {
     font-size: 22px;
+    filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.6));
 }
 
 .logo h1 {
-    font-size: 17px;
+    font-size: 16px;
     font-weight: 700;
     color: #fff;
+    letter-spacing: -0.3px;
 }
 
 .logo p {
@@ -68,16 +150,20 @@ body {
     flex-wrap: wrap;
 }
 
+/* ── Status Badge ── */
 .status-badge {
     display: flex;
     align-items: center;
     gap: 7px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 20px;
-    padding: 5px 12px;
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--r-pill);
+    padding: 5px 14px;
     font-size: 11px;
     color: var(--muted);
+    backdrop-filter: var(--glass-blur-sm);
+    -webkit-backdrop-filter: var(--glass-blur-sm);
+    transition: border-color 0.2s;
 }
 
 .dot {
@@ -90,90 +176,108 @@ body {
 
 .dot.scanning {
     background: var(--accent);
-    box-shadow: 0 0 6px var(--accent);
+    box-shadow: var(--glow-blue);
     animation: pulse 1.2s infinite;
 }
 
 .dot.done {
     background: var(--green);
-    box-shadow: 0 0 6px var(--green);
+    box-shadow: var(--glow-green);
 }
 
 .dot.error {
     background: var(--red);
+    box-shadow: var(--glow-red);
 }
 
 @keyframes pulse {
 
     0%,
     100% {
-        opacity: 1
+        opacity: 1;
+        transform: scale(1);
     }
 
     50% {
-        opacity: .3
+        opacity: 0.4;
+        transform: scale(0.85);
     }
 }
 
+/* ── Buttons ── */
 .btn {
-    background: linear-gradient(135deg, #2563eb, #4f46e5);
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.85), rgba(79, 70, 229, 0.85));
     color: #fff;
-    border: none;
+    border: 1px solid rgba(99, 140, 255, 0.3);
     padding: 7px 18px;
-    border-radius: 7px;
+    border-radius: var(--r-pill);
     font-size: 12px;
     font-weight: 600;
     cursor: pointer;
-    transition: opacity .2s, transform .1s;
+    transition: all 0.2s ease;
     font-family: inherit;
+    backdrop-filter: var(--glass-blur-sm);
+    -webkit-backdrop-filter: var(--glass-blur-sm);
+    box-shadow: 0 2px 12px rgba(59, 130, 246, 0.25), 0 1px 0 rgba(255, 255, 255, 0.1) inset;
+    letter-spacing: 0.2px;
 }
 
 .btn:hover {
-    opacity: .9;
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.9), rgba(99, 102, 241, 0.9));
+    box-shadow: var(--glow-blue), 0 1px 0 rgba(255, 255, 255, 0.15) inset;
     transform: translateY(-1px);
+}
+
+.btn:active {
+    transform: translateY(0);
 }
 
 .btn:disabled {
-    opacity: .4;
+    opacity: 0.35;
     cursor: not-allowed;
     transform: none;
+    box-shadow: none;
 }
 
 .btn-stop {
-    background: linear-gradient(135deg, #dc2626, #b91c1c);
+    background: linear-gradient(135deg, rgba(220, 38, 38, 0.85), rgba(185, 28, 28, 0.85));
     color: #fff;
-    border: none;
+    border: 1px solid rgba(255, 100, 100, 0.25);
     padding: 7px 18px;
-    border-radius: 7px;
+    border-radius: var(--r-pill);
     font-size: 12px;
     font-weight: 600;
     cursor: pointer;
-    transition: opacity .2s, transform .1s;
+    transition: all 0.2s ease;
     font-family: inherit;
     display: none;
+    box-shadow: 0 2px 12px rgba(239, 68, 68, 0.25);
 }
 
 .btn-stop:hover {
-    opacity: .9;
+    box-shadow: var(--glow-red);
     transform: translateY(-1px);
+}
+
+/* ── Controls Bar ── */
+.controls {
+    padding: 10px 24px;
+    display: flex;
+    gap: 14px;
+    align-items: center;
+    flex-wrap: wrap;
+    border-bottom: 1px solid var(--glass-border);
+    background: rgba(7, 12, 26, 0.60);
+    backdrop-filter: var(--glass-blur-sm);
+    -webkit-backdrop-filter: var(--glass-blur-sm);
 }
 
 .filter-sep {
     width: 1px;
-    height: 28px;
-    background: var(--border);
-    margin: 0 4px;
-}
-
-/* ── Controls ── */
-.controls {
-    padding: 12px 24px;
-    display: flex;
-    gap: 16px;
-    align-items: center;
-    flex-wrap: wrap;
-    border-bottom: 1px solid var(--border);
-    background: var(--surface);
+    height: 24px;
+    background: var(--glass-border);
+    margin: 0 2px;
+    border-radius: 1px;
 }
 
 .ctrl {
@@ -186,105 +290,184 @@ body {
     font-size: 11px;
     color: var(--muted);
     white-space: nowrap;
+    font-weight: 500;
 }
 
+/* ── Inputs & Selects ── */
 input[type="number"],
 select {
-    background: var(--surface2);
-    border: 1px solid var(--border);
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
     color: var(--text);
-    padding: 5px 9px;
-    border-radius: 5px;
+    padding: 5px 10px;
+    border-radius: var(--r-sm);
     font-size: 12px;
     font-family: inherit;
     width: 130px;
+    backdrop-filter: var(--glass-blur-sm);
+    -webkit-backdrop-filter: var(--glass-blur-sm);
+    transition: border-color 0.2s, box-shadow 0.2s;
+    -webkit-appearance: none;
+    appearance: none;
 }
 
 input[type="number"]:focus,
 select:focus {
     outline: none;
-    border-color: var(--accent);
+    border-color: rgba(59, 130, 246, 0.6);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
 }
 
+select option {
+    background: #0d1526;
+    color: var(--text);
+}
+
+/* ── Tabs ── */
 .tabs {
     display: flex;
     gap: 3px;
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--r-sm);
+    padding: 3px;
 }
 
 .tab {
-    padding: 4px 11px;
-    border-radius: 5px;
+    padding: 4px 12px;
+    border-radius: 6px;
     font-size: 11px;
     cursor: pointer;
-    border: 1px solid var(--border);
+    border: 1px solid transparent;
     color: var(--muted);
     background: transparent;
     font-family: inherit;
-    transition: all .15s;
+    font-weight: 500;
+    transition: all 0.18s ease;
 }
 
 .tab.active {
-    background: rgba(59, 130, 246, .12);
-    border-color: var(--accent);
-    color: var(--accent);
+    background: rgba(59, 130, 246, 0.18);
+    border-color: rgba(59, 130, 246, 0.35);
+    color: #93c5fd;
+    box-shadow: 0 0 10px rgba(59, 130, 246, 0.15);
 }
 
-/* ── Progress ── */
+.tab:hover:not(.active) {
+    color: var(--text);
+    background: var(--glass-bg-hover);
+}
+
+/* ── Progress Bar ── */
 .progress-bar {
     height: 2px;
-    background: var(--border);
+    background: rgba(255, 255, 255, 0.05);
 }
 
 .progress-fill {
     height: 100%;
-    background: linear-gradient(90deg, var(--accent), #8b5cf6);
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
     width: 0%;
-    transition: width .4s ease;
+    transition: width 0.4s ease;
+    box-shadow: 0 0 8px rgba(59, 130, 246, 0.5);
 }
 
-/* ── Stats ── */
+/* ── Stats Row ── */
 .stats-row {
     display: flex;
     gap: 1px;
-    background: var(--border);
-    border-bottom: 1px solid var(--border);
+    background: var(--glass-border);
+    border-bottom: 1px solid var(--glass-border);
 }
 
 .stat {
     flex: 1;
-    background: var(--surface);
+    background: rgba(7, 12, 26, 0.55);
+    backdrop-filter: var(--glass-blur-sm);
+    -webkit-backdrop-filter: var(--glass-blur-sm);
     padding: 14px 20px;
     min-width: 140px;
+    transition: background 0.2s;
+}
+
+.stat:hover {
+    background: rgba(255, 255, 255, 0.04);
 }
 
 .stat-label {
     font-size: 10px;
     color: var(--muted);
     text-transform: uppercase;
-    letter-spacing: .5px;
-    margin-bottom: 4px;
+    letter-spacing: 0.6px;
+    margin-bottom: 5px;
+    font-weight: 500;
 }
 
 .stat-value {
     font-size: 20px;
     font-weight: 700;
+    letter-spacing: -0.5px;
 }
 
 .stat-value.blue {
-    color: var(--accent);
+    color: #60a5fa;
+    text-shadow: var(--glow-blue);
 }
 
 .stat-value.green {
-    color: var(--green);
+    color: #4ade80;
+    text-shadow: var(--glow-green);
 }
 
 .stat-value.gold {
-    color: var(--gold);
+    color: #fbbf24;
+    text-shadow: var(--glow-gold);
+}
+
+/* ── Filter Row (inline column filters) ── */
+.filter-row {
+    background: rgba(4, 6, 15, 0.70) !important;
+}
+
+.filter-cell {
+    padding: 6px 8px !important;
+    border-bottom: 2px solid var(--glass-border) !important;
+    vertical-align: top;
+}
+
+.col-filter {
+    display: block;
+    width: 100%;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--glass-border);
+    color: var(--text);
+    padding: 4px 7px;
+    border-radius: var(--r-sm);
+    font-size: 11px;
+    font-family: inherit;
+    backdrop-filter: var(--glass-blur-sm);
+    -webkit-backdrop-filter: var(--glass-blur-sm);
+    transition: border-color 0.2s, box-shadow 0.2s;
+    -webkit-appearance: none;
+    appearance: none;
+    box-sizing: border-box;
+}
+
+.col-filter:focus {
+    outline: none;
+    border-color: rgba(59, 130, 246, 0.6);
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.12);
+}
+
+.col-filter::placeholder {
+    color: var(--muted);
+    opacity: 0.7;
 }
 
 /* ── Table ── */
 .table-wrap {
     overflow-x: auto;
+    background: transparent;
 }
 
 table {
@@ -294,7 +477,9 @@ table {
 }
 
 thead tr {
-    background: var(--surface2);
+    background: rgba(7, 12, 26, 0.80);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
     position: sticky;
     top: 0;
     z-index: 10;
@@ -306,12 +491,13 @@ th {
     font-size: 10px;
     font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: .5px;
+    letter-spacing: 0.6px;
     color: var(--muted);
     white-space: nowrap;
-    border-bottom: 1px solid var(--border);
+    border-bottom: 1px solid var(--glass-border);
     cursor: pointer;
     user-select: none;
+    transition: color 0.15s;
 }
 
 th:hover {
@@ -319,16 +505,16 @@ th:hover {
 }
 
 th.sorted {
-    color: var(--accent);
+    color: #60a5fa;
 }
 
 tbody tr {
-    border-bottom: 1px solid var(--border);
-    transition: background .1s;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    transition: background 0.15s;
 }
 
 tbody tr:hover {
-    background: var(--surface2);
+    background: var(--glass-bg-hover);
 }
 
 td {
@@ -337,7 +523,7 @@ td {
     white-space: nowrap;
 }
 
-/* Address cell */
+/* ── Address Cell ── */
 .addr-cell {
     display: flex;
     align-items: center;
@@ -356,12 +542,13 @@ td {
     font-weight: 700;
     color: #fff;
     flex-shrink: 0;
+    box-shadow: 0 0 10px rgba(99, 102, 241, 0.35);
 }
 
 .addr-text {
     font-family: var(--mono);
     font-size: 12px;
-    color: var(--accent);
+    color: #60a5fa;
 }
 
 .addr-name {
@@ -379,87 +566,96 @@ a.addr-link:hover .addr-text {
     text-decoration: underline;
 }
 
-/* Coin badge */
+/* ── Coin Badge ── */
 .coin-badge {
     display: inline-flex;
     align-items: center;
     gap: 5px;
-    padding: 3px 8px;
-    border-radius: 4px;
+    padding: 3px 9px;
+    border-radius: var(--r-sm);
     font-size: 11px;
     font-weight: 600;
+    backdrop-filter: var(--glass-blur-sm);
+    -webkit-backdrop-filter: var(--glass-blur-sm);
 }
 
 .coin-badge.long {
-    background: rgba(34, 197, 94, .1);
-    color: var(--green);
-    border: 1px solid rgba(34, 197, 94, .2);
+    background: rgba(34, 197, 94, 0.10);
+    color: #4ade80;
+    border: 1px solid rgba(34, 197, 94, 0.22);
+    box-shadow: 0 0 8px rgba(34, 197, 94, 0.12);
 }
 
 .coin-badge.short {
-    background: rgba(239, 68, 68, .1);
-    color: var(--red);
-    border: 1px solid rgba(239, 68, 68, .2);
+    background: rgba(239, 68, 68, 0.10);
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.22);
+    box-shadow: 0 0 8px rgba(239, 68, 68, 0.12);
 }
 
-/* Leverage badge */
+/* ── Leverage Badge ── */
 .lev-badge {
     display: inline-block;
-    padding: 2px 7px;
-    border-radius: 4px;
+    padding: 2px 8px;
+    border-radius: var(--r-sm);
     font-size: 11px;
     font-weight: 600;
-    background: rgba(249, 115, 22, .1);
-    color: var(--orange);
-    border: 1px solid rgba(249, 115, 22, .2);
+    background: rgba(249, 115, 22, 0.10);
+    color: #fb923c;
+    border: 1px solid rgba(249, 115, 22, 0.22);
+    box-shadow: 0 0 8px rgba(249, 115, 22, 0.12);
 }
 
-/* Values */
+/* ── Mono Values ── */
 .mono {
     font-family: var(--mono);
     font-size: 12px;
 }
 
 .green {
-    color: var(--green);
+    color: #4ade80;
 }
 
 .red {
-    color: var(--red);
+    color: #f87171;
 }
 
 .muted {
     color: var(--muted);
 }
 
-/* Distance to liq bar */
+/* ── Liq Bar ── */
 .liq-cell {
     min-width: 140px;
 }
 
 .liq-bar-wrap {
-    background: var(--border);
+    background: rgba(255, 255, 255, 0.06);
     border-radius: 3px;
-    height: 5px;
-    margin-top: 4px;
+    height: 4px;
+    margin-top: 5px;
     overflow: hidden;
 }
 
 .liq-bar {
     height: 100%;
     border-radius: 3px;
+    transition: width 0.4s ease;
 }
 
 .liq-bar.safe {
-    background: var(--green);
+    background: linear-gradient(90deg, #22c55e, #4ade80);
+    box-shadow: var(--glow-green);
 }
 
 .liq-bar.warn {
-    background: var(--orange);
+    background: linear-gradient(90deg, #f97316, #fb923c);
+    box-shadow: 0 0 8px rgba(249, 115, 22, 0.4);
 }
 
 .liq-bar.danger {
-    background: var(--red);
+    background: linear-gradient(90deg, #ef4444, #f87171);
+    box-shadow: var(--glow-red);
 }
 
 .liq-price {
@@ -473,7 +669,7 @@ a.addr-link:hover .addr-text {
     font-weight: 600;
 }
 
-/* Loading / empty */
+/* ── Empty / Loading ── */
 .empty-cell {
     text-align: center;
     padding: 60px;
@@ -483,16 +679,17 @@ a.addr-link:hover .addr-text {
 .empty-icon {
     font-size: 36px;
     margin-bottom: 10px;
+    opacity: 0.5;
 }
 
 .spinner {
     display: inline-block;
     width: 14px;
     height: 14px;
-    border: 2px solid var(--border);
+    border: 2px solid rgba(255, 255, 255, 0.08);
     border-top-color: var(--accent);
     border-radius: 50%;
-    animation: spin .7s linear infinite;
+    animation: spin 0.7s linear infinite;
     vertical-align: middle;
     margin-right: 6px;
 }
@@ -503,9 +700,11 @@ a.addr-link:hover .addr-text {
     }
 }
 
-/* Expand row */
+/* ── Expand Row ── */
 .expand-row td {
-    background: #0a0f1c;
+    background: rgba(4, 6, 15, 0.7);
+    backdrop-filter: var(--glass-blur-sm);
+    -webkit-backdrop-filter: var(--glass-blur-sm);
     padding: 0;
 }
 
@@ -516,7 +715,7 @@ a.addr-link:hover .addr-text {
     gap: 6px;
 }
 
-/* Coin filter pills */
+/* ── Coin Filter Pills ── */
 .coin-filter {
     display: flex;
     gap: 4px;
@@ -524,27 +723,66 @@ a.addr-link:hover .addr-text {
 }
 
 .coin-pill {
-    padding: 3px 10px;
-    border-radius: 12px;
+    padding: 3px 11px;
+    border-radius: var(--r-pill);
     font-size: 11px;
     cursor: pointer;
-    border: 1px solid var(--border);
+    border: 1px solid var(--glass-border);
     color: var(--muted);
-    background: transparent;
+    background: var(--glass-bg);
     font-family: inherit;
-    transition: all .15s;
+    font-weight: 500;
+    transition: all 0.18s ease;
+    backdrop-filter: var(--glass-blur-sm);
+    -webkit-backdrop-filter: var(--glass-blur-sm);
+}
+
+.coin-pill:hover {
+    border-color: rgba(59, 130, 246, 0.4);
+    color: #93c5fd;
+    background: rgba(59, 130, 246, 0.08);
 }
 
 .coin-pill.active {
-    border-color: var(--accent);
-    color: var(--accent);
-    background: rgba(59, 130, 246, .08);
+    border-color: rgba(59, 130, 246, 0.5);
+    color: #93c5fd;
+    background: rgba(59, 130, 246, 0.14);
+    box-shadow: 0 0 10px rgba(59, 130, 246, 0.15);
 }
 
+/* ── Auto Loading ── */
 .auto-loading {
     text-align: center;
     padding: 12px;
     color: var(--muted);
     font-size: 11px;
     display: none;
+    background: rgba(7, 12, 26, 0.5);
+    backdrop-filter: var(--glass-blur-sm);
+    -webkit-backdrop-filter: var(--glass-blur-sm);
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.10);
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.18);
+}
+
+/* ── Selection ── */
+::selection {
+    background: rgba(59, 130, 246, 0.3);
+    color: #fff;
 }
