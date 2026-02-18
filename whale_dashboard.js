@@ -2,10 +2,29 @@ const INFO_URL = 'https://api.hyperliquid.xyz/info';
 const LEADERBOARD_URL = 'https://stats-data.hyperliquid.xyz/Mainnet/leaderboard';
 const FX_URL = 'https://open.er-api.com/v6/latest/USD';
 
+const COLUMN_DEFS = [
+    { key: 'col-num', label: '#' },
+    { key: 'col-address', label: 'Address' },
+    { key: 'col-coin', label: 'Coin' },
+    { key: 'col-szi', label: 'Size' },
+    { key: 'col-leverage', label: 'Leverage' },
+    { key: 'col-positionValue', label: 'Value' },
+    { key: 'col-valueCcy', label: 'Value (CCY)' },
+    { key: 'col-entryPx', label: 'Avg Entry' },
+    { key: 'col-entryCcy', label: 'Avg Entry (Corr)' },
+    { key: 'col-unrealizedPnl', label: 'UPNL' },
+    { key: 'col-funding', label: 'Funding' },
+    { key: 'col-distToLiq', label: 'Dist. to Liq.' },
+    { key: 'col-accountValue', label: 'Acct. Value' }
+];
+
 // State
 let whaleList = [];       // from leaderboard
 let allRows = [];         // flat: one row per position
 let displayedRows = [];   // after filters
+let visibleColumns = COLUMN_DEFS.map(c => c.key); // Default all visible
+let columnOrder = COLUMN_DEFS.map(c => c.key); // Default order
+let _columnCloseTimer = null;
 let sortKey = 'accountValue';
 let sortDir = -1;
 let activeWindow = 'allTime';
@@ -268,7 +287,9 @@ function saveSettings() {
         chartHeight: chartHeight,
         chartMode: chartMode,
         bubbleScale: bubbleScale,
-        aggregationFactor: aggregationFactor
+        aggregationFactor: aggregationFactor,
+        visibleColumns: visibleColumns,
+        columnOrder: columnOrder
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
 }
@@ -278,6 +299,15 @@ function loadSettings() {
     if (!saved) return;
     try {
         const s = JSON.parse(saved);
+        if (s.columnOrder) {
+            columnOrder = s.columnOrder;
+            applyColumnOrder();
+        }
+        if (s.visibleColumns) {
+            visibleColumns = s.visibleColumns;
+            applyColumnVisibility();
+            updateColumnSelectDisplay();
+        }
         if (s.showSymbols !== undefined) {
             showSymbols = s.showSymbols;
             const btn = document.getElementById('btnShowSym');
@@ -1501,6 +1531,7 @@ async function init() {
             updateCoinFilter(allCoins);
         }
         loadSettings();
+        updateColumnSelectDisplay(); // Ensure display is updated even if no settings loaded
         loadTableData(); // Load persisted data
         if (allRows.length > 0) {
             updateStats();
@@ -1509,6 +1540,7 @@ async function init() {
             setStatus(`Restored ${allRows.length} positions`, 'done');
         }
 
+        initColumnReorder();
         fetchMarketCapRanking(true);
         setStatus('Ready', 'idle');
     } catch (e) {
@@ -1517,6 +1549,112 @@ async function init() {
         loadSettings();
     }
 }
+
+// ── Column Reordering & Drag-Drop ───────────────────────────────────
+
+let draggedColumnId = null;
+
+function initColumnReorder() {
+    const headers = document.querySelectorAll('thead tr:first-child th');
+    headers.forEach(th => {
+        th.setAttribute('draggable', 'true');
+        th.addEventListener('dragstart', handleDragStart);
+        th.addEventListener('dragover', handleDragOver);
+        th.addEventListener('drop', handleDrop);
+        th.addEventListener('dragenter', handleDragEnter);
+        th.addEventListener('dragleave', handleDragLeave);
+        th.addEventListener('dragend', handleDragEnd);
+    });
+}
+
+function handleDragStart(e) {
+    // Only allow dragging if clicking on the header itself or label, not resizer
+    if (e.target.classList.contains('resizer')) {
+        e.preventDefault();
+        return;
+    }
+    draggedColumnId = this.id;
+    this.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', this.id);
+}
+
+function handleDragOver(e) {
+    if (e.preventDefault) e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    return false;
+}
+
+function handleDragEnter(e) {
+    this.classList.add('drag-over');
+}
+
+function handleDragLeave(e) {
+    this.classList.remove('drag-over');
+}
+
+function handleDragEnd(e) {
+    this.classList.remove('dragging');
+    document.querySelectorAll('thead th').forEach(th => th.classList.remove('drag-over'));
+}
+
+function handleDrop(e) {
+    if (e.stopPropagation) e.stopPropagation();
+    
+    const targetTh = this;
+    const targetId = targetTh.id;
+    
+    if (draggedColumnId && draggedColumnId !== targetId) {
+        // Find keys in columnOrder
+        const fromKey = COLUMN_DEFS.find(c => document.getElementById(draggedColumnId).classList.contains(c.key))?.key;
+        const toKey = COLUMN_DEFS.find(c => targetTh.classList.contains(c.key))?.key;
+        
+        if (fromKey && toKey) {
+            const fromIdx = columnOrder.indexOf(fromKey);
+            const toIdx = columnOrder.indexOf(toKey);
+            
+            if (fromIdx > -1 && toIdx > -1) {
+                // Move item in array
+                const item = columnOrder.splice(fromIdx, 1)[0];
+                columnOrder.splice(toIdx, 0, item);
+                
+                applyColumnOrder();
+                renderTable();
+                saveSettings();
+            }
+        }
+    }
+    return false;
+}
+
+function applyColumnOrder() {
+    const headerRow = document.querySelector('thead tr:first-child');
+    const filterRow = document.querySelector('thead tr.filter-row');
+    if (!headerRow || !filterRow) return;
+    
+    // We need to reorder DOM elements based on columnOrder
+    // First, map column keys to their DOM elements
+    const headerMap = {};
+    const filterMap = {};
+    
+    // Populate maps
+    Array.from(headerRow.children).forEach(th => {
+        const key = COLUMN_DEFS.find(c => th.classList.contains(c.key))?.key;
+        if (key) headerMap[key] = th;
+    });
+    
+    Array.from(filterRow.children).forEach(th => {
+        const key = COLUMN_DEFS.find(c => th.classList.contains(c.key))?.key;
+        if (key) filterMap[key] = th;
+    });
+    
+    // Re-append in correct order
+    columnOrder.forEach(key => {
+        if (headerMap[key]) headerRow.appendChild(headerMap[key]);
+        if (filterMap[key]) filterRow.appendChild(filterMap[key]);
+    });
+}
+
 
 function renderTable() {
     const sideFilter = document.getElementById('sideFilter').value;
@@ -1639,33 +1777,38 @@ function renderTable() {
 
         const usdSym = showSymbols ? '$' : '';
 
-        return `<tr>
-        <td class="muted" style="font-size:11px">${i + 1}</td>
-        <td>
-            <div class="addr-cell">
-                <div class="addr-avatar">${(r.displayName || r.address).slice(0, 2).toUpperCase()}</div>
-                <div>
-                    <a class="addr-link" href="https://app.hyperliquid.xyz/explorer/address/${r.address}" target="_blank">
-                        <div class="addr-text">${fmtAddr(r.address)}${r.displayName ? ' ★' : ''}</div>
-                    </a>
-                    ${r.displayName ? `<div class="addr-name">${r.displayName}</div>` : ''}
+        // Cell Renderers Map
+        const cells = {
+            'col-num': `<td class="muted col-num" style="font-size:11px">${i + 1}</td>`,
+            'col-address': `<td class="col-address">
+                <div class="addr-cell">
+                    <div class="addr-avatar">${(r.displayName || r.address).slice(0, 2).toUpperCase()}</div>
+                    <div>
+                        <a class="addr-link" href="https://app.hyperliquid.xyz/explorer/address/${r.address}" target="_blank">
+                            <div class="addr-text">${fmtAddr(r.address)}${r.displayName ? ' ★' : ''}</div>
+                        </a>
+                        ${r.displayName ? `<div class="addr-name">${r.displayName}</div>` : ''}
+                    </div>
                 </div>
-            </div>
-        </td>
-        <td>
-            <span class="coin-badge ${side}">${r.coin} ${side === 'long' ? '▲' : '▼'}</span>
-        </td>
-        <td class="mono">${sziStr}</td>
-        <td><span class="lev-badge">${levLabel}</span></td>
-        <td class="mono">${usdSym}${fmt(r.positionValue)}</td>
-        <td class="mono" style="color:var(--gold);font-weight:600">${ccyStr}</td>
-        <td class="mono">${r.entryPx.toLocaleString('en-US', { maximumFractionDigits: 2 })}</td>
-        <td class="mono" style="color:var(--gold);font-weight:600">${entStr}</td>
-        <td class="mono ${pnlClass}" style="font-weight:600">${fmtUSD(r.unrealizedPnl)}</td>
-        <td class="mono ${fundClass}">${fmtUSD(r.funding)}</td>
-        <td>${distHtml}</td>
-        <td class="mono">${usdSym}${fmt(r.accountValue)}</td>
-    </tr>`;
+            </td>`,
+            'col-coin': `<td class="col-coin">
+                <span class="coin-badge ${side}">${r.coin} ${side === 'long' ? '▲' : '▼'}</span>
+            </td>`,
+            'col-szi': `<td class="mono col-szi">${sziStr}</td>`,
+            'col-leverage': `<td class="col-leverage"><span class="lev-badge">${levLabel}</span></td>`,
+            'col-positionValue': `<td class="mono col-positionValue">${usdSym}${fmt(r.positionValue)}</td>`,
+            'col-valueCcy': `<td class="mono col-valueCcy" style="color:var(--gold);font-weight:600">${ccyStr}</td>`,
+            'col-entryPx': `<td class="mono col-entryPx">${r.entryPx.toLocaleString('en-US', { maximumFractionDigits: 2 })}</td>`,
+            'col-entryCcy': `<td class="mono col-entryCcy" style="color:var(--gold);font-weight:600">${entStr}</td>`,
+            'col-unrealizedPnl': `<td class="mono col-unrealizedPnl ${pnlClass}" style="font-weight:600">${fmtUSD(r.unrealizedPnl)}</td>`,
+            'col-funding': `<td class="mono col-funding ${fundClass}">${fmtUSD(r.funding)}</td>`,
+            'col-distToLiq': `<td class="col-distToLiq">${distHtml}</td>`,
+            'col-accountValue': `<td class="mono col-accountValue">${usdSym}${fmt(r.accountValue)}</td>`
+        };
+
+        return `<tr>
+            ${columnOrder.map(key => cells[key]).join('')}
+        </tr>`;
     }).join('');
 }
 
@@ -1958,6 +2101,107 @@ async function fetchMarketCapRanking(force = false) {
             panel.innerHTML = `<div style="padding:10px; font-size:11px; color:var(--muted)">Ranking unavailable (Rate limited)</div>`;
         }
     }
+}
+
+// ── Column Visibility ───────────────────────────────────────────────
+
+function openColumnCombobox() {
+    Object.keys(CB_OPTIONS).forEach(id => cbClose(id));
+    const cb = document.getElementById('columnCombobox');
+    if (!cb) return;
+    cb.classList.add('open');
+    renderColumnDropdown();
+}
+
+function closeColumnComboboxDelayed() {
+    _columnCloseTimer = setTimeout(() => {
+        const cb = document.getElementById('columnCombobox');
+        if (cb) cb.classList.remove('open');
+    }, 180);
+}
+
+function renderColumnDropdown() {
+    const dd = document.getElementById('columnDropdown');
+    if (!dd) return;
+
+    let html = COLUMN_DEFS.map(c => {
+        const isSel = visibleColumns.includes(c.key);
+        return `<div class="combobox-item${isSel ? ' selected' : ''}" onmousedown="event.preventDefault(); toggleColumn('${c.key}')">` +
+            `<span class="item-label">${c.label}</span>${isSel ? '<span class="item-remove">✓</span>' : ''}</div>`;
+    }).join('');
+
+    // Add "Select All" / "Deselect All" options
+    html += `<div class="combobox-separator"></div>`;
+    html += `<div class="combobox-item" onmousedown="event.preventDefault(); toggleAllColumns(true)">Show All</div>`;
+    html += `<div class="combobox-item" onmousedown="event.preventDefault(); toggleAllColumns(false)">Hide All</div>`;
+
+    dd.innerHTML = html;
+}
+
+function toggleColumn(key) {
+    if (_columnCloseTimer) { clearTimeout(_columnCloseTimer); _columnCloseTimer = null; }
+    
+    const idx = visibleColumns.indexOf(key);
+    if (idx > -1) {
+        if (visibleColumns.length > 1) { // Prevent hiding all columns one by one
+            visibleColumns.splice(idx, 1);
+        }
+    } else {
+        visibleColumns.push(key);
+    }
+    
+    applyColumnVisibility();
+    updateColumnSelectDisplay();
+    renderColumnDropdown();
+    saveSettings();
+}
+
+function toggleAllColumns(show) {
+    if (_columnCloseTimer) { clearTimeout(_columnCloseTimer); _columnCloseTimer = null; }
+    
+    if (show) {
+        visibleColumns = COLUMN_DEFS.map(c => c.key);
+    } else {
+        // Keep at least one column (e.g. Address or Coin) to avoid empty table issues?
+        // Let's just keep Coin and Address
+        visibleColumns = ['col-coin', 'col-address'];
+    }
+    
+    applyColumnVisibility();
+    updateColumnSelectDisplay();
+    renderColumnDropdown();
+    saveSettings();
+}
+
+function updateColumnSelectDisplay() {
+    const search = document.getElementById('columnSelectDisplay');
+    if (!search) return;
+    
+    if (visibleColumns.length === COLUMN_DEFS.length) {
+        search.value = 'All Columns';
+    } else {
+        search.value = `${visibleColumns.length} Visible`;
+    }
+}
+
+function applyColumnVisibility() {
+    let style = document.getElementById('col-visibility-style');
+    if (!style) {
+        style = document.createElement('style');
+        style.id = 'col-visibility-style';
+        document.head.appendChild(style);
+    }
+    
+    // Find hidden columns
+    const hidden = COLUMN_DEFS.filter(c => !visibleColumns.includes(c.key));
+    
+    if (hidden.length === 0) {
+        style.textContent = '';
+        return;
+    }
+    
+    const css = hidden.map(c => `.${c.key} { display: none !important; }`).join('\n');
+    style.textContent = css;
 }
 
 // Initialize

@@ -599,6 +599,25 @@ select option {
     z-index: 301 !important;
 }
 
+/* Drag & Drop */
+th[draggable="true"] {
+    cursor: grab;
+}
+th[draggable="true"]:active {
+    cursor: grabbing;
+}
+th.dragging {
+    opacity: 0.4;
+    background: rgba(59, 130, 246, 0.2);
+}
+th.drag-over {
+    border-left: 2px solid var(--accent);
+}
+/* Prevent drag on resizer */
+.resizer {
+    cursor: col-resize;
+}
+
 /* ── Ranking Panel ── */
 #ranking-panel {
     display: flex;

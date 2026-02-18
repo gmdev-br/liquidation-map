@@ -86,6 +86,18 @@
         </div>
         <div class="filter-sep"></div>
         <div class="ctrl">
+            <label>Columns</label>
+            <div class="combobox" id="columnCombobox" style="width:110px">
+                <div class="combobox-input-wrap">
+                    <input type="text" id="columnSelectDisplay" class="combobox-input" placeholder="Select" readonly 
+                        onfocus="openColumnCombobox()" onblur="closeColumnComboboxDelayed()">
+                    <span class="combobox-arrow">▾</span>
+                </div>
+                <div class="combobox-dropdown" id="columnDropdown"></div>
+            </div>
+        </div>
+        <div class="filter-sep"></div>
+        <div class="ctrl">
             <label>Chart Mode</label>
             <div class="tabs">
                 <button class="tab active" data-chart="scatter" onclick="setChartMode(this)">Scatter</button>
@@ -151,60 +163,60 @@
         <table>
             <thead>
                 <tr>
-                    <th id="th-num"><span class="th-label">#</span>
+                    <th id="th-num" class="col-num"><span class="th-label">#</span>
                         <div class="resizer" onmousedown="startResizing(event, this)"></div>
                     </th>
-                    <th id="th-address"><span class="th-label">Address</span>
+                    <th id="th-address" class="col-address"><span class="th-label">Address</span>
                         <div class="resizer" onmousedown="startResizing(event, this)"></div>
                     </th>
-                    <th id="th-coin" onclick="sortBy('coin')"><span class="th-label">Coin ↕</span>
+                    <th id="th-coin" class="col-coin" onclick="sortBy('coin')"><span class="th-label">Coin ↕</span>
                         <div class="resizer" onmousedown="startResizing(event, this)"></div>
                     </th>
-                    <th id="th-szi" onclick="sortBy('szi')"><span class="th-label">Size ↕</span>
+                    <th id="th-szi" class="col-szi" onclick="sortBy('szi')"><span class="th-label">Size ↕</span>
                         <div class="resizer" onmousedown="startResizing(event, this)"></div>
                     </th>
-                    <th id="th-leverage"><span class="th-label">Leverage</span>
+                    <th id="th-leverage" class="col-leverage"><span class="th-label">Leverage</span>
                         <div class="resizer" onmousedown="startResizing(event, this)"></div>
                     </th>
-                    <th id="th-positionValue" onclick="sortBy('positionValue')"><span class="th-label">Value ↕</span>
+                    <th id="th-positionValue" class="col-positionValue" onclick="sortBy('positionValue')"><span class="th-label">Value ↕</span>
                         <div class="resizer" onmousedown="startResizing(event, this)"></div>
                     </th>
-                    <th id="th-valueCcy" onclick="sortBy('valueCcy')" style="color:var(--gold)"><span
+                    <th id="th-valueCcy" class="col-valueCcy" onclick="sortBy('valueCcy')" style="color:var(--gold)"><span
                             class="th-label">Value (CCY) ↕</span>
                         <div class="resizer" onmousedown="startResizing(event, this)"></div>
                     </th>
-                    <th id="th-entryPx" onclick="sortBy('entryPx')"><span class="th-label">Avg Entry ↕</span>
+                    <th id="th-entryPx" class="col-entryPx" onclick="sortBy('entryPx')"><span class="th-label">Avg Entry ↕</span>
                         <div class="resizer" onmousedown="startResizing(event, this)"></div>
                     </th>
-                    <th id="th-entryCcy" onclick="sortBy('entryCcy')" style="color:var(--gold)"><span
+                    <th id="th-entryCcy" class="col-entryCcy" onclick="sortBy('entryCcy')" style="color:var(--gold)"><span
                             class="th-label">Avg Entry (Corr) ↕</span>
                         <div class="resizer" onmousedown="startResizing(event, this)"></div>
                     </th>
-                    <th id="th-unrealizedPnl" onclick="sortBy('unrealizedPnl')"><span class="th-label">UPNL ↕</span>
+                    <th id="th-unrealizedPnl" class="col-unrealizedPnl" onclick="sortBy('unrealizedPnl')"><span class="th-label">UPNL ↕</span>
                         <div class="resizer" onmousedown="startResizing(event, this)"></div>
                     </th>
-                    <th id="th-funding" onclick="sortBy('funding')"><span class="th-label">Funding ↕</span>
+                    <th id="th-funding" class="col-funding" onclick="sortBy('funding')"><span class="th-label">Funding ↕</span>
                         <div class="resizer" onmousedown="startResizing(event, this)"></div>
                     </th>
-                    <th id="th-distToLiq"><span class="th-label">Dist. to Liq.</span>
+                    <th id="th-distToLiq" class="col-distToLiq"><span class="th-label">Dist. to Liq.</span>
                         <div class="resizer" onmousedown="startResizing(event, this)">
                         </div>
                     </th>
-                    <th id="th-accountValue" onclick="sortBy('accountValue')"><span class="th-label">Acct. Value
+                    <th id="th-accountValue" class="col-accountValue" onclick="sortBy('accountValue')"><span class="th-label">Acct. Value
                             ↕</span>
                         <div class="resizer" onmousedown="startResizing(event, this)"></div>
                     </th>
                 </tr>
                 <tr class="filter-row">
                     <!-- # -->
-                    <th class="filter-cell"></th>
+                    <th class="filter-cell col-num"></th>
                     <!-- Address -->
-                    <th class="filter-cell">
+                    <th class="filter-cell col-address">
                         <input type="text" id="addressFilter" placeholder="Filter address…" class="col-filter"
                             oninput="renderTable()">
                     </th>
                     <!-- Coin -->
-                    <th class="filter-cell">
+                    <th class="filter-cell col-coin">
                         <!-- searchable coin combobox -->
                         <div class="combobox col-filter" id="coinCombobox">
                             <div class="combobox-input-wrap">
@@ -229,12 +241,12 @@
                         <input type="hidden" id="sideFilter" value="">
                     </th>
                     <!-- Size -->
-                    <th class="filter-cell">
+                    <th class="filter-cell col-szi">
                         <input type="number" id="minSzi" placeholder="Min" class="col-filter" oninput="renderTable()">
                         <input type="number" id="maxSzi" placeholder="Max" class="col-filter" style="margin-top:3px" oninput="renderTable()">
                     </th>
                     <!-- Leverage -->
-                    <th class="filter-cell">
+                    <th class="filter-cell col-leverage">
                         <input type="number" id="minLev" value="" step="1" min="1" placeholder="Min x"
                             class="col-filter" oninput="renderTable()">
                         <input type="number" id="maxLev" value="" step="1" min="1" placeholder="Max x"
@@ -252,12 +264,12 @@
                         <input type="hidden" id="levTypeFilter" value="">
                     </th>
                     <!-- Value -->
-                    <th class="filter-cell">
+                    <th class="filter-cell col-positionValue">
                         <input type="number" id="minSize" value="" step="100000" min="0" placeholder="Min"
                             class="col-filter" oninput="renderTable()">
                     </th>
                     <!-- Value (CCY) -->
-                    <th class="filter-cell">
+                    <th class="filter-cell col-valueCcy">
                         <!-- Currency combobox -->
                         <div class="combobox col-filter" id="cb-currencySelect" style="width:100%">
                             <div class="combobox-input-wrap">
@@ -273,9 +285,9 @@
                         <input type="number" id="maxValueCcy" placeholder="Max" class="col-filter" style="margin-top:3px" oninput="renderTable()">
                     </th>
                     <!-- Avg Entry -->
-                    <th class="filter-cell"></th>
+                    <th class="filter-cell col-entryPx"></th>
                     <!-- Entry Corr -->
-                    <th class="filter-cell">
+                    <th class="filter-cell col-entryCcy">
                         <!-- Entry Currency combobox -->
                         <div class="combobox col-filter" id="cb-entryCurrencySelect" style="width:100%">
                             <div class="combobox-input-wrap">
@@ -291,19 +303,19 @@
                         <input type="number" id="maxEntryCcy" placeholder="Max" class="col-filter" style="margin-top:3px" oninput="renderTable()">
                     </th>
                     <!-- UPNL -->
-                    <th class="filter-cell">
+                    <th class="filter-cell col-unrealizedPnl">
                         <input type="number" id="minUpnl" placeholder="Min" class="col-filter" oninput="renderTable()">
                         <input type="number" id="maxUpnl" placeholder="Max" class="col-filter" style="margin-top:3px" oninput="renderTable()">
                     </th>
                     <!-- Funding -->
-                    <th class="filter-cell">
+                    <th class="filter-cell col-funding">
                         <input type="number" id="minFunding" value="" step="1000" min="0" placeholder="Min |$|"
                             class="col-filter" oninput="renderTable()">
                     </th>
                     <!-- Dist. to Liq. -->
-                    <th class="filter-cell"></th>
+                    <th class="filter-cell col-distToLiq"></th>
                     <!-- Acct. Value -->
-                    <th class="filter-cell">
+                    <th class="filter-cell col-accountValue">
                         <input type="number" id="minValue" value="2500000" step="500000" min="0" placeholder="Min Acct"
                             class="col-filter" oninput="renderTable()">
                     </th>
