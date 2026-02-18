@@ -34,34 +34,6 @@
     </div>
 
     <div class="controls">
-        <div class="ctrl">
-            <label>Currency</label>
-            <!-- combobox: currencySelect -->
-            <div class="combobox" id="cb-currencySelect" style="width:110px">
-                <div class="combobox-input-wrap">
-                    <input type="text" id="cb-currencySelect-search" class="combobox-input" placeholder="USD $"
-                        autocomplete="off" readonly onfocus="cbOpen('currencySelect')"
-                        onblur="cbCloseDelayed('currencySelect')">
-                    <span class="combobox-arrow">▾</span>
-                </div>
-                <div class="combobox-dropdown" id="cb-currencySelect-dropdown"></div>
-            </div>
-            <input type="hidden" id="currencySelect" value="USD">
-        </div>
-        <div class="ctrl">
-            <label>Entry Currency</label>
-            <!-- combobox: entryCurrencySelect -->
-            <div class="combobox" id="cb-entryCurrencySelect" style="width:110px">
-                <div class="combobox-input-wrap">
-                    <input type="text" id="cb-entryCurrencySelect-search" class="combobox-input" placeholder="USD $"
-                        autocomplete="off" readonly onfocus="cbOpen('entryCurrencySelect')"
-                        onblur="cbCloseDelayed('entryCurrencySelect')">
-                    <span class="combobox-arrow">▾</span>
-                </div>
-                <div class="combobox-dropdown" id="cb-entryCurrencySelect-dropdown"></div>
-            </div>
-            <input type="hidden" id="entryCurrencySelect" value="USD">
-        </div>
         <div class="filter-sep"></div>
         <div class="ctrl">
             <label>Sort PnL window</label>
@@ -203,10 +175,7 @@
                         <input type="hidden" id="sideFilter" value="">
                     </th>
                     <!-- Size -->
-                    <th class="filter-cell">
-                        <input type="number" id="minSize" value="" step="100000" min="0" placeholder="Min"
-                            class="col-filter" oninput="renderTable()">
-                    </th>
+                    <th class="filter-cell"></th>
                     <!-- Leverage -->
                     <th class="filter-cell">
                         <input type="number" id="minLev" value="" step="1" min="1" placeholder="Min x"
@@ -227,24 +196,38 @@
                     </th>
                     <!-- Value -->
                     <th class="filter-cell">
-                        <input type="number" id="minValue" value="2500000" step="500000" min="0" placeholder="Min Acct"
+                        <input type="number" id="minSize" value="" step="100000" min="0" placeholder="Min"
                             class="col-filter" oninput="renderTable()">
                     </th>
                     <!-- Value (CCY) -->
                     <th class="filter-cell">
-                        <input type="number" id="minValueCcy" value="" step="100000" min="0" placeholder="Min"
-                            class="col-filter" oninput="renderTable()">
-                        <input type="number" id="maxValueCcy" value="" step="100000" min="0" placeholder="Max"
-                            class="col-filter" style="margin-top:3px" oninput="renderTable()">
+                        <!-- Currency combobox -->
+                        <div class="combobox col-filter" id="cb-currencySelect" style="width:100%">
+                            <div class="combobox-input-wrap">
+                                <input type="text" id="cb-currencySelect-search" class="combobox-input col-filter" placeholder="USD $"
+                                    autocomplete="off" readonly onfocus="cbOpen('currencySelect')"
+                                    onblur="cbCloseDelayed('currencySelect')">
+                                <span class="combobox-arrow">▾</span>
+                            </div>
+                            <div class="combobox-dropdown" id="cb-currencySelect-dropdown"></div>
+                        </div>
+                        <input type="hidden" id="currencySelect" value="USD">
                     </th>
                     <!-- Avg Entry -->
                     <th class="filter-cell"></th>
                     <!-- Entry Corr -->
                     <th class="filter-cell">
-                        <input type="number" id="minEntryCcy" value="" step="1" min="0" placeholder="Min"
-                            class="col-filter" oninput="renderTable()">
-                        <input type="number" id="maxEntryCcy" value="" step="1" min="0" placeholder="Max"
-                            class="col-filter" style="margin-top:3px" oninput="renderTable()">
+                        <!-- Entry Currency combobox -->
+                        <div class="combobox col-filter" id="cb-entryCurrencySelect" style="width:100%">
+                            <div class="combobox-input-wrap">
+                                <input type="text" id="cb-entryCurrencySelect-search" class="combobox-input col-filter" placeholder="USD $"
+                                    autocomplete="off" readonly onfocus="cbOpen('entryCurrencySelect')"
+                                    onblur="cbCloseDelayed('entryCurrencySelect')">
+                                <span class="combobox-arrow">▾</span>
+                            </div>
+                            <div class="combobox-dropdown" id="cb-entryCurrencySelect-dropdown"></div>
+                        </div>
+                        <input type="hidden" id="entryCurrencySelect" value="USD">
                     </th>
                     <!-- UPNL -->
                     <th class="filter-cell"></th>
@@ -256,7 +239,10 @@
                     <!-- Dist. to Liq. -->
                     <th class="filter-cell"></th>
                     <!-- Acct. Value -->
-                    <th class="filter-cell"></th>
+                    <th class="filter-cell">
+                        <input type="number" id="minValue" value="2500000" step="500000" min="0" placeholder="Min Acct"
+                            class="col-filter" oninput="renderTable()">
+                    </th>
                 </tr>
             </thead>
             <tbody id="tableBody">

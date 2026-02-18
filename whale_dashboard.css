@@ -899,6 +899,7 @@ select option {
     padding: 6px 8px !important;
     border-bottom: 2px solid var(--glass-border) !important;
     vertical-align: top;
+    overflow: visible !important;
 }
 
 .col-filter {

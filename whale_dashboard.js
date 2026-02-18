@@ -80,17 +80,12 @@ function fmtCcy(value, overrideCcy = null) {
 }
 
 function getCorrelatedEntry(row) {
-    // Benchmark logic: ETH correlated to BTC, BTC correlated to ETH
-    let benchmark = 'BTC';
-    if (row.coin === 'BTC') benchmark = 'ETH';
-    else if (row.coin !== 'ETH') return row.entryPx; // No benchmark for others
+    const targetPrice = parseFloat(currentPrices['BTC'] || 0);
+    if (row.coin === 'BTC' || targetPrice <= 0) return row.entryPx;
 
-    const assetPrice = parseFloat(currentPrices[row.coin] || 0);
-    const benchPrice = parseFloat(currentPrices[benchmark] || 0);
-
-    if (assetPrice > 0 && benchPrice > 0) {
-        // Result = EntryPx * (BenchPrice / AssetPrice)
-        return row.entryPx * (benchPrice / assetPrice);
+    const coinPrice = parseFloat(currentPrices[row.coin] || 0);
+    if (coinPrice > 0) {
+        return row.entryPx * (targetPrice / coinPrice);
     }
     return row.entryPx;
 }
@@ -120,7 +115,7 @@ function onCurrencyChange() {
     const thVal = document.getElementById('th-valueCcy');
     if (thVal) thVal.textContent = `Value (${activeCurrency}) ↕`;
     const thEntry = document.getElementById('th-entryCcy');
-    if (thEntry) thEntry.textContent = `Entry Corr (USD) ↕`;
+    if (thEntry) thEntry.textContent = `Entry Corr (${activeEntryCurrency}) ↕`;
 
     renderTable();
 }
@@ -177,10 +172,6 @@ function saveSettings() {
         levTypeFilter: document.getElementById('levTypeFilter').value,
         currencySelect: document.getElementById('currencySelect').value,
         entryCurrencySelect: document.getElementById('entryCurrencySelect').value,
-        minValueCcy: document.getElementById('minValueCcy').value,
-        maxValueCcy: document.getElementById('maxValueCcy').value,
-        minEntryCcy: document.getElementById('minEntryCcy').value,
-        maxEntryCcy: document.getElementById('maxEntryCcy').value,
         addressFilter: document.getElementById('addressFilter').value,
         selectedCoins: selectedCoins,
         priceMode: priceMode,
@@ -212,10 +203,6 @@ function loadSettings() {
         if (s.currencySelect) cbSetValue('currencySelect', s.currencySelect);
         if (s.entryCurrencySelect) cbSetValue('entryCurrencySelect', s.entryCurrencySelect);
         onCurrencyChange();
-        if (s.minValueCcy) document.getElementById('minValueCcy').value = s.minValueCcy;
-        if (s.maxValueCcy) document.getElementById('maxValueCcy').value = s.maxValueCcy;
-        if (s.minEntryCcy) document.getElementById('minEntryCcy').value = s.minEntryCcy;
-        if (s.maxEntryCcy) document.getElementById('maxEntryCcy').value = s.maxEntryCcy;
         if (s.addressFilter) document.getElementById('addressFilter').value = s.addressFilter;
         if (s.selectedCoins) {
             selectedCoins = s.selectedCoins;
@@ -743,10 +730,6 @@ function renderTable() {
     const minSize = parseFloat(document.getElementById('minSize').value);
     const minFunding = parseFloat(document.getElementById('minFunding').value);
     const levTypeFilter = document.getElementById('levTypeFilter').value;
-    const minValueCcy = parseFloat(document.getElementById('minValueCcy').value);
-    const maxValueCcy = parseFloat(document.getElementById('maxValueCcy').value);
-    const minEntryCcy = parseFloat(document.getElementById('minEntryCcy').value);
-    const maxEntryCcy = parseFloat(document.getElementById('maxEntryCcy').value);
 
     saveSettings();
 
@@ -763,14 +746,6 @@ function renderTable() {
         if (!isNaN(minSize) && r.positionValue < minSize) return false;
         if (!isNaN(minFunding) && Math.abs(r.funding) < minFunding) return false;
         if (levTypeFilter && r.leverageType !== levTypeFilter) return false;
-        const ccyVal = convertToActiveCcy(r.positionValue, activeCurrency);
-        if (!isNaN(minValueCcy) && ccyVal < minValueCcy) return false;
-        if (!isNaN(maxValueCcy) && ccyVal > maxValueCcy) return false;
-
-        const entryCcyVal = getCorrelatedEntry(r);
-        if (!isNaN(minEntryCcy) && entryCcyVal < minEntryCcy) return false;
-        if (!isNaN(maxEntryCcy) && entryCcyVal > maxEntryCcy) return false;
-
         return true;
     });
 
@@ -856,7 +831,7 @@ function renderTable() {
         <td class="mono">$${fmt(r.positionValue)}</td>
         <td class="mono" style="color:var(--gold);font-weight:600">${ccyStr}</td>
         <td class="mono">${r.entryPx.toLocaleString('en-US', { maximumFractionDigits: 2 })}</td>
-        <td class="mono" style="color:var(--gold);font-weight:600">${getCorrelatedEntry(r).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+        <td class="mono" style="color:var(--gold);font-weight:600">$${getCorrelatedEntry(r).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
         <td class="mono ${pnlClass}" style="font-weight:600">${fmtUSD(r.unrealizedPnl)}</td>
         <td class="mono ${fundClass}">${fmtUSD(r.funding)}</td>
         <td>${distHtml}</td>
