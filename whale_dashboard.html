@@ -649,6 +649,20 @@
         </select>
     </div>
     <div class="ctrl">
+        <label>Entry Currency</label>
+        <select id="entryCurrencySelect" onchange="onCurrencyChange()" style="width:80px">
+            <option value="USD">USD $</option>
+            <option value="BRL">BRL R$</option>
+            <option value="EUR">EUR €</option>
+            <option value="GBP">GBP £</option>
+            <option value="JPY">JPY ¥</option>
+            <option value="ARS">ARS $</option>
+            <option value="CAD">CAD $</option>
+            <option value="AUD">AUD $</option>
+            <option value="BTC">BTC ₿</option>
+        </select>
+    </div>
+    <div class="ctrl">
         <label id="minValueCcyLabel">Min Value ($)</label>
         <input type="number" id="minValueCcy" value="" step="100000" min="0" placeholder="Any" style="width:120px"
             oninput="renderTable()">
@@ -656,6 +670,17 @@
     <div class="ctrl">
         <label id="maxValueCcyLabel">Max Value ($)</label>
         <input type="number" id="maxValueCcy" value="" step="100000" min="0" placeholder="Any" style="width:120px"
+            oninput="renderTable()">
+    </div>
+    <div class="filter-sep"></div>
+    <div class="ctrl">
+        <label id="minEntryCcyLabel">Min Entry ($)</label>
+        <input type="number" id="minEntryCcy" value="" step="100" min="0" placeholder="Any" style="width:120px"
+            oninput="renderTable()">
+    </div>
+    <div class="ctrl">
+        <label id="maxEntryCcyLabel">Max Entry ($)</label>
+        <input type="number" id="maxEntryCcy" value="" step="100" min="0" placeholder="Any" style="width:120px"
             oninput="renderTable()">
     </div>
     <div class="filter-sep"></div>
@@ -709,6 +734,7 @@
                     <th id="th-positionValue" onclick="sortBy('positionValue')">Value ↕</th>
                     <th id="th-valueCcy" onclick="sortBy('valueCcy')" style="color:var(--gold)">Value (CCY) ↕</th>
                     <th id="th-entryPx" onclick="sortBy('entryPx')">Avg Entry ↕</th>
+                    <th id="th-entryCcy" onclick="sortBy('entryCcy')" style="color:var(--gold)">Entry (CCY) ↕</th>
                     <th id="th-unrealizedPnl" onclick="sortBy('unrealizedPnl')">UPNL ↕</th>
                     <th id="th-funding" onclick="sortBy('funding')">Funding ↕</th>
                     <th>Dist. to Liq.</th>
@@ -717,7 +743,7 @@
             </thead>
             <tbody id="tableBody">
                 <tr>
-                    <td colspan="12" class="empty-cell">
+                    <td colspan="13" class="empty-cell">
                         <div class="empty-icon">🐋</div>
                         <div>Click <strong>Scan Whales</strong> to load data</div>
                     </td>
@@ -760,6 +786,7 @@
         let fxRates = { USD: 1 };   // USD-based rates, fetched once
         let fxReady = false;
         let activeCurrency = 'USD';
+        let activeEntryCurrency = 'USD';
 
         async function fetchExchangeRates() {
             try {
@@ -776,21 +803,24 @@
             }
         }
 
-        function convertToActiveCcy(usdValue) {
-            if (activeCurrency === 'BTC') {
+        function convertToActiveCcy(valUSD, overrideCcy = null) {
+            const ccy = overrideCcy || activeCurrency;
+            if (ccy === 'USD') return valUSD;
+            if (ccy === 'BTC') {
                 const btcPrice = parseFloat(currentPrices['BTC'] || 0);
-                return btcPrice > 0 ? usdValue / btcPrice : 0;
+                return btcPrice > 0 ? valUSD / btcPrice : 0;
             }
-            const rate = fxRates[activeCurrency] ?? 1;
-            return usdValue * rate;
+            const rate = fxRates[ccy] || 1;
+            return valUSD * rate;
         }
 
-        function fmtCcy(value) {
-            const meta = CURRENCY_META[activeCurrency] || CURRENCY_META.USD;
+        function fmtCcy(value, overrideCcy = null) {
+            const ccy = overrideCcy || activeCurrency;
+            const meta = CURRENCY_META[ccy] || CURRENCY_META.USD;
             const abs = Math.abs(value);
             const sign = value >= 0 ? '' : '-';
 
-            if (activeCurrency === 'BTC') {
+            if (ccy === 'BTC') {
                 return sign + meta.symbol + abs.toFixed(abs >= 1 ? 4 : 8);
             }
 
@@ -802,14 +832,26 @@
 
         function onCurrencyChange() {
             activeCurrency = document.getElementById('currencySelect').value;
-            const meta = CURRENCY_META[activeCurrency] || CURRENCY_META.USD;
-            const sym = meta.symbol;
-            // Update column header
-            const th = document.getElementById('th-valueCcy');
-            if (th) th.textContent = `Value (${activeCurrency}) ↕`;
+            activeEntryCurrency = document.getElementById('entryCurrencySelect').value;
+
+            const metaVal = CURRENCY_META[activeCurrency] || CURRENCY_META.USD;
+            const symVal = metaVal.symbol;
+
+            const metaEntry = CURRENCY_META[activeEntryCurrency] || CURRENCY_META.USD;
+            const symEntry = metaEntry.symbol;
+
+            // Update column headers
+            const thVal = document.getElementById('th-valueCcy');
+            if (thVal) thVal.textContent = `Value (${activeCurrency}) ↕`;
+            const thEntry = document.getElementById('th-entryCcy');
+            if (thEntry) thEntry.textContent = `Entry (${activeEntryCurrency}) ↕`;
+
             // Update filter labels
-            document.getElementById('minValueCcyLabel').textContent = `Min Value (${sym})`;
-            document.getElementById('maxValueCcyLabel').textContent = `Max Value (${sym})`;
+            document.getElementById('minValueCcyLabel').textContent = `Min Value (${symVal})`;
+            document.getElementById('maxValueCcyLabel').textContent = `Max Value (${symVal})`;
+            document.getElementById('minEntryCcyLabel').textContent = `Min Entry (${symEntry})`;
+            document.getElementById('maxEntryCcyLabel').textContent = `Max Entry (${symEntry})`;
+
             renderTable();
         }
         // Rate limit: 1200 weight/min, clearinghouseState = weight 2 → max 600 req/min = 10 req/s
@@ -864,8 +906,11 @@
                 minFunding: document.getElementById('minFunding').value,
                 levTypeFilter: document.getElementById('levTypeFilter').value,
                 currencySelect: document.getElementById('currencySelect').value,
+                entryCurrencySelect: document.getElementById('entryCurrencySelect').value,
                 minValueCcy: document.getElementById('minValueCcy').value,
                 maxValueCcy: document.getElementById('maxValueCcy').value,
+                minEntryCcy: document.getElementById('minEntryCcy').value,
+                maxEntryCcy: document.getElementById('maxEntryCcy').value,
                 activeWindow: activeWindow,
                 sortKey: sortKey,
                 sortDir: sortDir
@@ -888,10 +933,15 @@
                 if (s.levTypeFilter) document.getElementById('levTypeFilter').value = s.levTypeFilter;
                 if (s.currencySelect) {
                     document.getElementById('currencySelect').value = s.currencySelect;
-                    onCurrencyChange(); // update labels
                 }
+                if (s.entryCurrencySelect) {
+                    document.getElementById('entryCurrencySelect').value = s.entryCurrencySelect;
+                }
+                onCurrencyChange(); // update labels for both
                 if (s.minValueCcy) document.getElementById('minValueCcy').value = s.minValueCcy;
                 if (s.maxValueCcy) document.getElementById('maxValueCcy').value = s.maxValueCcy;
+                if (s.minEntryCcy) document.getElementById('minEntryCcy').value = s.minEntryCcy;
+                if (s.maxEntryCcy) document.getElementById('maxEntryCcy').value = s.maxEntryCcy;
                 if (s.activeWindow) {
                     activeWindow = s.activeWindow;
                     document.querySelectorAll('.tab').forEach(t => {
@@ -935,7 +985,7 @@
         async function startScan() {
             const minVal = parseFloat(document.getElementById('minValue').value) || 2500000;
             document.getElementById('scanBtn').disabled = true;
-            document.getElementById('tableBody').innerHTML = `<tr><td colspan="12" class="empty-cell"><span class="spinner"></span> Fetching leaderboard…</td></tr>`;
+            document.getElementById('tableBody').innerHTML = `<tr><td colspan="13" class="empty-cell"><span class="spinner"></span> Fetching leaderboard…</td></tr>`;
             allRows = [];
             loadedCount = 0;
 
@@ -963,7 +1013,7 @@
 
             } catch (e) {
                 console.error(e);
-                document.getElementById('tableBody').innerHTML = `<tr><td colspan="12" class="empty-cell" style="color:var(--red)">Error: ${e.message}</td></tr>`;
+                document.getElementById('tableBody').innerHTML = `<tr><td colspan="13" class="empty-cell" style="color:var(--red)">Error: ${e.message}</td></tr>`;
                 setStatus('Error', 'error');
                 document.getElementById('scanBtn').disabled = false;
             }
@@ -1179,6 +1229,8 @@
             const levTypeFilter = document.getElementById('levTypeFilter').value;
             const minValueCcy = parseFloat(document.getElementById('minValueCcy').value);
             const maxValueCcy = parseFloat(document.getElementById('maxValueCcy').value);
+            const minEntryCcy = parseFloat(document.getElementById('minEntryCcy').value);
+            const maxEntryCcy = parseFloat(document.getElementById('maxEntryCcy').value);
 
             saveSettings();
 
@@ -1190,9 +1242,14 @@
                 if (!isNaN(minSize) && r.positionValue < minSize) return false;
                 if (!isNaN(minFunding) && Math.abs(r.funding) < minFunding) return false;
                 if (levTypeFilter && r.leverageType !== levTypeFilter) return false;
-                const ccyVal = convertToActiveCcy(r.positionValue);
+                const ccyVal = convertToActiveCcy(r.positionValue, activeCurrency);
                 if (!isNaN(minValueCcy) && ccyVal < minValueCcy) return false;
                 if (!isNaN(maxValueCcy) && ccyVal > maxValueCcy) return false;
+
+                const entryCcyVal = convertToActiveCcy(r.entryPx, activeEntryCurrency);
+                if (!isNaN(minEntryCcy) && entryCcyVal < minEntryCcy) return false;
+                if (!isNaN(maxEntryCcy) && entryCcyVal > maxEntryCcy) return false;
+
                 return true;
             });
 
@@ -1206,6 +1263,9 @@
                 } else if (sortKey === 'valueCcy') {
                     va = convertToActiveCcy(a.positionValue);
                     vb = convertToActiveCcy(b.positionValue);
+                } else if (sortKey === 'entryCcy') {
+                    va = convertToActiveCcy(a.entryPx, activeEntryCurrency);
+                    vb = convertToActiveCcy(b.entryPx, activeEntryCurrency);
                 } else {
                     va = a[sortKey] ?? 0;
                     vb = b[sortKey] ?? 0;
@@ -1217,7 +1277,7 @@
             const tbody = document.getElementById('tableBody');
 
             if (rows.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="12" class="empty-cell"><div class="empty-icon">🔍</div><div>No positions match the current filters.</div></td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="13" class="empty-cell"><div class="empty-icon">🔍</div><div>No positions match the current filters.</div></td></tr>`;
                 return;
             }
 
@@ -1275,6 +1335,7 @@
                 <td class="mono">$${fmt(r.positionValue)}</td>
                 <td class="mono" style="color:var(--gold);font-weight:600">${ccyStr}</td>
                 <td class="mono">${r.entryPx.toLocaleString('en-US', { maximumFractionDigits: 2 })}</td>
+                <td class="mono" style="color:var(--gold);font-weight:600">${fmtCcy(convertToActiveCcy(r.entryPx, activeEntryCurrency), activeEntryCurrency)}</td>
                 <td class="mono ${pnlClass}" style="font-weight:600">${fmtUSD(r.unrealizedPnl)}</td>
                 <td class="mono ${fundClass}">${fmtUSD(r.funding)}</td>
                 <td>${distHtml}</td>
