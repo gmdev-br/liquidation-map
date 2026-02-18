@@ -13,6 +13,9 @@ let loadedCount = 0;
 let scanning = false;
 let isPaused = false;
 let selectedCoins = [];   // Array for multi-select
+let priceMode = 'realtime'; // 'realtime' or 'dailyclose'
+let priceTicker = null;
+let dailyCloseCache = {}; // { COIN: price }
 
 // Currency conversion
 const CURRENCY_META = {
@@ -177,6 +180,7 @@ function saveSettings() {
         maxEntryCcy: document.getElementById('maxEntryCcy').value,
         addressFilter: document.getElementById('addressFilter').value,
         selectedCoins: selectedCoins,
+        priceMode: priceMode,
         activeWindow: activeWindow,
         sortKey: sortKey,
         sortDir: sortDir
@@ -211,6 +215,11 @@ function loadSettings() {
         if (s.selectedCoins) {
             selectedCoins = s.selectedCoins;
             updateCoinSearchLabel();
+            renderQuotesPanel();
+        }
+        if (s.priceMode) {
+            priceMode = s.priceMode;
+            updatePriceModeUI();
         }
         if (s.activeWindow) {
             activeWindow = s.activeWindow;
@@ -583,7 +592,6 @@ function onCoinSearch() {
     const cb = document.getElementById('coinCombobox');
     if (cb) cb.classList.add('open');
     const query = document.getElementById('coinSearch').value;
-    if (!query) selectCoin('', '');
     renderCoinDropdown(query);
 }
 
@@ -593,14 +601,14 @@ function renderCoinDropdown(query = '') {
     const q = query.trim().toUpperCase();
     const filtered = q ? _coinOptions.filter(c => c.toUpperCase().includes(q)) : _coinOptions;
 
-    let html = `<div class="combobox-item all-item ${selectedCoins.length === 0 ? 'selected' : ''}" onmousedown="selectCoin('','')">All coins</div>`;
+    let html = `<div class="combobox-item all-item ${selectedCoins.length === 0 ? 'selected' : ''}" onmousedown="event.preventDefault(); selectCoin('','')">All coins</div>`;
     if (filtered.length === 0) {
         html += `<div class="combobox-empty">No match</div>`;
     } else {
         html += filtered.map(c => {
             const isSel = selectedCoins.includes(c);
-            return `<div class="combobox-item${isSel ? ' selected' : ''}" onmousedown="selectCoin('${c}','${c}')">` +
-                `${isSel ? '✓ ' : ''}${c}</div>`;
+            return `<div class="combobox-item${isSel ? ' selected' : ''}" onmousedown="event.preventDefault(); selectCoin('${c}','${c}')">` +
+                `<span class="item-label">${c}</span>${isSel ? '<span class="item-remove">✕</span>' : ''}</div>`;
         }).join('');
     }
     dd.innerHTML = html;
@@ -623,11 +631,7 @@ function selectCoin(value, label) {
     updateCoinSearchLabel();
     renderCoinDropdown(document.getElementById('coinSearch').value);
     renderTable();
-    // Do not close the combobox for multi-select, unless it's a reset
-    if (value === '') {
-        const cb = document.getElementById('coinCombobox');
-        if (cb) cb.classList.remove('open');
-    }
+    renderQuotesPanel();
 }
 
 function updateCoinSearchLabel() {
@@ -827,13 +831,163 @@ function renderTable() {
         <td class="mono">$${fmt(r.positionValue)}</td>
         <td class="mono" style="color:var(--gold);font-weight:600">${ccyStr}</td>
         <td class="mono">${r.entryPx.toLocaleString('en-US', { maximumFractionDigits: 2 })}</td>
-        <td class="mono" style="color:var(--gold);font-weight:600">${fmtPriceCcy(getCorrelatedEntry(r), 'USD')}</td>
+        <td class="mono" style="color:var(--gold);font-weight:600">${getCorrelatedEntry(r).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
         <td class="mono ${pnlClass}" style="font-weight:600">${fmtUSD(r.unrealizedPnl)}</td>
         <td class="mono ${fundClass}">${fmtUSD(r.funding)}</td>
         <td>${distHtml}</td>
         <td class="mono">$${fmt(r.accountValue)}</td>
     </tr>`;
     }).join('');
+}
+
+// ── Quotes Panel & Real-time Prices ──────────────────────────────────
+
+function setPriceMode(el) {
+    document.querySelectorAll('#priceModeToggle .tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    priceMode = el.dataset.mode;
+    saveSettings();
+    renderQuotesPanel();
+}
+
+function updatePriceModeUI() {
+    const tabs = document.querySelectorAll('#priceModeToggle .tab');
+    tabs.forEach(t => {
+        if (t.dataset.mode === priceMode) t.classList.add('active');
+        else t.classList.remove('active');
+    });
+}
+
+async function renderQuotesPanel() {
+    const panel = document.getElementById('quotes-panel');
+    if (selectedCoins.length === 0) {
+        panel.style.display = 'none';
+        stopPriceTicker();
+        return;
+    }
+
+    panel.style.display = 'flex';
+
+    // Initial render with current state
+    updateQuotesHTML();
+
+    // Start ticker if in realtime mode
+    if (priceMode === 'realtime') {
+        startPriceTicker();
+    } else {
+        stopPriceTicker();
+        // Fetch daily closes if missing
+        for (const coin of selectedCoins) {
+            if (dailyCloseCache[coin] === undefined) {
+                await fetchDailyClose(coin);
+                updateQuotesHTML();
+            }
+        }
+    }
+}
+
+function updateQuotesHTML() {
+    const panel = document.getElementById('quotes-panel');
+    if (selectedCoins.length === 0) return;
+
+    panel.innerHTML = selectedCoins.map(coin => {
+        const price = priceMode === 'realtime'
+            ? parseFloat(currentPrices[coin] || 0)
+            : (dailyCloseCache[coin] || 0);
+
+        const priceStr = price > 0 ? '$' + price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 6 }) : 'Loading…';
+        const label = priceMode === 'realtime' ? 'Mark Price' : 'Daily Close';
+
+        return `
+            <div class="quote-card neutral">
+                <button class="quote-remove" onclick="removeCoin('${coin}')">✕</button>
+                <div class="quote-coin">${coin}</div>
+                <div class="quote-price" id="quote-price-${coin}">${priceStr}</div>
+                <div class="quote-label">${label}</div>
+            </div>
+        `;
+    }).join('');
+}
+
+function startPriceTicker() {
+    if (priceTicker) return;
+    priceTicker = setInterval(async () => {
+        await fetchAllMids();
+        if (priceMode === 'realtime') {
+            selectedCoins.forEach(coin => {
+                const el = document.getElementById(`quote-price-${coin}`);
+                if (el) {
+                    const price = parseFloat(currentPrices[coin] || 0);
+                    const oldStr = el.innerText.replace('$', '').replace(/,/g, '');
+                    const oldPrice = parseFloat(oldStr);
+                    el.innerText = '$' + price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 6 });
+
+                    // Add flash effect
+                    if (price > oldPrice) {
+                        el.classList.add('flash-up');
+                        setTimeout(() => el.classList.remove('flash-up'), 500);
+                    } else if (price < oldPrice) {
+                        el.classList.add('flash-down');
+                        setTimeout(() => el.classList.remove('flash-down'), 500);
+                    }
+                }
+            });
+        }
+    }, 3000);
+}
+
+function stopPriceTicker() {
+    if (priceTicker) {
+        clearInterval(priceTicker);
+        priceTicker = null;
+    }
+}
+
+function removeCoin(coin) {
+    const idx = selectedCoins.indexOf(coin);
+    if (idx > -1) {
+        selectedCoins.splice(idx, 1);
+        updateCoinSearchLabel();
+        renderCoinDropdown(document.getElementById('coinSearch').value);
+        renderTable();
+        renderQuotesPanel();
+        saveSettings();
+    }
+}
+
+async function fetchDailyClose(coin) {
+    try {
+        const endTime = Date.now();
+        const startTime = endTime - 48 * 60 * 60 * 1000; // Last 48h to be safe
+        const resp = await fetch(INFO_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                type: 'candleSnapshot',
+                req: {
+                    coin: coin,
+                    interval: '1d',
+                    startTime: startTime,
+                    endTime: endTime
+                }
+            })
+        });
+        const candles = await resp.json();
+        if (candles && Array.isArray(candles) && candles.length > 0) {
+            // Hyperliquid returns [t, o, h, l, c, v] or objects depending on wrapper
+            // Standard info candleSnapshot is an array of objects: {t, T, s, i, o, c, h, l, v, n}
+            // We want the most recent "closed" candle.
+            // If length is 1, it's the current open candle.
+            // If length > 1, the one before last is definitely closed.
+            const target = candles.length > 1 ? candles[candles.length - 2] : candles[candles.length - 1];
+            if (target && target.c) {
+                dailyCloseCache[coin] = parseFloat(target.c);
+            }
+        }
+    } catch (e) {
+        console.warn(`Failed to fetch daily close for ${coin}`, e);
+        dailyCloseCache[coin] = 0;
+    }
 }
 
 // Initialize

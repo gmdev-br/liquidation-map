@@ -483,6 +483,19 @@ select option {
     color: #fff;
     border-left: 3px solid var(--accent);
     padding-left: 7px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.item-remove {
+    font-size: 10px;
+    opacity: 0.5;
+    transition: opacity 0.2s;
+}
+
+.combobox-item.selected:hover .item-remove {
+    opacity: 1;
 }
 
 .combobox-item.all-item {
@@ -513,6 +526,149 @@ select option {
 .combobox.open .combobox-dropdown {
     display: block;
     z-index: 301 !important;
+}
+
+/* ── Quotes Panel ── */
+#quotes-panel {
+    display: flex;
+    gap: 10px;
+    padding: 10px 24px;
+    overflow-x: auto;
+    background: rgba(4, 6, 15, 0.55);
+    border-bottom: 1px solid var(--glass-border);
+    position: relative;
+    z-index: 80;
+    scrollbar-width: thin;
+    scrollbar-color: var(--glass-border) transparent;
+    flex-wrap: nowrap;
+    align-items: center;
+}
+
+#quotes-panel::-webkit-scrollbar {
+    height: 4px;
+}
+
+#quotes-panel::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+#quotes-panel::-webkit-scrollbar-thumb {
+    background: var(--glass-border);
+    border-radius: 2px;
+}
+
+.quote-card {
+    flex-shrink: 0;
+    background: var(--glass-bg-strong);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--r-md);
+    padding: 8px 14px;
+    min-width: 130px;
+    backdrop-filter: var(--glass-blur-sm);
+    -webkit-backdrop-filter: var(--glass-blur-sm);
+    transition: border-color 0.2s, box-shadow 0.2s;
+    position: relative;
+    overflow: hidden;
+}
+
+.quote-card:hover {
+    border-color: var(--glass-border-hi);
+    box-shadow: var(--glass-shadow);
+}
+
+.quote-remove {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-size: 10px;
+    cursor: pointer;
+    padding: 2px 5px;
+    border-radius: 4px;
+    transition: all 0.2s;
+    z-index: 2;
+}
+
+.quote-remove:hover {
+    color: var(--text);
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.quote-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    border-radius: var(--r-md) var(--r-md) 0 0;
+}
+
+.quote-card.up::before {
+    background: var(--green);
+}
+
+.quote-card.down::before {
+    background: var(--red);
+}
+
+.quote-card.neutral::before {
+    background: var(--muted);
+}
+
+.quote-coin {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 3px;
+}
+
+.quote-price {
+    font-family: var(--mono);
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+    letter-spacing: -0.3px;
+    transition: color 0.3s;
+}
+
+.quote-price.flash-up {
+    color: var(--green);
+}
+
+.quote-price.flash-down {
+    color: var(--red);
+}
+
+.quote-change {
+    font-size: 11px;
+    font-weight: 600;
+    margin-top: 2px;
+}
+
+.quote-change.up {
+    color: #4ade80;
+}
+
+.quote-change.down {
+    color: #f87171;
+}
+
+.quote-change.neutral {
+    color: var(--muted);
+}
+
+.quote-label {
+    font-size: 9px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    margin-top: 1px;
+    opacity: 0.7;
 }
 
 

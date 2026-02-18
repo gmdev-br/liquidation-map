@@ -72,7 +72,18 @@
                 <button class="tab" data-window="day" onclick="setWindow(this)">24h</button>
             </div>
         </div>
+        <div class="filter-sep"></div>
+        <div class="ctrl">
+            <label>Price Mode</label>
+            <div class="tabs" id="priceModeToggle">
+                <button class="tab active" data-mode="realtime" onclick="setPriceMode(this)">Real-time</button>
+                <button class="tab" data-mode="dailyclose" onclick="setPriceMode(this)">Daily Close</button>
+            </div>
+        </div>
     </div>
+
+    <!-- Quotes panel: shown when coins are selected -->
+    <div id="quotes-panel" style="display:none"></div>
 
     <div class="progress-bar">
         <div class="progress-fill" id="progressFill"></div>
@@ -113,7 +124,7 @@
                     <th id="th-positionValue" onclick="sortBy('positionValue')">Value ↕</th>
                     <th id="th-valueCcy" onclick="sortBy('valueCcy')" style="color:var(--gold)">Value (CCY) ↕</th>
                     <th id="th-entryPx" onclick="sortBy('entryPx')">Avg Entry ↕</th>
-                    <th id="th-entryCcy" onclick="sortBy('entryCcy')" style="color:var(--gold)">Entry Corr (USD) ↕</th>
+                    <th id="th-entryCcy" onclick="sortBy('entryCcy')" style="color:var(--gold)">Avg Entry (Corr) ↕</th>
                     <th id="th-unrealizedPnl" onclick="sortBy('unrealizedPnl')">UPNL ↕</th>
                     <th id="th-funding" onclick="sortBy('funding')">Funding ↕</th>
                     <th>Dist. to Liq.</th>
