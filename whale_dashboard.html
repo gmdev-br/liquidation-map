@@ -97,6 +97,10 @@
             <label title="Adjust bubble size">Radius: <span id="bubbleSizeVal">1.0</span>x</label>
             <input type="range" id="bubbleSizeRange" min="0.1" max="3.0" step="0.1" value="1.0" style="width: 80px" oninput="updateBubbleSize(this.value)">
         </div>
+        <div class="ctrl" id="aggregationCtrl" style="display:none">
+            <label title="Adjust bin count for columns">Bins: <span id="aggregationVal">50</span></label>
+            <input type="range" id="aggregationRange" min="10" max="1000" step="10" value="50" style="width: 120px" oninput="updateAggregation(this.value)">
+        </div>
     </div>
 
     <!-- Quotes panel: shown when coins are selected -->

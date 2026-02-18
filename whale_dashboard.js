@@ -24,6 +24,7 @@ let colorMinLev = 1;
 let colorMaxLev = 50;
 let chartMode = 'scatter'; // 'scatter' or 'column'
 let bubbleScale = 1.0;
+let aggregationFactor = 50;
 
 // Currency conversion
 const CURRENCY_META = {
@@ -266,7 +267,8 @@ function saveSettings() {
         showSymbols: showSymbols,
         chartHeight: chartHeight,
         chartMode: chartMode,
-        bubbleScale: bubbleScale
+        bubbleScale: bubbleScale,
+        aggregationFactor: aggregationFactor
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
 }
@@ -293,11 +295,20 @@ function loadSettings() {
             if (bubbleCtrl) {
                 bubbleCtrl.style.display = (chartMode === 'scatter') ? 'block' : 'none';
             }
+            const aggCtrl = document.getElementById('aggregationCtrl');
+            if (aggCtrl) {
+                aggCtrl.style.display = (chartMode === 'column') ? 'block' : 'none';
+            }
         }
         if (s.bubbleScale) {
             bubbleScale = s.bubbleScale;
             document.getElementById('bubbleSizeVal').textContent = bubbleScale.toFixed(1);
             document.getElementById('bubbleSizeRange').value = bubbleScale;
+        }
+        if (s.aggregationFactor) {
+            aggregationFactor = s.aggregationFactor;
+            document.getElementById('aggregationVal').textContent = aggregationFactor;
+            document.getElementById('aggregationRange').value = aggregationFactor;
         }
         if (s.minValue) document.getElementById('minValue').value = s.minValue;
         if (s.coinFilter) {
@@ -857,6 +868,13 @@ function updateBubbleSize(val) {
     saveSettings();
 }
 
+function updateAggregation(val) {
+    aggregationFactor = parseInt(val, 10);
+    document.getElementById('aggregationVal').textContent = aggregationFactor;
+    renderScatterPlot();
+    saveSettings();
+}
+
 function setChartMode(el) {
     document.querySelectorAll('.tab[data-chart]').forEach(t => t.classList.remove('active'));
     el.classList.add('active');
@@ -866,6 +884,11 @@ function setChartMode(el) {
     const bubbleCtrl = document.getElementById('bubbleSizeCtrl');
     if (bubbleCtrl) {
         bubbleCtrl.style.display = (chartMode === 'scatter') ? 'block' : 'none';
+    }
+
+    const aggCtrl = document.getElementById('aggregationCtrl');
+    if (aggCtrl) {
+        aggCtrl.style.display = (chartMode === 'column') ? 'block' : 'none';
     }
 
     renderScatterPlot();
@@ -956,7 +979,7 @@ function renderScatterPlot() {
         const maxX = Math.max(...xValues, refPrice);
         
         // Smart bin count based on range distribution, but fixed 50 is usually fine
-        const numBins = 50;
+        const numBins = aggregationFactor;
         const range = maxX - minX || 1;
         const binSize = range / numBins;
         
@@ -1122,7 +1145,30 @@ function renderScatterPlot() {
 
     if (scatterChart) {
         scatterChart.data.datasets = datasets;
+        
+        // Preserve zoom state if scales exist
+        const currentX = scatterChart.scales.x;
+        const currentY = scatterChart.scales.y;
+        
+        // Check if we are in a zoomed state
+        const isZoomed = scatterChart.isZoomed || (scatterChart.isZoomedOrPanned && scatterChart.isZoomedOrPanned());
+
+        if (isZoomed && currentX && currentY) {
+            // Apply current min/max to the new scales config
+            if (scales.x) {
+                scales.x.min = currentX.min;
+                scales.x.max = currentX.max;
+            }
+            if (scales.y) {
+                scales.y.min = currentY.min;
+                scales.y.max = currentY.max;
+            }
+        }
+
+        // Now assign the scales to options
         scatterChart.options.scales = scales;
+        
+        // Re-assign plugins/annotations (moved outside the zoom check block)
         scatterChart.options.plugins.annotation.annotations = annotations;
         scatterChart.options.plugins.btcPriceLabel = { price: refPrice, text: labelText };
         scatterChart.options.plugins.tooltip.callbacks = tooltipCallback;
@@ -1131,7 +1177,7 @@ function renderScatterPlot() {
         if (!scatterChart.options.layout.padding) scatterChart.options.layout.padding = {};
         scatterChart.options.layout.padding.bottom = 40;
         
-        scatterChart.update();
+        scatterChart.update('none'); // Use 'none' mode to avoid animation and reduce flicker
     } else {
         Chart.defaults.color = '#9ca3af';
         Chart.defaults.borderColor = 'rgba(255, 255, 255, 0.1)';
@@ -1170,10 +1216,12 @@ function renderScatterPlot() {
                                 modifierKey: 'shift',
                             },
                             mode: 'xy',
+                            onZoom: function({chart}) { chart.isZoomed = true; }
                         },
                         pan: {
                             enabled: true,
                             mode: 'xy',
+                            onPan: function({chart}) { chart.isZoomed = true; }
                         }
                     },
                     btcPriceLabel: {
