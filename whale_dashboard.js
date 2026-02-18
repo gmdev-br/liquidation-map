@@ -40,6 +40,7 @@ let columnWidths = {};    // { th-id: width_px }
 let rankingLimit = 10;
 let rankingTicker = null;
 let chartHeight = 400; // default height in px
+let liqChartHeight = 400; // default height for liquidation chart
 let colorMinLev = 1;
 let colorMaxLev = 50;
 let chartMode = 'scatter'; // 'scatter' or 'column'
@@ -430,6 +431,11 @@ function loadSettings() {
             chartHeight = s.chartHeight;
             const section = document.getElementById('chart-section');
             if (section) section.style.height = chartHeight + 'px';
+        }
+        if (s.liqChartHeight) {
+            liqChartHeight = s.liqChartHeight;
+            const section = document.getElementById('liq-chart-section');
+            if (section) section.style.height = liqChartHeight + 'px';
         }
     } catch (e) { console.warn('Failed to load settings', e); }
 }
@@ -916,7 +922,7 @@ function updateColorSettings() {
     if (!isNaN(min) && !isNaN(max) && max > min) {
         colorMinLev = min;
         colorMaxLev = max;
-        renderScatterPlot();
+        renderCharts();
         saveSettings();
     }
 }
@@ -951,12 +957,18 @@ function setChartMode(el) {
         aggCtrl.style.display = (chartMode === 'column') ? 'block' : 'none';
     }
 
-    renderScatterPlot();
+    renderCharts();
     saveSettings();
 }
 
 // ── Chart Logic ──
 let scatterChart = null;
+let liqChartInstance = null;
+
+function renderCharts() {
+    renderScatterPlot();
+    renderLiqScatterPlot();
+}
 
 function renderScatterPlot() {
     const section = document.getElementById('chart-section');
@@ -1519,6 +1531,543 @@ function renderScatterPlot() {
     }
 }
 
+
+function renderLiqScatterPlot() {
+    const section = document.getElementById('liq-chart-section');
+    if (!section) return;
+
+    if (!displayedRows || displayedRows.length === 0) {
+        section.style.display = 'none';
+        return;
+    }
+
+    const btcPrice = parseFloat(currentPrices['BTC'] || 0);
+    const currencyMeta = CURRENCY_META[activeEntryCurrency || 'USD'] || CURRENCY_META.USD;
+    const sym = showSymbols ? currencyMeta.symbol : '';
+    const entryLabel = `Liquidation Price (${activeEntryCurrency || 'USD'})`;
+
+    // 1. Prepare Data
+    const data = displayedRows.map(r => {
+        let volBTC = 0;
+        if (r.coin === 'BTC') {
+            volBTC = Math.abs(r.szi);
+        } else if (btcPrice > 0) {
+            volBTC = r.positionValue / btcPrice;
+        }
+
+        const liqPrice = r.liquidationPx > 0 ? getCorrelatedPrice(r, r.liquidationPx) : 0;
+        
+        if (liqPrice <= 0) return null;
+
+        return {
+            x: liqPrice,
+            y: volBTC,
+            _raw: r
+        };
+    }).filter(d => d !== null);
+
+    if (data.length === 0) {
+        section.style.display = 'none';
+        return;
+    }
+
+    section.style.display = 'block';
+    section.style.height = liqChartHeight + 'px';
+
+    const canvas = document.getElementById('liqChart');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+
+    // 2. Prepare Reference Price
+    let refPrice = btcPrice;
+    if (activeEntryCurrency === 'BTC') {
+        refPrice = 1;
+    } else if (activeEntryCurrency && activeEntryCurrency !== 'USD') {
+        const rate = fxRates[activeEntryCurrency] || 1;
+        refPrice = btcPrice * rate;
+    }
+    
+    const priceStr = refPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const labelText = `BTC: ${sym}${priceStr}`;
+    
+    // Annotations (shared)
+    const annotations = {
+        currentPriceLine: {
+            type: 'line',
+            xMin: refPrice,
+            xMax: refPrice,
+            borderColor: 'rgba(255, 255, 255, 0.5)',
+            borderWidth: 1,
+            borderDash: [5, 5],
+            clip: false
+        }
+    };
+
+    // 3. Configure Chart based on Mode
+    let datasets = [];
+    let chartType = 'bubble';
+    let scales = {};
+    let tooltipCallback = null;
+
+    if (chartMode === 'column') {
+        // Histogram Mode
+        chartType = 'bar';
+        
+        // Create Bins
+        const xValues = data.map(d => d.x);
+        const minX = Math.min(...xValues, refPrice);
+        const maxX = Math.max(...xValues, refPrice);
+        
+        const numBins = aggregationFactor;
+        const range = maxX - minX || 1;
+        const binSize = range / numBins;
+        
+        // Initialize bins
+        const bins = [];
+        for (let i = 0; i < numBins; i++) {
+            bins.push({ 
+                x: minX + (i * binSize) + (binSize / 2),
+                xStart: minX + (i * binSize),
+                xEnd: minX + ((i + 1) * binSize),
+                long: 0, 
+                short: 0 
+            });
+        }
+
+        // Fill bins
+        data.forEach(d => {
+            const binIdx = Math.min(Math.floor((d.x - minX) / binSize), numBins - 1);
+            if (binIdx >= 0) {
+                if (d._raw.side === 'long') bins[binIdx].long += d.y;
+                else bins[binIdx].short += d.y;
+            }
+        });
+
+        datasets = [
+            {
+                label: 'Longs',
+                data: bins.map(b => ({ x: b.x, y: b.long })),
+                backgroundColor: 'rgba(34, 197, 94, 0.7)',
+                borderColor: 'rgba(34, 197, 94, 1)',
+                borderWidth: 1,
+                barPercentage: 1.0,
+                categoryPercentage: 1.0
+            },
+            {
+                label: 'Shorts',
+                data: bins.map(b => ({ x: b.x, y: b.short })),
+                backgroundColor: 'rgba(239, 68, 68, 0.7)',
+                borderColor: 'rgba(239, 68, 68, 1)',
+                borderWidth: 1,
+                barPercentage: 1.0,
+                categoryPercentage: 1.0
+            }
+        ];
+
+        scales = {
+            x: {
+                type: 'linear',
+                title: { display: true, text: entryLabel, color: '#9ca3af' },
+                grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                stacked: true,
+                offset: false,
+                ticks: {
+                    color: '#9ca3af',
+                    callback: function(value) {
+                        return value.toLocaleString(undefined, { maximumFractionDigits: 0 });
+                    }
+                }
+            },
+            y: {
+                type: 'linear',
+                title: { display: true, text: 'Volume (BTC)', color: '#9ca3af' },
+                grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                stacked: true,
+                beginAtZero: true
+            }
+        };
+
+        tooltipCallback = {
+            label: function(context) {
+                const raw = context.raw;
+                const side = context.dataset.label;
+                return `${side}: ${raw.y.toFixed(4)} ₿ @ ~${raw.x.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+            }
+        };
+
+    } else {
+        // Scatter (Bubble) Mode
+        chartType = 'bubble';
+        
+        const maxVol = Math.max(...data.map(d => d.y), 0.0001);
+        
+        const bubbleData = data.map(d => {
+            const radius = (3 + (Math.sqrt(d.y) / Math.sqrt(maxVol)) * 17) * bubbleScale;
+            return {
+                x: d.x,
+                y: d.y,
+                r: radius,
+                _raw: d._raw
+            };
+        });
+
+        const longs = bubbleData.filter(d => d._raw.side === 'long');
+        const shorts = bubbleData.filter(d => d._raw.side === 'short');
+
+        datasets = [
+            {
+                label: 'Longs',
+                data: longs,
+                backgroundColor: longs.map(d => getPointColor('long', d._raw.leverageValue)),
+                borderColor: longs.map(d => getPointColor('long', d._raw.leverageValue, true)),
+                borderWidth: 1,
+                hoverBackgroundColor: longs.map(d => getPointColor('long', d._raw.leverageValue, true)),
+                hoverBorderColor: '#fff',
+            },
+            {
+                label: 'Shorts',
+                data: shorts,
+                backgroundColor: shorts.map(d => getPointColor('short', d._raw.leverageValue)),
+                borderColor: shorts.map(d => getPointColor('short', d._raw.leverageValue, true)),
+                borderWidth: 1,
+                hoverBackgroundColor: shorts.map(d => getPointColor('short', d._raw.leverageValue, true)),
+                hoverBorderColor: '#fff',
+            }
+        ];
+
+        scales = {
+            x: {
+                type: 'linear',
+                title: { display: true, text: entryLabel, color: '#9ca3af' },
+                grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                ticks: {
+                    color: '#9ca3af',
+                    callback: function(value) {
+                        return value.toLocaleString(undefined, { maximumFractionDigits: 2 });
+                    }
+                }
+            },
+            y: {
+                type: 'logarithmic',
+                title: { display: true, text: 'Volume (BTC) [Log]', color: '#9ca3af' },
+                grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                ticks: {
+                    color: '#9ca3af',
+                    callback: function(value) {
+                        return Number(value).toLocaleString();
+                    }
+                }
+            }
+        };
+
+        tooltipCallback = {
+            label: function(context) {
+                const d = context.raw;
+                const r = d._raw;
+                const liqPrice = r.liquidationPx > 0 ? getCorrelatedPrice(r, r.liquidationPx) : 0;
+                const liqStr = liqPrice > 0 ? fmtPriceCcy(liqPrice) : 'N/A';
+                
+                return [
+                    `${r.coin} ${r.side.toUpperCase()} x${r.leverageValue}`,
+                    `Liq: ${liqStr}`,
+                    `Vol: ${d.y.toFixed(4)} ₿`,
+                    `User: ${r.user}`
+                ];
+            }
+        };
+    }
+
+    if (liqChartInstance && liqChartInstance.config.type === chartType) {
+        liqChartInstance.data.datasets = datasets;
+        
+        const currentX = liqChartInstance.scales.x;
+        const currentY = liqChartInstance.scales.y;
+        const isZoomed = liqChartInstance.isZoomed;
+
+        if (isZoomed && currentX && currentY) {
+            if (scales.x) {
+                scales.x.min = currentX.min;
+                scales.x.max = currentX.max;
+            }
+            if (scales.y) {
+                scales.y.min = currentY.min;
+                scales.y.max = currentY.max;
+            }
+        }
+
+        liqChartInstance.options.scales = scales;
+        liqChartInstance.options.plugins.annotation.annotations = annotations;
+        liqChartInstance.options.plugins.btcPriceLabel = { price: refPrice, text: labelText };
+        liqChartInstance.options.plugins.tooltip.callbacks = tooltipCallback;
+        
+        if (!liqChartInstance.options.layout) liqChartInstance.options.layout = {};
+        if (!liqChartInstance.options.layout.padding) liqChartInstance.options.layout.padding = {};
+        liqChartInstance.options.layout.padding.bottom = 40;
+        
+        liqChartInstance.update('none');
+        return;
+    }
+
+    if (liqChartInstance) {
+        liqChartInstance.destroy();
+    }
+
+    liqChartInstance = new Chart(ctx, {
+        type: chartType,
+        data: { datasets },
+        options: {
+            layout: {
+                padding: { bottom: 40 }
+            },
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: false,
+            interaction: {
+                mode: 'nearest',
+                axis: 'xy',
+                intersect: false
+            },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                    titleColor: '#fff',
+                    bodyColor: '#cbd5e1',
+                    borderColor: 'rgba(255,255,255,0.1)',
+                    borderWidth: 1,
+                    callbacks: tooltipCallback
+                },
+                annotation: {
+                    annotations: annotations
+                },
+                btcPriceLabel: {
+                    price: refPrice,
+                    text: labelText
+                },
+                zoom: {
+                    pan: {
+                        enabled: true,
+                        mode: 'xy',
+                        modifierKey: null,
+                        onPan: ({chart}) => {
+                             chart.isZoomed = true;
+                             const btn = document.getElementById('resetLiqZoomBtn');
+                             if(btn) btn.style.display = 'block';
+                        }
+                    },
+                    zoom: {
+                        wheel: { enabled: true, modifierKey: 'ctrl' },
+                        drag: { enabled: true, modifierKey: 'shift' },
+                        pinch: { enabled: true },
+                        mode: 'xy',
+                        onZoom: ({chart}) => {
+                             chart.isZoomed = true;
+                             const btn = document.getElementById('resetLiqZoomBtn');
+                             if(btn) btn.style.display = 'block';
+                        }
+                    }
+                }
+            },
+            scales: scales,
+        },
+        plugins: [
+            {
+                id: 'btcPriceLabel',
+                afterDraw: (chart) => {
+                    const opts = chart.options.plugins.btcPriceLabel;
+                    if (!opts || !opts.text) return;
+                    
+                    const { ctx, chartArea: { bottom, left, right }, scales: { x } } = chart;
+                    const xVal = x.getPixelForValue(opts.price);
+                    
+                    if (xVal < left || xVal > right) return;
+                    
+                    const text = opts.text;
+                    ctx.save();
+                    ctx.font = 'bold 11px sans-serif';
+                    const textWidth = ctx.measureText(text).width + 16;
+                    const textHeight = 22;
+                    const yPos = bottom + 25;
+                    
+                    ctx.fillStyle = 'rgba(255, 165, 0, 0.9)';
+                    ctx.beginPath();
+                    const r = 4;
+                    ctx.roundRect(xVal - textWidth / 2, yPos, textWidth, textHeight, r);
+                    ctx.fill();
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(xVal, yPos);
+                    ctx.lineTo(xVal - 5, yPos + 6);
+                    ctx.lineTo(xVal + 5, yPos + 6);
+                    ctx.fillStyle = 'rgba(255, 165, 0, 0.9)';
+                    ctx.fill();
+                    
+                    ctx.fillStyle = '#000';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(text, xVal, yPos + textHeight / 2);
+                    
+                    ctx.restore();
+                }
+            },
+            {
+                id: 'crosshair',
+                afterInit: (chart) => {
+                    chart.crosshair = { x: 0, y: 0, visible: false };
+                    const canvas = chart.canvas;
+                    canvas.addEventListener('mousemove', (e) => {
+                        const rect = canvas.getBoundingClientRect();
+                        chart.crosshair.x = e.clientX - rect.left;
+                        chart.crosshair.y = e.clientY - rect.top;
+                        chart.crosshair.visible = true;
+                        chart.draw();
+                    });
+                    canvas.addEventListener('mouseout', () => {
+                        chart.crosshair.visible = false;
+                        chart.draw();
+                    });
+                },
+                beforeDatasetsDraw: (chart, args, options) => {
+                    args.changed = true;
+                },
+                afterDraw: (chart, args, options) => {
+                    if (chart.crosshair && chart.crosshair.visible) {
+                        const { ctx, chartArea: { top, bottom, left, right }, scales: { x: xScale, y: yScale } } = chart;
+                        const { x, y } = chart.crosshair;
+
+                        ctx.save();
+                        ctx.beginPath();
+                        ctx.lineWidth = 1;
+                        ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+                        ctx.setLineDash([3, 3]);
+                        ctx.moveTo(x, top);
+                        ctx.lineTo(x, bottom);
+                        ctx.moveTo(left, y);
+                        ctx.lineTo(right, y);
+                        ctx.stroke();
+
+                        ctx.font = '11px sans-serif';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        
+                        const xValue = xScale.getValueForPixel(x);
+                        const xLabel = xValue.toLocaleString(undefined, { maximumFractionDigits: 2 });
+                        const xLabelWidth = ctx.measureText(xLabel).width + 12;
+                        const xLabelHeight = 20;
+                        
+                        ctx.fillStyle = 'rgba(7, 12, 26, 0.9)';
+                        ctx.fillRect(x - xLabelWidth / 2, bottom, xLabelWidth, xLabelHeight);
+                        ctx.fillStyle = '#e2e8f4';
+                        ctx.fillText(xLabel, x, bottom + 10);
+
+                        const yValue = yScale.getValueForPixel(y);
+                        const yLabel = yValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 });
+                        const yLabelWidth = ctx.measureText(yLabel).width + 12;
+                        const yLabelHeight = 20;
+                        
+                        ctx.fillStyle = 'rgba(7, 12, 26, 0.9)';
+                        ctx.fillRect(left - yLabelWidth, y - yLabelHeight / 2, yLabelWidth, yLabelHeight);
+                        ctx.textAlign = 'right';
+                        ctx.fillStyle = '#e2e8f4';
+                        ctx.fillText(yLabel, left - 6, y);
+
+                        ctx.restore();
+                    }
+                }
+            }, {
+                id: 'dragScales',
+                beforeEvent: (chart, args) => {
+                    const { event } = args;
+                    const { x, y, type } = event;
+                    const scales = chart.scales;
+                    
+                    if (!chart.dragScaleState) {
+                        chart.dragScaleState = {
+                            dragging: false,
+                            axis: null,
+                            startPos: 0,
+                            initialMin: 0,
+                            initialMax: 0
+                        };
+                    }
+                    const state = chart.dragScaleState;
+                    const inX = x >= scales.x.left && x <= scales.x.right && y >= scales.x.top && y <= scales.x.bottom;
+                    const inY = x >= scales.y.left && x <= scales.y.right && y >= scales.y.top && y <= scales.y.bottom;
+
+                    if (chart.options.plugins.zoom && chart.options.plugins.zoom.pan) {
+                        if (state.dragging || inX || inY) {
+                            if (chart.options.plugins.zoom.pan.enabled !== false) {
+                                chart.options.plugins.zoom.pan.enabled = false;
+                            }
+                        } else {
+                            if (chart.options.plugins.zoom.pan.enabled !== true) {
+                                chart.options.plugins.zoom.pan.enabled = true;
+                            }
+                        }
+                    }
+
+                    if (type === 'mousemove' && !state.dragging) {
+                        if (inX) {
+                            event.native.target.style.cursor = 'col-resize';
+                        } else if (inY) {
+                            event.native.target.style.cursor = 'row-resize';
+                        } else {
+                            event.native.target.style.cursor = 'default';
+                        }
+                    }
+
+                    if (type === 'mousedown') {
+                        if (inX) {
+                            state.dragging = true;
+                            state.axis = 'x';
+                            state.startPos = x;
+                            state.initialMin = scales.x.min;
+                            state.initialMax = scales.x.max;
+                            return false;
+                        } else if (inY) {
+                            state.dragging = true;
+                            state.axis = 'y';
+                            state.startPos = y;
+                            state.initialMin = scales.y.min;
+                            state.initialMax = scales.y.max;
+                            return false;
+                        }
+                    }
+
+                    if (type === 'mousemove' && state.dragging) {
+                        const axis = state.axis;
+                        const currentPos = axis === 'x' ? x : y;
+                        const delta = state.startPos - currentPos;
+                        const range = state.initialMax - state.initialMin;
+                        const center = (state.initialMin + state.initialMax) / 2;
+                        const sensitivity = 0.002;
+                        let scaleFactor = 1;
+                        if (axis === 'y') scaleFactor = Math.exp(-delta * sensitivity);
+                        else scaleFactor = Math.exp(delta * sensitivity);
+                        const newRange = range * scaleFactor;
+                        const newMin = center - newRange / 2;
+                        const newMax = center + newRange / 2;
+                        chart.options.scales[axis].min = newMin;
+                        chart.options.scales[axis].max = newMax;
+                        chart.update('none');
+                        const btn = document.getElementById('resetLiqZoomBtn');
+                        if(btn) btn.style.display = 'block';
+                        return false;
+                    }
+
+                    if (type === 'mouseup' || type === 'mouseout') {
+                        if (state.dragging) {
+                            state.dragging = false;
+                            event.native.target.style.cursor = 'default';
+                            return false;
+                        }
+                    }
+                }
+            }
+        ]
+    });
+}
+
 async function init() {
     setStatus('Initializing...', 'scanning');
 
@@ -1761,7 +2310,7 @@ function renderTable() {
     });
 
     displayedRows = rows;
-    renderScatterPlot(); // Update chart with filtered rows
+    renderCharts(); // Update chart with filtered rows
     const tbody = document.getElementById('tableBody');
 
     if (rows.length === 0) {
@@ -2055,6 +2604,53 @@ function stopChartResize() {
     saveSettings(); // Save new height
 }
 
+// ── Liquidation Chart Resizing ──
+
+let isLiqChartResizing = false;
+let startLiqChartY = 0;
+let startLiqChartH = 0;
+
+function startLiqChartResize(e) {
+    isLiqChartResizing = true;
+    startLiqChartY = e.clientY;
+    const section = document.getElementById('liq-chart-section');
+    startLiqChartH = section.offsetHeight;
+    
+    document.addEventListener('mousemove', liqChartResize);
+    document.addEventListener('mouseup', stopLiqChartResize);
+    
+    // Add active class for visual feedback
+    const resizer = document.querySelector('#liq-chart-section .chart-resizer');
+    if (resizer) resizer.classList.add('active');
+    
+    document.body.style.cursor = 'ns-resize';
+    e.preventDefault(); // prevent text selection
+}
+
+function liqChartResize(e) {
+    if (!isLiqChartResizing) return;
+    const dy = e.clientY - startLiqChartY;
+    const newH = Math.max(200, startLiqChartH + dy); // min 200px
+    const section = document.getElementById('liq-chart-section');
+    section.style.height = newH + 'px';
+    liqChartHeight = newH; // Update global state
+    
+    // Resize chart instance if needed
+    if (liqChartInstance) liqChartInstance.resize();
+}
+
+function stopLiqChartResize() {
+    isLiqChartResizing = false;
+    document.removeEventListener('mousemove', liqChartResize);
+    document.removeEventListener('mouseup', stopLiqChartResize);
+    
+    const resizer = document.querySelector('#liq-chart-section .chart-resizer');
+    if (resizer) resizer.classList.remove('active');
+    
+    document.body.style.cursor = '';
+    saveSettings(); // Save new height
+}
+
 // ── Column Resizing ──────────────────────────────────────────────────
 
 function startResizing(e, resizer) {
@@ -2253,5 +2849,14 @@ init();
 function resetChartZoom() {
     if (scatterChart) {
         scatterChart.resetZoom();
+    }
+}
+
+function resetLiqChartZoom() {
+    if (liqChartInstance) {
+        liqChartInstance.resetZoom();
+        liqChartInstance.isZoomed = false;
+        const btn = document.getElementById('resetLiqZoomBtn');
+        if (btn) btn.style.display = 'none';
     }
 }
