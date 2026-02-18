@@ -931,6 +931,17 @@ function renderScatterPlot() {
                     intersect: true
                 },
                 plugins: {
+                    zoom: {
+                        zoom: {
+                            wheel: { enabled: true },
+                            pinch: { enabled: true },
+                            mode: 'xy',
+                        },
+                        pan: {
+                            enabled: true,
+                            mode: 'xy',
+                        }
+                    },
                     btcPriceLabel: {
                         price: refPrice,
                         text: labelText
@@ -1606,3 +1617,9 @@ async function fetchMarketCapRanking(force = false) {
 
 // Initialize
 init();
+
+function resetChartZoom() {
+    if (scatterChart) {
+        scatterChart.resetZoom();
+    }
+}
