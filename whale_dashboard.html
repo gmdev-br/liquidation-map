@@ -657,7 +657,11 @@
         let sortDir = -1;
         let activeWindow = 'allTime';
         let loadedCount = 0;
-        const BATCH = 20;         // whales to load at a time
+        let scanning = false;
+        // Rate limit: 1200 weight/min, clearinghouseState = weight 2 → max 600 req/min = 10 req/s
+        // We use 8 concurrent requests to stay safely under the limit.
+        const MAX_CONCURRENCY = 8;
+        const RETRY_DELAY_MS = 2000;  // wait 2s on 429 before retry
         let currentPrices = {};   // coin -> mark price
 
         // Formatting
@@ -749,8 +753,9 @@
                 setProgress(15);
                 setStatus(`Found ${whaleList.length} whales. Loading positions…`, 'scanning');
 
-                // Load first batch
-                await loadBatch(0, BATCH, minVal);
+                // Start the concurrency-limited streaming loader
+                scanning = true;
+                streamPositions(minVal);
 
             } catch (e) {
                 console.error(e);
@@ -761,84 +766,122 @@
         }
 
 
+        // ── Concurrency-limited streaming loader ──────────────────────────────
+        // Fires MAX_CONCURRENCY requests at a time. As each resolves, the next
+        // whale is immediately dispatched — keeping the pipeline full without
+        // ever exceeding the rate limit. Retries on 429 with exponential backoff.
 
-        async function loadBatch(from, to, minVal) {
-            const batch = whaleList.slice(from, to);
-            if (batch.length === 0) {
-                finishScan();
-                return;
-            }
-            document.getElementById('autoLoading').style.display = batch.length === BATCH ? 'block' : 'none';
-
-            // Fetch clearinghouse states in parallel (10 at a time is fine)
-            const results = await Promise.allSettled(
-                batch.map(whale =>
-                    fetch(INFO_URL, {
+        async function fetchWithRetry(whale, retries = 3) {
+            for (let attempt = 0; attempt < retries; attempt++) {
+                try {
+                    const resp = await fetch(INFO_URL, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ type: 'clearinghouseState', user: whale.ethAddress })
-                    }).then(r => r.json()).then(state => ({ whale, state }))
-                )
-            );
-
-            results.forEach(result => {
-                if (result.status !== 'fulfilled') return;
-                const { whale, state } = result.value;
-                const positions = (state.assetPositions || []).filter(p => parseFloat(p.position.szi) !== 0);
-
-                positions.forEach(p => {
-                    const pos = p.position;
-                    const size = parseFloat(pos.szi);
-                    const markPrice = parseFloat(currentPrices[pos.coin] || pos.entryPx);
-                    const liqPx = parseFloat(pos.liquidationPx);
-                    const entryPx = parseFloat(pos.entryPx);
-
-                    // Distance to liquidation as % from current price
-                    let distPct = null;
-                    if (liqPx > 0 && markPrice > 0) {
-                        distPct = Math.abs((markPrice - liqPx) / markPrice) * 100;
-                    }
-
-                    allRows.push({
-                        // Whale info
-                        address: whale.ethAddress,
-                        displayName: whale.displayName,
-                        accountValue: parseFloat(whale.accountValue),
-                        leaderRow: whale,
-                        // Position info
-                        coin: pos.coin,
-                        szi: size,
-                        side: size > 0 ? 'long' : 'short',
-                        leverageType: pos.leverage?.type || 'cross',
-                        leverageValue: pos.leverage?.value || 1,
-                        positionValue: parseFloat(pos.positionValue),
-                        entryPx: entryPx,
-                        markPrice: markPrice,
-                        unrealizedPnl: parseFloat(pos.unrealizedPnl),
-                        funding: parseFloat(pos.cumFunding?.sinceOpen || 0),
-                        liquidationPx: liqPx,
-                        distPct: distPct,
-                        marginUsed: parseFloat(pos.marginUsed),
                     });
+                    if (resp.status === 429) {
+                        const wait = RETRY_DELAY_MS * Math.pow(2, attempt);
+                        console.warn(`Rate limited, retrying in ${wait}ms…`);
+                        await new Promise(r => setTimeout(r, wait));
+                        continue;
+                    }
+                    if (!resp.ok) return null;
+                    return await resp.json();
+                } catch (e) {
+                    if (attempt === retries - 1) return null;
+                    await new Promise(r => setTimeout(r, 500));
+                }
+            }
+            return null;
+        }
+
+        function processState(whale, state) {
+            if (!state) return;
+            const positions = (state.assetPositions || []).filter(p => parseFloat(p.position.szi) !== 0);
+            positions.forEach(p => {
+                const pos = p.position;
+                const size = parseFloat(pos.szi);
+                const markPrice = parseFloat(currentPrices[pos.coin] || pos.entryPx);
+                const liqPx = parseFloat(pos.liquidationPx);
+                const entryPx = parseFloat(pos.entryPx);
+                let distPct = null;
+                if (liqPx > 0 && markPrice > 0) {
+                    distPct = Math.abs((markPrice - liqPx) / markPrice) * 100;
+                }
+                allRows.push({
+                    address: whale.ethAddress,
+                    displayName: whale.displayName,
+                    accountValue: parseFloat(whale.accountValue),
+                    leaderRow: whale,
+                    coin: pos.coin,
+                    szi: size,
+                    side: size > 0 ? 'long' : 'short',
+                    leverageType: pos.leverage?.type || 'cross',
+                    leverageValue: pos.leverage?.value || 1,
+                    positionValue: parseFloat(pos.positionValue),
+                    entryPx: entryPx,
+                    markPrice: markPrice,
+                    unrealizedPnl: parseFloat(pos.unrealizedPnl),
+                    funding: parseFloat(pos.cumFunding?.sinceOpen || 0),
+                    liquidationPx: liqPx,
+                    distPct: distPct,
+                    marginUsed: parseFloat(pos.marginUsed),
                 });
             });
+        }
 
-            loadedCount = to;
-            const progress = 15 + (loadedCount / whaleList.length) * 80;
-            setProgress(Math.min(progress, 95));
-            setStatus(`Loaded ${loadedCount}/${whaleList.length} whales…`, 'scanning');
+        // Throttled UI refresh — at most once every 400ms to avoid reflow spam
+        let renderPending = false;
+        function scheduleRender() {
+            if (renderPending) return;
+            renderPending = true;
+            setTimeout(() => {
+                renderPending = false;
+                updateStats();
+                updateCoinFilter();
+                renderTable();
+            }, 400);
+        }
 
+        async function streamPositions(minVal) {
+            document.getElementById('autoLoading').style.display = 'block';
+            const queue = [...whaleList];
+            let active = 0;
+            let done = 0;
+            const total = queue.length;
+
+            await new Promise(resolve => {
+                function dispatch() {
+                    // Fill up to MAX_CONCURRENCY slots
+                    while (active < MAX_CONCURRENCY && queue.length > 0) {
+                        const whale = queue.shift();
+                        active++;
+                        fetchWithRetry(whale).then(state => {
+                            processState(whale, state);
+                            active--;
+                            done++;
+                            loadedCount = done;
+                            const pct = 15 + (done / total) * 80;
+                            setProgress(Math.min(pct, 95));
+                            setStatus(`Loading ${done}/${total} whales…`, 'scanning');
+                            scheduleRender();
+                            if (queue.length > 0) {
+                                dispatch(); // refill the slot immediately
+                            } else if (active === 0) {
+                                resolve(); // all done
+                            }
+                        });
+                    }
+                }
+                dispatch();
+            });
+
+            document.getElementById('autoLoading').style.display = 'none';
+            // Final render to make sure everything is shown
             updateStats();
             updateCoinFilter();
             renderTable();
-
-            if (loadedCount < whaleList.length) {
-                // Auto-continue: yield to browser for a frame, then load next batch
-                setTimeout(() => loadBatch(loadedCount, loadedCount + BATCH, minVal), 200);
-            } else {
-                document.getElementById('autoLoading').style.display = 'none';
-                finishScan();
-            }
+            finishScan();
         }
 
         function finishScan() {
