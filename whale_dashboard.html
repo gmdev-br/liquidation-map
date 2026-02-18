@@ -583,92 +583,91 @@
         </div>
     </div>
 
-    <div class="controls">
-        <div class="ctrl">
-            <label>Min Account ($)</label>
-            <input type="number" id="minValue" value="2500000" step="500000" min="0">
+    <div class="ctrl">
+        <label>Min Account ($)</label>
+        <input type="number" id="minValue" value="2500000" step="500000" min="0" oninput="renderTable()">
+    </div>
+    <div class="filter-sep"></div>
+    <div class="ctrl">
+        <label>Coin Filter</label>
+        <select id="coinFilter" onchange="renderTable()">
+            <option value="">All Coins</option>
+        </select>
+    </div>
+    <div class="ctrl">
+        <label>Side</label>
+        <select id="sideFilter" onchange="renderTable()">
+            <option value="">All</option>
+            <option value="long">Long Only</option>
+            <option value="short">Short Only</option>
+        </select>
+    </div>
+    <div class="filter-sep"></div>
+    <div class="ctrl">
+        <label>Min Leverage (x)</label>
+        <input type="number" id="minLev" value="" step="1" min="1" placeholder="Any" style="width:90px"
+            oninput="renderTable()">
+    </div>
+    <div class="ctrl">
+        <label>Max Leverage (x)</label>
+        <input type="number" id="maxLev" value="" step="1" min="1" placeholder="Any" style="width:90px"
+            oninput="renderTable()">
+    </div>
+    <div class="filter-sep"></div>
+    <div class="ctrl">
+        <label>Min Size ($)</label>
+        <input type="number" id="minSize" value="" step="100000" min="0" placeholder="Any" style="width:110px"
+            oninput="renderTable()">
+    </div>
+    <div class="ctrl">
+        <label>Min |Funding| ($)</label>
+        <input type="number" id="minFunding" value="" step="1000" min="0" placeholder="Any" style="width:110px"
+            oninput="renderTable()">
+    </div>
+    <div class="filter-sep"></div>
+    <div class="ctrl">
+        <label>Lev. Type</label>
+        <select id="levTypeFilter" onchange="renderTable()">
+            <option value="">All</option>
+            <option value="isolated">Isolated</option>
+            <option value="cross">Cross</option>
+        </select>
+    </div>
+    <div class="filter-sep"></div>
+    <div class="ctrl">
+        <label>Currency</label>
+        <select id="currencySelect" onchange="onCurrencyChange()" style="width:80px">
+            <option value="USD">USD $</option>
+            <option value="BRL">BRL R$</option>
+            <option value="EUR">EUR €</option>
+            <option value="GBP">GBP £</option>
+            <option value="JPY">JPY ¥</option>
+            <option value="ARS">ARS $</option>
+            <option value="CAD">CAD $</option>
+            <option value="AUD">AUD $</option>
+            <option value="BTC">BTC ₿</option>
+        </select>
+    </div>
+    <div class="ctrl">
+        <label id="minValueCcyLabel">Min Value ($)</label>
+        <input type="number" id="minValueCcy" value="" step="100000" min="0" placeholder="Any" style="width:120px"
+            oninput="renderTable()">
+    </div>
+    <div class="ctrl">
+        <label id="maxValueCcyLabel">Max Value ($)</label>
+        <input type="number" id="maxValueCcy" value="" step="100000" min="0" placeholder="Any" style="width:120px"
+            oninput="renderTable()">
+    </div>
+    <div class="filter-sep"></div>
+    <div class="ctrl">
+        <label>Sort PnL window</label>
+        <div class="tabs">
+            <button class="tab active" data-window="allTime" onclick="setWindow(this)">All Time</button>
+            <button class="tab" data-window="month" onclick="setWindow(this)">30d</button>
+            <button class="tab" data-window="week" onclick="setWindow(this)">7d</button>
+            <button class="tab" data-window="day" onclick="setWindow(this)">24h</button>
         </div>
-        <div class="filter-sep"></div>
-        <div class="ctrl">
-            <label>Coin Filter</label>
-            <select id="coinFilter" onchange="renderTable()">
-                <option value="">All Coins</option>
-            </select>
-        </div>
-        <div class="ctrl">
-            <label>Side</label>
-            <select id="sideFilter" onchange="renderTable()">
-                <option value="">All</option>
-                <option value="long">Long Only</option>
-                <option value="short">Short Only</option>
-            </select>
-        </div>
-        <div class="filter-sep"></div>
-        <div class="ctrl">
-            <label>Min Leverage (x)</label>
-            <input type="number" id="minLev" value="" step="1" min="1" placeholder="Any" style="width:90px"
-                oninput="renderTable()">
-        </div>
-        <div class="ctrl">
-            <label>Max Leverage (x)</label>
-            <input type="number" id="maxLev" value="" step="1" min="1" placeholder="Any" style="width:90px"
-                oninput="renderTable()">
-        </div>
-        <div class="filter-sep"></div>
-        <div class="ctrl">
-            <label>Min Size ($)</label>
-            <input type="number" id="minSize" value="" step="100000" min="0" placeholder="Any" style="width:110px"
-                oninput="renderTable()">
-        </div>
-        <div class="ctrl">
-            <label>Min |Funding| ($)</label>
-            <input type="number" id="minFunding" value="" step="1000" min="0" placeholder="Any" style="width:110px"
-                oninput="renderTable()">
-        </div>
-        <div class="filter-sep"></div>
-        <div class="ctrl">
-            <label>Lev. Type</label>
-            <select id="levTypeFilter" onchange="renderTable()">
-                <option value="">All</option>
-                <option value="isolated">Isolated</option>
-                <option value="cross">Cross</option>
-            </select>
-        </div>
-        <div class="filter-sep"></div>
-        <div class="ctrl">
-            <label>Currency</label>
-            <select id="currencySelect" onchange="onCurrencyChange()" style="width:80px">
-                <option value="USD">USD $</option>
-                <option value="BRL">BRL R$</option>
-                <option value="EUR">EUR €</option>
-                <option value="GBP">GBP £</option>
-                <option value="JPY">JPY ¥</option>
-                <option value="ARS">ARS $</option>
-                <option value="CAD">CAD $</option>
-                <option value="AUD">AUD $</option>
-                <option value="BTC">BTC ₿</option>
-            </select>
-        </div>
-        <div class="ctrl">
-            <label id="minValueCcyLabel">Min Value ($)</label>
-            <input type="number" id="minValueCcy" value="" step="100000" min="0" placeholder="Any" style="width:120px"
-                oninput="renderTable()">
-        </div>
-        <div class="ctrl">
-            <label id="maxValueCcyLabel">Max Value ($)</label>
-            <input type="number" id="maxValueCcy" value="" step="100000" min="0" placeholder="Any" style="width:120px"
-                oninput="renderTable()">
-        </div>
-        <div class="filter-sep"></div>
-        <div class="ctrl">
-            <label>Sort PnL window</label>
-            <div class="tabs">
-                <button class="tab active" data-window="allTime" onclick="setWindow(this)">All Time</button>
-                <button class="tab" data-window="month" onclick="setWindow(this)">30d</button>
-                <button class="tab" data-window="week" onclick="setWindow(this)">7d</button>
-                <button class="tab" data-window="day" onclick="setWindow(this)">24h</button>
-            </div>
-        </div>
+    </div>
     </div>
 
     <div class="progress-bar">
@@ -848,7 +847,60 @@
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
             el.classList.add('active');
             activeWindow = el.dataset.window;
+            saveSettings();
             renderTable();
+        }
+
+        // Persistence
+        const STORAGE_KEY = 'whaleWatcherSettings';
+        function saveSettings() {
+            const settings = {
+                minValue: document.getElementById('minValue').value,
+                coinFilter: document.getElementById('coinFilter').value,
+                sideFilter: document.getElementById('sideFilter').value,
+                minLev: document.getElementById('minLev').value,
+                maxLev: document.getElementById('maxLev').value,
+                minSize: document.getElementById('minSize').value,
+                minFunding: document.getElementById('minFunding').value,
+                levTypeFilter: document.getElementById('levTypeFilter').value,
+                currencySelect: document.getElementById('currencySelect').value,
+                minValueCcy: document.getElementById('minValueCcy').value,
+                maxValueCcy: document.getElementById('maxValueCcy').value,
+                activeWindow: activeWindow,
+                sortKey: sortKey,
+                sortDir: sortDir
+            };
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+        }
+
+        function loadSettings() {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if (!saved) return;
+            try {
+                const s = JSON.parse(saved);
+                if (s.minValue) document.getElementById('minValue').value = s.minValue;
+                if (s.coinFilter) document.getElementById('coinFilter').value = s.coinFilter;
+                if (s.sideFilter) document.getElementById('sideFilter').value = s.sideFilter;
+                if (s.minLev) document.getElementById('minLev').value = s.minLev;
+                if (s.maxLev) document.getElementById('maxLev').value = s.maxLev;
+                if (s.minSize) document.getElementById('minSize').value = s.minSize;
+                if (s.minFunding) document.getElementById('minFunding').value = s.minFunding;
+                if (s.levTypeFilter) document.getElementById('levTypeFilter').value = s.levTypeFilter;
+                if (s.currencySelect) {
+                    document.getElementById('currencySelect').value = s.currencySelect;
+                    onCurrencyChange(); // update labels
+                }
+                if (s.minValueCcy) document.getElementById('minValueCcy').value = s.minValueCcy;
+                if (s.maxValueCcy) document.getElementById('maxValueCcy').value = s.maxValueCcy;
+                if (s.activeWindow) {
+                    activeWindow = s.activeWindow;
+                    document.querySelectorAll('.tab').forEach(t => {
+                        t.classList.toggle('active', t.dataset.window === activeWindow);
+                    });
+                }
+                if (s.sortKey) sortKey = s.sortKey;
+                if (s.sortDir) sortDir = s.sortDir;
+            } catch (e) { console.warn('Failed to load settings', e); }
         }
 
         function sortBy(key) {
@@ -891,12 +943,7 @@
             setProgress(5);
 
             try {
-                // Fetch leaderboard + prices + FX rates in parallel
-                const [lbResp] = await Promise.all([
-                    fetch(LEADERBOARD_URL),
-                    fetchAllMids(),
-                    fetchExchangeRates()
-                ]);
+                const lbResp = await fetch(LEADERBOARD_URL);
                 if (!lbResp.ok) throw new Error(`Leaderboard HTTP ${lbResp.status}`);
                 const lbData = await lbResp.json();
                 const rows = lbData.leaderboardRows || [];
@@ -1084,10 +1131,18 @@
             document.getElementById('sLargest').textContent = '$' + fmt(largest);
         }
 
-        function updateCoinFilter() {
-            const coins = [...new Set(allRows.map(r => r.coin))].sort();
+        function updateCoinFilter(initialCoins = null) {
+            let coins = initialCoins || [...new Set(allRows.map(r => r.coin))].sort();
             const sel = document.getElementById('coinFilter');
+            if (!sel) return;
             const current = sel.value;
+
+            // Preserve current selection if it's not in the new list (to avoid resetting persistent filters)
+            if (!initialCoins && current && !coins.includes(current)) {
+                coins.push(current);
+                coins.sort();
+            }
+
             sel.innerHTML = '<option value="">All Coins</option>';
             coins.forEach(c => {
                 const opt = document.createElement('option');
@@ -1095,6 +1150,23 @@
                 if (c === current) opt.selected = true;
                 sel.appendChild(opt);
             });
+        }
+
+        async function init() {
+            setStatus('Initializing...', 'scanning');
+            try {
+                await Promise.all([fetchExchangeRates(), fetchAllMids()]);
+                const allCoins = Object.keys(currentPrices).sort();
+                if (allCoins.length > 0) {
+                    updateCoinFilter(allCoins);
+                }
+                loadSettings();
+                setStatus('Ready', 'idle');
+            } catch (e) {
+                console.warn('Init failed', e);
+                setStatus('Init error', 'error');
+                loadSettings();
+            }
         }
 
         function renderTable() {
@@ -1107,6 +1179,8 @@
             const levTypeFilter = document.getElementById('levTypeFilter').value;
             const minValueCcy = parseFloat(document.getElementById('minValueCcy').value);
             const maxValueCcy = parseFloat(document.getElementById('maxValueCcy').value);
+
+            saveSettings();
 
             let rows = allRows.filter(r => {
                 if (coinFilter && r.coin !== coinFilter) return false;
@@ -1208,8 +1282,11 @@
             </tr>`;
             }).join('');
         }
+
+        // Initialize
+        init();
     </script>
 
 </body>
 
-</html>
+</html>```
