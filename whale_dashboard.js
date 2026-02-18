@@ -19,6 +19,7 @@ let dailyCloseCache = {}; // { COIN: price }
 let columnWidths = {};    // { th-id: width_px }
 let rankingLimit = 10;
 let rankingTicker = null;
+let chartHeight = 400; // default height in px
 
 // Currency conversion
 const CURRENCY_META = {
@@ -159,9 +160,17 @@ function onCurrencyChange() {
 }
 // Rate limit: 1200 weight/min, clearinghouseState = weight 2 → max 600 req/min = 10 req/s
 // We use 8 concurrent requests to stay safely under the limit.
-const MAX_CONCURRENCY = 8;
+let maxConcurrency = 8;
 const RETRY_DELAY_MS = 2000;  // wait 2s on 429 before retry
 let currentPrices = {};   // coin -> mark price
+
+function updateSpeed(val) {
+    const v = parseInt(val, 10);
+    if (v >= 1 && v <= 20) {
+        maxConcurrency = v;
+        document.getElementById('speedVal').textContent = v;
+    }
+}
 
 // Formatting
 const fmt = (n, dec = 0) => {
@@ -227,7 +236,8 @@ function saveSettings() {
         rankingLimit: rankingLimit,
         sortKey: sortKey,
         sortDir: sortDir,
-        showSymbols: showSymbols
+        showSymbols: showSymbols,
+        chartHeight: chartHeight
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
 }
@@ -293,6 +303,11 @@ function loadSettings() {
         }
         if (s.sortKey) sortKey = s.sortKey;
         if (s.sortDir) sortDir = s.sortDir;
+        if (s.chartHeight) {
+            chartHeight = s.chartHeight;
+            const section = document.getElementById('chart-section');
+            if (section) section.style.height = chartHeight + 'px';
+        }
     } catch (e) { console.warn('Failed to load settings', e); }
 }
 
@@ -348,6 +363,9 @@ async function startScan() {
     setProgress(5);
 
     try {
+        // Refresh prices before scanning to ensure accuracy
+        await fetchAllMids();
+
         const lbResp = await fetch(LEADERBOARD_URL);
         if (!lbResp.ok) throw new Error(`Leaderboard HTTP ${lbResp.status}`);
         const lbData = await lbResp.json();
@@ -467,8 +485,8 @@ async function streamPositions(minVal) {
                 if (active === 0) resolve();
                 return;
             }
-            // Fill up to MAX_CONCURRENCY slots
-            while (scanning && active < MAX_CONCURRENCY && queue.length > 0) {
+            // Fill up to maxConcurrency slots
+            while (scanning && active < maxConcurrency && queue.length > 0) {
                 const whale = queue.shift();
                 active++;
 
@@ -735,6 +753,326 @@ function updateCoinFilter(initialCoins = null) {
     }
 }
 
+// ── Chart Logic ──
+let scatterChart = null;
+
+function renderScatterPlot() {
+    const section = document.getElementById('chart-section');
+    if (!section) return;
+
+    if (!displayedRows || displayedRows.length === 0) {
+        section.style.display = 'none';
+        return;
+    }
+
+    const btcPrice = parseFloat(currentPrices['BTC'] || 0);
+
+    // Find max volume for scaling
+    const maxVol = Math.max(...displayedRows.map(r => {
+        if (r.coin === 'BTC') return Math.abs(r.szi);
+        if (btcPrice > 0) return r.positionValue / btcPrice;
+        return 0;
+    }), 0.0001); // Avoid div by zero
+
+    const data = displayedRows.map(r => {
+        let volBTC = 0;
+        if (r.coin === 'BTC') {
+            volBTC = Math.abs(r.szi);
+        } else if (btcPrice > 0) {
+            volBTC = r.positionValue / btcPrice;
+        }
+
+        const entryCorr = getCorrelatedEntry(r);
+
+        // Scale radius: Min 3px, Max 20px
+        // Using square root to make area proportional to volume (better visual perception)
+        const radius = 3 + (Math.sqrt(volBTC) / Math.sqrt(maxVol)) * 17;
+
+        return {
+            x: entryCorr,
+            y: volBTC,
+            r: radius, // Chart.js bubble radius
+            _raw: r    // Store raw data for tooltip
+        };
+    });
+
+    if (data.length === 0) {
+        section.style.display = 'none';
+        return;
+    }
+
+    section.style.display = 'block';
+
+    const longs = data.filter(d => d._raw.side === 'long');
+    const shorts = data.filter(d => d._raw.side === 'short');
+
+    const canvas = document.getElementById('scatterChart');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+
+    const entryLabel = `Entry Price (${activeEntryCurrency || 'USD'})`;
+
+    // Prepare annotation for current BTC price (or reference price)
+    // If activeEntryCurrency is USD, we show BTC price in USD.
+    // If activeEntryCurrency is BTC, we show 1.0.
+    // If activeEntryCurrency is other, we convert BTC price to that currency.
+    let refPrice = btcPrice;
+    if (activeEntryCurrency === 'BTC') {
+        refPrice = 1;
+    } else if (activeEntryCurrency && activeEntryCurrency !== 'USD') {
+        const rate = fxRates[activeEntryCurrency] || 1;
+        refPrice = btcPrice * rate;
+    }
+
+    const currencyMeta = CURRENCY_META[activeEntryCurrency || 'USD'] || CURRENCY_META.USD;
+    const sym = showSymbols ? currencyMeta.symbol : '';
+    const priceStr = refPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const labelText = `BTC: ${sym}${priceStr}`;
+
+    const annotations = {
+        currentPriceLine: {
+            type: 'line',
+            xMin: refPrice,
+            xMax: refPrice,
+            borderColor: 'rgba(255, 255, 255, 0.5)',
+            borderWidth: 1,
+            borderDash: [5, 5],
+            clip: false
+        }
+    };
+
+    if (scatterChart) {
+        scatterChart.data.datasets[0].data = longs;
+        scatterChart.data.datasets[1].data = shorts;
+        scatterChart.options.scales.x.title.text = entryLabel;
+        scatterChart.options.plugins.annotation.annotations = annotations;
+        
+        // Update BTC Price Label data
+        scatterChart.options.plugins.btcPriceLabel = { price: refPrice, text: labelText };
+
+        // Ensure padding is updated for existing chart
+        if (!scatterChart.options.layout) scatterChart.options.layout = {};
+        if (!scatterChart.options.layout.padding) scatterChart.options.layout.padding = {};
+        scatterChart.options.layout.padding.bottom = 40; 
+        
+        scatterChart.update();
+    } else {
+        Chart.defaults.color = '#9ca3af';
+        Chart.defaults.borderColor = 'rgba(255, 255, 255, 0.1)';
+
+        scatterChart = new Chart(ctx, {
+            type: 'bubble', // Changed from 'scatter' to 'bubble' for explicit radius support
+            data: {
+                datasets: [
+                    {
+                        label: 'Longs',
+                        data: longs,
+                        backgroundColor: 'rgba(34, 197, 94, 0.6)', // Green with 0.6 opacity
+                        borderColor: 'rgba(34, 197, 94, 1)',
+                        borderWidth: 1,
+                        hoverBackgroundColor: 'rgba(34, 197, 94, 0.9)',
+                        hoverBorderColor: '#fff',
+                        hoverBorderWidth: 2
+                    },
+                    {
+                        label: 'Shorts',
+                        data: shorts,
+                        backgroundColor: 'rgba(239, 68, 68, 0.6)', // Red with 0.6 opacity
+                        borderColor: 'rgba(239, 68, 68, 1)',
+                        borderWidth: 1,
+                        hoverBackgroundColor: 'rgba(239, 68, 68, 0.9)',
+                        hoverBorderColor: '#fff',
+                        hoverBorderWidth: 2
+                    }
+                ]
+            },
+            options: {
+                layout: {
+                    padding: {
+                        bottom: 40
+                    }
+                },
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: false,
+                interaction: {
+                    mode: 'nearest',
+                    axis: 'xy',
+                    intersect: true
+                },
+                plugins: {
+                    btcPriceLabel: {
+                        price: refPrice,
+                        text: labelText
+                    },
+                    annotation: {
+                        annotations: annotations
+                    },
+                    tooltip: {
+                        // Allow auto positioning to avoid covering info
+                        caretPadding: 30,
+                        padding: 10,
+                        backgroundColor: 'rgba(7, 12, 26, 0.95)',
+                        borderColor: 'rgba(59, 130, 246, 0.3)',
+                        borderWidth: 1,
+                        titleColor: '#fff',
+                        bodyColor: '#e2e8f4',
+                        callbacks: {
+                            label: function(context) {
+                                const d = context.raw;
+                                const r = d._raw;
+                                return [
+                                    `${r.coin} ${r.side.toUpperCase()} (${r.leverageValue}x)`,
+                                    `Entry (Corr): ${d.x.toLocaleString(undefined, { maximumFractionDigits: 2 })} ${activeEntryCurrency || 'USD'}`,
+                                    `Vol: ${d.y.toFixed(4)} ₿`,
+                                    `Value: $${fmt(r.positionValue)}`,
+                                    `Addr: ${fmtAddr(r.address)}`
+                                ];
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        type: 'linear',
+                        title: { display: true, text: entryLabel, color: '#9ca3af' },
+                        grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                        ticks: {
+                            color: '#9ca3af',
+                            callback: function(value) {
+                                return value.toLocaleString(undefined, { maximumFractionDigits: 0 });
+                            }
+                        }
+                    },
+                    y: {
+                        type: 'linear',
+                        title: { display: true, text: 'Volume (BTC)', color: '#9ca3af' },
+                        grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                        beginAtZero: true
+                    }
+                }
+            },
+            plugins: [{
+                id: 'btcPriceLabel',
+                afterDraw: (chart) => {
+                    const opts = chart.options.plugins.btcPriceLabel;
+                    if (!opts || !opts.text) return;
+                    
+                    const { ctx, chartArea: { bottom, left, right }, scales: { x } } = chart;
+                    const xVal = x.getPixelForValue(opts.price);
+                    
+                    // Only draw if within chart horizontal bounds
+                    if (xVal < left || xVal > right) return;
+                    
+                    const text = opts.text;
+                    ctx.save();
+                    ctx.font = 'bold 11px sans-serif';
+                    const textWidth = ctx.measureText(text).width + 16;
+                    const textHeight = 22;
+                    const yPos = bottom + 25; // Position below axis ticks
+                    
+                    // Draw Label Background (pill shape)
+                    ctx.fillStyle = 'rgba(255, 165, 0, 0.9)';
+                    ctx.beginPath();
+                    const r = 4;
+                    ctx.roundRect(xVal - textWidth / 2, yPos, textWidth, textHeight, r);
+                    ctx.fill();
+                    
+                    // Small triangle pointer pointing up
+                    ctx.beginPath();
+                    ctx.moveTo(xVal, yPos);
+                    ctx.lineTo(xVal - 5, yPos + 6);
+                    ctx.lineTo(xVal + 5, yPos + 6);
+                    ctx.fillStyle = 'rgba(255, 165, 0, 0.9)';
+                    ctx.fill();
+                    
+                    // Draw Text
+                    ctx.fillStyle = '#000';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(text, xVal, yPos + textHeight / 2);
+                    
+                    ctx.restore();
+                }
+            }, {
+                id: 'crosshair',
+                defaults: {
+                    width: 1,
+                    color: 'rgba(255, 255, 255, 0.2)',
+                    dash: [3, 3]
+                },
+                afterInit: (chart, args, options) => {
+                    chart.crosshair = { x: 0, y: 0, visible: false };
+                },
+                afterEvent: (chart, args) => {
+                    const { inChartArea } = args;
+                    const { x, y } = args.event;
+                    
+                    chart.crosshair = { x, y, visible: inChartArea };
+                    args.changed = true;
+                },
+                afterDraw: (chart, args, options) => {
+                    if (chart.crosshair && chart.crosshair.visible) {
+                        const { ctx, chartArea: { top, bottom, left, right }, scales: { x: xScale, y: yScale } } = chart;
+                        const { x, y } = chart.crosshair;
+
+                        ctx.save();
+                        
+                        // Draw lines
+                        ctx.beginPath();
+                        ctx.lineWidth = options.width;
+                        ctx.strokeStyle = options.color;
+                        ctx.setLineDash(options.dash);
+                        
+                        ctx.moveTo(x, top);
+                        ctx.lineTo(x, bottom);
+                        ctx.moveTo(left, y);
+                        ctx.lineTo(right, y);
+                        ctx.stroke();
+
+                        // Draw Labels
+                        ctx.font = '11px sans-serif';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        
+                        // X-Axis Label
+                        const xValue = xScale.getValueForPixel(x);
+                        // Using toLocaleString for consistent formatting
+                        const xLabel = xValue.toLocaleString(undefined, { maximumFractionDigits: 2 });
+                        const xLabelWidth = ctx.measureText(xLabel).width + 12;
+                        const xLabelHeight = 20;
+                        
+                        // Draw X Label Background
+                        ctx.fillStyle = 'rgba(7, 12, 26, 0.9)';
+                        ctx.fillRect(x - xLabelWidth / 2, bottom, xLabelWidth, xLabelHeight);
+                        
+                        // Draw X Label Text
+                        ctx.fillStyle = '#e2e8f4';
+                        ctx.fillText(xLabel, x, bottom + 10);
+
+                        // Y-Axis Label
+                        const yValue = yScale.getValueForPixel(y);
+                        const yLabel = yValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 });
+                        const yLabelWidth = ctx.measureText(yLabel).width + 12;
+                        const yLabelHeight = 20;
+                        
+                        // Draw Y Label Background
+                        ctx.fillStyle = 'rgba(7, 12, 26, 0.9)';
+                        ctx.fillRect(left - yLabelWidth, y - yLabelHeight / 2, yLabelWidth, yLabelHeight);
+                        
+                        // Draw Y Label Text
+                        ctx.textAlign = 'right';
+                        ctx.fillStyle = '#e2e8f4';
+                        ctx.fillText(yLabel, left - 6, y);
+
+                        ctx.restore();
+                    }
+                }
+            }]
+        });
+    }
+}
+
 async function init() {
     setStatus('Initializing...', 'scanning');
 
@@ -859,6 +1197,7 @@ function renderTable() {
     });
 
     displayedRows = rows;
+    renderScatterPlot(); // Update chart with filtered rows
     const tbody = document.getElementById('tableBody');
 
     if (rows.length === 0) {
@@ -1088,6 +1427,53 @@ async function fetchDailyClose(coin) {
         console.warn(`Failed to fetch daily close for ${coin}`, e);
         dailyCloseCache[coin] = 0;
     }
+}
+
+// ── Chart Resizing ──
+
+let isChartResizing = false;
+let startChartY = 0;
+let startChartH = 0;
+
+function startChartResize(e) {
+    isChartResizing = true;
+    startChartY = e.clientY;
+    const section = document.getElementById('chart-section');
+    startChartH = section.offsetHeight;
+    
+    document.addEventListener('mousemove', chartResize);
+    document.addEventListener('mouseup', stopChartResize);
+    
+    // Add active class for visual feedback
+    e.target.classList.add('active');
+    document.body.style.cursor = 'ns-resize';
+    e.preventDefault(); // prevent text selection
+}
+
+function chartResize(e) {
+    if (!isChartResizing) return;
+    const dy = e.clientY - startChartY;
+    const newH = Math.max(200, startChartH + dy); // min 200px
+    const section = document.getElementById('chart-section');
+    section.style.height = newH + 'px';
+    
+    // Resize chart instance if needed (Chart.js usually handles this with responsive: true, but explicit update helps)
+    if (scatterChart) scatterChart.resize();
+}
+
+function stopChartResize() {
+    isChartResizing = false;
+    document.removeEventListener('mousemove', chartResize);
+    document.removeEventListener('mouseup', stopChartResize);
+    document.body.style.cursor = '';
+    
+    const resizers = document.querySelectorAll('.chart-resizer');
+    resizers.forEach(r => r.classList.remove('active'));
+    
+    // Save new height
+    const section = document.getElementById('chart-section');
+    chartHeight = section.offsetHeight;
+    saveSettings();
 }
 
 // ── Column Resizing ──────────────────────────────────────────────────
