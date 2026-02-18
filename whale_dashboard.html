@@ -54,6 +54,13 @@
         </div>
         <div class="filter-sep"></div>
         <div class="ctrl">
+            <label>Show Symbols</label>
+            <div class="tabs">
+                <button class="tab active" id="btnShowSym" onclick="toggleShowSymbols()">On</button>
+            </div>
+        </div>
+        <div class="filter-sep"></div>
+        <div class="ctrl">
             <label>Top N Ranking</label>
             <input type="number" id="rankingLimit" value="10" min="1" max="100" class="col-filter" style="width:70px"
                 oninput="updateRankingLimit()">
@@ -175,7 +182,10 @@
                         <input type="hidden" id="sideFilter" value="">
                     </th>
                     <!-- Size -->
-                    <th class="filter-cell"></th>
+                    <th class="filter-cell">
+                        <input type="number" id="minSzi" placeholder="Min" class="col-filter" oninput="renderTable()">
+                        <input type="number" id="maxSzi" placeholder="Max" class="col-filter" style="margin-top:3px" oninput="renderTable()">
+                    </th>
                     <!-- Leverage -->
                     <th class="filter-cell">
                         <input type="number" id="minLev" value="" step="1" min="1" placeholder="Min x"
@@ -212,6 +222,8 @@
                             <div class="combobox-dropdown" id="cb-currencySelect-dropdown"></div>
                         </div>
                         <input type="hidden" id="currencySelect" value="USD">
+                        <input type="number" id="minValueCcy" placeholder="Min" class="col-filter" style="margin-top:3px" oninput="renderTable()">
+                        <input type="number" id="maxValueCcy" placeholder="Max" class="col-filter" style="margin-top:3px" oninput="renderTable()">
                     </th>
                     <!-- Avg Entry -->
                     <th class="filter-cell"></th>
@@ -228,9 +240,14 @@
                             <div class="combobox-dropdown" id="cb-entryCurrencySelect-dropdown"></div>
                         </div>
                         <input type="hidden" id="entryCurrencySelect" value="USD">
+                        <input type="number" id="minEntryCcy" placeholder="Min" class="col-filter" style="margin-top:3px" oninput="renderTable()">
+                        <input type="number" id="maxEntryCcy" placeholder="Max" class="col-filter" style="margin-top:3px" oninput="renderTable()">
                     </th>
                     <!-- UPNL -->
-                    <th class="filter-cell"></th>
+                    <th class="filter-cell">
+                        <input type="number" id="minUpnl" placeholder="Min" class="col-filter" oninput="renderTable()">
+                        <input type="number" id="maxUpnl" placeholder="Max" class="col-filter" style="margin-top:3px" oninput="renderTable()">
+                    </th>
                     <!-- Funding -->
                     <th class="filter-cell">
                         <input type="number" id="minFunding" value="" step="1000" min="0" placeholder="Min |$|"

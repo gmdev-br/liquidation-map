@@ -36,6 +36,18 @@ let fxRates = { USD: 1 };   // USD-based rates, fetched once
 let fxReady = false;
 let activeCurrency = 'USD';
 let activeEntryCurrency = 'USD';
+let showSymbols = true;
+
+function toggleShowSymbols() {
+    showSymbols = !showSymbols;
+    const btn = document.getElementById('btnShowSym');
+    if (btn) {
+        btn.textContent = showSymbols ? 'On' : 'Off';
+        btn.classList.toggle('active', showSymbols);
+    }
+    saveSettings();
+    renderTable();
+}
 
 async function fetchExchangeRates() {
     try {
@@ -68,26 +80,51 @@ function fmtCcy(value, overrideCcy = null) {
     const meta = CURRENCY_META[ccy] || CURRENCY_META.USD;
     const abs = Math.abs(value);
     const sign = value >= 0 ? '' : '-';
+    const sym = showSymbols ? meta.symbol : '';
 
     if (ccy === 'BTC') {
-        return sign + meta.symbol + abs.toFixed(abs >= 1 ? 4 : 8);
+        return sign + sym + abs.toFixed(abs >= 1 ? 4 : 8);
     }
 
-    if (abs >= 1e9) return sign + meta.symbol + (abs / 1e9).toFixed(2) + 'B';
-    if (abs >= 1e6) return sign + meta.symbol + (abs / 1e6).toFixed(2) + 'M';
-    if (abs >= 1e3) return sign + meta.symbol + (abs / 1e3).toFixed(1) + 'K';
-    return sign + meta.symbol + abs.toFixed(0);
+    if (abs >= 1e9) return sign + sym + (abs / 1e9).toFixed(2) + 'B';
+    if (abs >= 1e6) return sign + sym + (abs / 1e6).toFixed(2) + 'M';
+    if (abs >= 1e3) return sign + sym + (abs / 1e3).toFixed(1) + 'K';
+    return sign + sym + abs.toFixed(0);
 }
 
 function getCorrelatedEntry(row) {
-    const targetPrice = parseFloat(currentPrices['BTC'] || 0);
-    if (row.coin === 'BTC' || targetPrice <= 0) return row.entryPx;
+    const targetCcy = activeEntryCurrency || 'USD';
 
+    // 1. Calculate Base Correlated Price (The "Holy Grail" Logic)
+    // Formula: Entry * (BTC_Price / Coin_Price)
+    // This projects the entry price to the equivalent BTC price level.
+    const btcPrice = parseFloat(currentPrices['BTC'] || 0);
     const coinPrice = parseFloat(currentPrices[row.coin] || 0);
-    if (coinPrice > 0) {
-        return row.entryPx * (targetPrice / coinPrice);
+    
+    let correlatedVal = row.entryPx; // Default to raw entry if data missing
+    
+    if (row.coin !== 'BTC' && btcPrice > 0 && coinPrice > 0) {
+        correlatedVal = row.entryPx * (btcPrice / coinPrice);
+    } else if (row.coin === 'BTC') {
+        correlatedVal = row.entryPx;
     }
-    return row.entryPx;
+
+    // 2. If target is USD, return the correlated value (which is in USD)
+    if (targetCcy === 'USD') {
+        return correlatedVal;
+    }
+
+    // 3. If target is BTC, user likely wants "Entry Price in BTC terms"
+    // Since correlatedVal is "The BTC Price equivalent", converting it to BTC = 1 (useless).
+    // So for BTC selection, we return the raw entry price converted to BTC.
+    if (targetCcy === 'BTC') {
+        if (btcPrice > 0) return row.entryPx / btcPrice;
+        return 0;
+    }
+
+    // 4. If target is Fiat (BRL, EUR, etc), convert the Correlated USD Value to that Fiat
+    const rate = fxRates[targetCcy] || 1;
+    return correlatedVal * rate;
 }
 
 function fmtPriceCcy(value, overrideCcy = null) {
@@ -95,16 +132,17 @@ function fmtPriceCcy(value, overrideCcy = null) {
     const meta = CURRENCY_META[ccy] || CURRENCY_META.USD;
     const abs = Math.abs(value);
     const sign = value >= 0 ? '' : '-';
+    const sym = showSymbols ? meta.symbol : '';
 
     if (ccy === 'BTC') {
-        return sign + meta.symbol + abs.toFixed(8);
+        return sign + sym + abs.toFixed(8);
     }
 
     // For prices, we want more precision than total values
     if (abs >= 1) {
-        return sign + meta.symbol + abs.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 });
+        return sign + sym + abs.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 });
     }
-    return sign + meta.symbol + abs.toFixed(6);
+    return sign + sym + abs.toFixed(6);
 }
 
 function onCurrencyChange() {
@@ -135,9 +173,10 @@ const fmt = (n, dec = 0) => {
 const fmtUSD = (n) => {
     const sign = n >= 0 ? '+' : '-';
     const abs = Math.abs(n);
-    if (abs >= 1e6) return sign + '$' + (abs / 1e6).toFixed(2) + 'M';
-    if (abs >= 1e3) return sign + '$' + (abs / 1e3).toFixed(1) + 'K';
-    return sign + '$' + abs.toFixed(0);
+    const sym = showSymbols ? '$' : '';
+    if (abs >= 1e6) return sign + sym + (abs / 1e6).toFixed(2) + 'M';
+    if (abs >= 1e3) return sign + sym + (abs / 1e3).toFixed(1) + 'K';
+    return sign + sym + abs.toFixed(0);
 };
 const fmtAddr = (a) => `${a.slice(0, 6)}…${a.slice(-4)}`;
 const fmtNum = (n) => new Intl.NumberFormat('en-US').format(n);
@@ -168,6 +207,14 @@ function saveSettings() {
         minLev: document.getElementById('minLev').value,
         maxLev: document.getElementById('maxLev').value,
         minSize: document.getElementById('minSize').value,
+        minSzi: document.getElementById('minSzi').value,
+        maxSzi: document.getElementById('maxSzi').value,
+        minValueCcy: document.getElementById('minValueCcy').value,
+        maxValueCcy: document.getElementById('maxValueCcy').value,
+        minEntryCcy: document.getElementById('minEntryCcy').value,
+        maxEntryCcy: document.getElementById('maxEntryCcy').value,
+        minUpnl: document.getElementById('minUpnl').value,
+        maxUpnl: document.getElementById('maxUpnl').value,
         minFunding: document.getElementById('minFunding').value,
         levTypeFilter: document.getElementById('levTypeFilter').value,
         currencySelect: document.getElementById('currencySelect').value,
@@ -179,7 +226,8 @@ function saveSettings() {
         columnWidths: columnWidths,
         rankingLimit: rankingLimit,
         sortKey: sortKey,
-        sortDir: sortDir
+        sortDir: sortDir,
+        showSymbols: showSymbols
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
 }
@@ -189,6 +237,14 @@ function loadSettings() {
     if (!saved) return;
     try {
         const s = JSON.parse(saved);
+        if (s.showSymbols !== undefined) {
+            showSymbols = s.showSymbols;
+            const btn = document.getElementById('btnShowSym');
+            if (btn) {
+                btn.textContent = showSymbols ? 'On' : 'Off';
+                btn.classList.toggle('active', showSymbols);
+            }
+        }
         if (s.minValue) document.getElementById('minValue').value = s.minValue;
         if (s.coinFilter) {
             document.getElementById('coinFilter').value = s.coinFilter;
@@ -198,6 +254,14 @@ function loadSettings() {
         if (s.minLev) document.getElementById('minLev').value = s.minLev;
         if (s.maxLev) document.getElementById('maxLev').value = s.maxLev;
         if (s.minSize) document.getElementById('minSize').value = s.minSize;
+        if (s.minSzi) document.getElementById('minSzi').value = s.minSzi;
+        if (s.maxSzi) document.getElementById('maxSzi').value = s.maxSzi;
+        if (s.minValueCcy) document.getElementById('minValueCcy').value = s.minValueCcy;
+        if (s.maxValueCcy) document.getElementById('maxValueCcy').value = s.maxValueCcy;
+        if (s.minEntryCcy) document.getElementById('minEntryCcy').value = s.minEntryCcy;
+        if (s.maxEntryCcy) document.getElementById('maxEntryCcy').value = s.maxEntryCcy;
+        if (s.minUpnl) document.getElementById('minUpnl').value = s.minUpnl;
+        if (s.maxUpnl) document.getElementById('maxUpnl').value = s.maxUpnl;
         if (s.minFunding) document.getElementById('minFunding').value = s.minFunding;
         if (s.levTypeFilter) cbSetValue('levTypeFilter', s.levTypeFilter);
         if (s.currencySelect) cbSetValue('currencySelect', s.currencySelect);
@@ -481,12 +545,13 @@ function updateStats() {
 
     document.getElementById('sWhales').textContent = fmtNum(whalesWithPos);
     document.getElementById('sPositions').textContent = fmtNum(allRows.length);
-    document.getElementById('sCapital').textContent = '$' + fmt(totalCap);
+    const sym = showSymbols ? '$' : '';
+    document.getElementById('sCapital').textContent = sym + fmt(totalCap);
     const upnlEl = document.getElementById('sUpnl');
     upnlEl.textContent = fmtUSD(totalUpnl);
     upnlEl.className = 'stat-value ' + (totalUpnl >= 0 ? 'green' : 'red');
     const largest = Math.max(...allRows.map(r => r.accountValue), 0);
-    document.getElementById('sLargest').textContent = '$' + fmt(largest);
+    document.getElementById('sLargest').textContent = sym + fmt(largest);
 }
 
 // ── Generic Combobox Engine ──────────────────────────────────────────
@@ -731,6 +796,15 @@ function renderTable() {
     const minFunding = parseFloat(document.getElementById('minFunding').value);
     const levTypeFilter = document.getElementById('levTypeFilter').value;
 
+    const minSzi = parseFloat(document.getElementById('minSzi').value);
+    const maxSzi = parseFloat(document.getElementById('maxSzi').value);
+    const minValueCcy = parseFloat(document.getElementById('minValueCcy').value);
+    const maxValueCcy = parseFloat(document.getElementById('maxValueCcy').value);
+    const minEntryCcy = parseFloat(document.getElementById('minEntryCcy').value);
+    const maxEntryCcy = parseFloat(document.getElementById('maxEntryCcy').value);
+    const minUpnl = parseFloat(document.getElementById('minUpnl').value);
+    const maxUpnl = parseFloat(document.getElementById('maxUpnl').value);
+
     saveSettings();
 
     let rows = allRows.filter(r => {
@@ -746,6 +820,21 @@ function renderTable() {
         if (!isNaN(minSize) && r.positionValue < minSize) return false;
         if (!isNaN(minFunding) && Math.abs(r.funding) < minFunding) return false;
         if (levTypeFilter && r.leverageType !== levTypeFilter) return false;
+
+        if (!isNaN(minSzi) && Math.abs(r.szi) < minSzi) return false;
+        if (!isNaN(maxSzi) && Math.abs(r.szi) > maxSzi) return false;
+
+        const valCcy = convertToActiveCcy(r.positionValue);
+        if (!isNaN(minValueCcy) && valCcy < minValueCcy) return false;
+        if (!isNaN(maxValueCcy) && valCcy > maxValueCcy) return false;
+
+        const entCcy = getCorrelatedEntry(r);
+        if (!isNaN(minEntryCcy) && entCcy < minEntryCcy) return false;
+        if (!isNaN(maxEntryCcy) && entCcy > maxEntryCcy) return false;
+
+        if (!isNaN(minUpnl) && r.unrealizedPnl < minUpnl) return false;
+        if (!isNaN(maxUpnl) && r.unrealizedPnl > maxUpnl) return false;
+
         return true;
     });
 
@@ -792,7 +881,7 @@ function renderTable() {
             const pct = r.distPct;
             const barClass = pct > 30 ? 'safe' : pct > 10 ? 'warn' : 'danger';
             const barW = Math.min(pct, 100).toFixed(0);
-            const liqStr = r.liquidationPx > 0 ? '$' + r.liquidationPx.toLocaleString('en-US', { maximumFractionDigits: 0 }) : '—';
+            const liqStr = r.liquidationPx > 0 ? (showSymbols ? '$' : '') + r.liquidationPx.toLocaleString('en-US', { maximumFractionDigits: 0 }) : '—';
             distHtml = `
             <div class="liq-cell">
                 <div style="display:flex;justify-content:space-between;align-items:center;gap:6px">
@@ -809,6 +898,14 @@ function renderTable() {
 
         const ccyVal = convertToActiveCcy(r.positionValue);
         const ccyStr = fmtCcy(ccyVal);
+
+        const entVal = getCorrelatedEntry(r);
+        let entStr = '';
+        const entMeta = CURRENCY_META[activeEntryCurrency] || CURRENCY_META.USD;
+        const sym = showSymbols ? entMeta.symbol : '';
+        entStr = sym + entVal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+        const usdSym = showSymbols ? '$' : '';
 
         return `<tr>
         <td class="muted" style="font-size:11px">${i + 1}</td>
@@ -828,14 +925,14 @@ function renderTable() {
         </td>
         <td class="mono">${sziStr}</td>
         <td><span class="lev-badge">${levLabel}</span></td>
-        <td class="mono">$${fmt(r.positionValue)}</td>
+        <td class="mono">${usdSym}${fmt(r.positionValue)}</td>
         <td class="mono" style="color:var(--gold);font-weight:600">${ccyStr}</td>
         <td class="mono">${r.entryPx.toLocaleString('en-US', { maximumFractionDigits: 2 })}</td>
-        <td class="mono" style="color:var(--gold);font-weight:600">$${getCorrelatedEntry(r).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+        <td class="mono" style="color:var(--gold);font-weight:600">${entStr}</td>
         <td class="mono ${pnlClass}" style="font-weight:600">${fmtUSD(r.unrealizedPnl)}</td>
         <td class="mono ${fundClass}">${fmtUSD(r.funding)}</td>
         <td>${distHtml}</td>
-        <td class="mono">$${fmt(r.accountValue)}</td>
+        <td class="mono">${usdSym}${fmt(r.accountValue)}</td>
     </tr>`;
     }).join('');
 }
@@ -895,7 +992,8 @@ function updateQuotesHTML() {
             ? parseFloat(currentPrices[coin] || 0)
             : (dailyCloseCache[coin] || 0);
 
-        const priceStr = price > 0 ? '$' + price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 6 }) : 'Loading…';
+        const sym = showSymbols ? '$' : '';
+        const priceStr = price > 0 ? sym + price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 6 }) : 'Loading…';
         const label = priceMode === 'realtime' ? 'Mark Price' : 'Daily Close';
 
         return `
