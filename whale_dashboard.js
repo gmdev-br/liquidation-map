@@ -20,6 +20,8 @@ let columnWidths = {};    // { th-id: width_px }
 let rankingLimit = 10;
 let rankingTicker = null;
 let chartHeight = 400; // default height in px
+let colorMinLev = 1;
+let colorMaxLev = 50;
 
 // Currency conversion
 const CURRENCY_META = {
@@ -255,6 +257,8 @@ function saveSettings() {
         activeWindow: activeWindow,
         columnWidths: columnWidths,
         rankingLimit: rankingLimit,
+        colorMinLev: colorMinLev,
+        colorMaxLev: colorMaxLev,
         sortKey: sortKey,
         sortDir: sortDir,
         showSymbols: showSymbols,
@@ -315,6 +319,14 @@ function loadSettings() {
         if (s.rankingLimit) {
             rankingLimit = s.rankingLimit;
             document.getElementById('rankingLimit').value = rankingLimit;
+        }
+        if (s.colorMinLev) {
+            colorMinLev = s.colorMinLev;
+            document.getElementById('colorMinLev').value = colorMinLev;
+        }
+        if (s.colorMaxLev) {
+            colorMaxLev = s.colorMaxLev;
+            document.getElementById('colorMaxLev').value = colorMaxLev;
         }
         if (s.activeWindow) {
             activeWindow = s.activeWindow;
@@ -783,6 +795,42 @@ function updateCoinFilter(initialCoins = null) {
     }
 }
 
+// ── Color Helpers ──
+function getPointColor(side, leverage, isBorder = false) {
+    const minLev = colorMinLev;
+    const maxLev = colorMaxLev;
+    let factor = (leverage - minLev) / (maxLev - minLev);
+    if (factor < 0) factor = 0;
+    if (factor > 1) factor = 1;
+
+    const alpha = isBorder ? 1 : 0.6;
+
+    if (side === 'long') {
+        // Low: Yellow (234, 179, 8) -> High: Green (34, 197, 94)
+        const r = Math.round(234 + (34 - 234) * factor);
+        const g = Math.round(179 + (197 - 179) * factor);
+        const b = Math.round(8 + (94 - 8) * factor);
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    } else {
+        // Low: Fuchsia (217, 70, 239) -> High: Red (239, 68, 68)
+        const r = Math.round(217 + (239 - 217) * factor);
+        const g = Math.round(70 + (68 - 70) * factor);
+        const b = Math.round(239 + (68 - 239) * factor);
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+}
+
+function updateColorSettings() {
+    const min = parseInt(document.getElementById('colorMinLev').value, 10);
+    const max = parseInt(document.getElementById('colorMaxLev').value, 10);
+    if (!isNaN(min) && !isNaN(max) && max > min) {
+        colorMinLev = min;
+        colorMaxLev = max;
+        renderScatterPlot();
+        saveSettings();
+    }
+}
+
 // ── Chart Logic ──
 let scatterChart = null;
 
@@ -873,7 +921,15 @@ function renderScatterPlot() {
 
     if (scatterChart) {
         scatterChart.data.datasets[0].data = longs;
+        scatterChart.data.datasets[0].backgroundColor = longs.map(d => getPointColor('long', d._raw.leverageValue));
+        scatterChart.data.datasets[0].borderColor = longs.map(d => getPointColor('long', d._raw.leverageValue, true));
+        scatterChart.data.datasets[0].hoverBackgroundColor = longs.map(d => getPointColor('long', d._raw.leverageValue, true));
+
         scatterChart.data.datasets[1].data = shorts;
+        scatterChart.data.datasets[1].backgroundColor = shorts.map(d => getPointColor('short', d._raw.leverageValue));
+        scatterChart.data.datasets[1].borderColor = shorts.map(d => getPointColor('short', d._raw.leverageValue, true));
+        scatterChart.data.datasets[1].hoverBackgroundColor = shorts.map(d => getPointColor('short', d._raw.leverageValue, true));
+
         scatterChart.options.scales.x.title.text = entryLabel;
         scatterChart.options.plugins.annotation.annotations = annotations;
         
@@ -897,20 +953,20 @@ function renderScatterPlot() {
                     {
                         label: 'Longs',
                         data: longs,
-                        backgroundColor: 'rgba(34, 197, 94, 0.6)', // Green with 0.6 opacity
-                        borderColor: 'rgba(34, 197, 94, 1)',
+                        backgroundColor: longs.map(d => getPointColor('long', d._raw.leverageValue)),
+                        borderColor: longs.map(d => getPointColor('long', d._raw.leverageValue, true)),
                         borderWidth: 1,
-                        hoverBackgroundColor: 'rgba(34, 197, 94, 0.9)',
+                        hoverBackgroundColor: longs.map(d => getPointColor('long', d._raw.leverageValue, true)),
                         hoverBorderColor: '#fff',
                         hoverBorderWidth: 2
                     },
                     {
                         label: 'Shorts',
                         data: shorts,
-                        backgroundColor: 'rgba(239, 68, 68, 0.6)', // Red with 0.6 opacity
-                        borderColor: 'rgba(239, 68, 68, 1)',
+                        backgroundColor: shorts.map(d => getPointColor('short', d._raw.leverageValue)),
+                        borderColor: shorts.map(d => getPointColor('short', d._raw.leverageValue, true)),
                         borderWidth: 1,
-                        hoverBackgroundColor: 'rgba(239, 68, 68, 0.9)',
+                        hoverBackgroundColor: shorts.map(d => getPointColor('short', d._raw.leverageValue, true)),
                         hoverBorderColor: '#fff',
                         hoverBorderWidth: 2
                     }
@@ -933,13 +989,25 @@ function renderScatterPlot() {
                 plugins: {
                     zoom: {
                         zoom: {
-                            wheel: { enabled: true },
+                            wheel: { 
+                                enabled: true,
+                                speed: 0.05, // Slower zoom speed
+                                modifierKey: 'ctrl', // Require Ctrl key to avoid page scroll conflict
+                            },
                             pinch: { enabled: true },
+                            drag: {
+                                enabled: true,
+                                backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                                borderColor: 'rgba(59, 130, 246, 0.4)',
+                                borderWidth: 1,
+                                modifierKey: 'shift', // Shift + Drag to zoom area
+                            },
                             mode: 'xy',
                         },
                         pan: {
                             enabled: true,
                             mode: 'xy',
+                            // modifierKey removed for free pan
                         }
                     },
                     btcPriceLabel: {
@@ -1493,7 +1561,9 @@ function startChartResize(e) {
     document.addEventListener('mouseup', stopChartResize);
     
     // Add active class for visual feedback
-    e.target.classList.add('active');
+    const resizer = document.querySelector('.chart-resizer');
+    if (resizer) resizer.classList.add('active');
+    
     document.body.style.cursor = 'ns-resize';
     e.preventDefault(); // prevent text selection
 }
@@ -1504,6 +1574,7 @@ function chartResize(e) {
     const newH = Math.max(200, startChartH + dy); // min 200px
     const section = document.getElementById('chart-section');
     section.style.height = newH + 'px';
+    chartHeight = newH; // Update global state
     
     // Resize chart instance if needed (Chart.js usually handles this with responsive: true, but explicit update helps)
     if (scatterChart) scatterChart.resize();
@@ -1513,15 +1584,12 @@ function stopChartResize() {
     isChartResizing = false;
     document.removeEventListener('mousemove', chartResize);
     document.removeEventListener('mouseup', stopChartResize);
+    
+    const resizer = document.querySelector('.chart-resizer');
+    if (resizer) resizer.classList.remove('active');
+    
     document.body.style.cursor = '';
-    
-    const resizers = document.querySelectorAll('.chart-resizer');
-    resizers.forEach(r => r.classList.remove('active'));
-    
-    // Save new height
-    const section = document.getElementById('chart-section');
-    chartHeight = section.offsetHeight;
-    saveSettings();
+    saveSettings(); // Save new height
 }
 
 // ── Column Resizing ──────────────────────────────────────────────────
