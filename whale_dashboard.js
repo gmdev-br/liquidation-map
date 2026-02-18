@@ -22,6 +22,8 @@ let rankingTicker = null;
 let chartHeight = 400; // default height in px
 let colorMinLev = 1;
 let colorMaxLev = 50;
+let chartMode = 'scatter'; // 'scatter' or 'column'
+let bubbleScale = 1.0;
 
 // Currency conversion
 const CURRENCY_META = {
@@ -262,7 +264,9 @@ function saveSettings() {
         sortKey: sortKey,
         sortDir: sortDir,
         showSymbols: showSymbols,
-        chartHeight: chartHeight
+        chartHeight: chartHeight,
+        chartMode: chartMode,
+        bubbleScale: bubbleScale
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
 }
@@ -279,6 +283,21 @@ function loadSettings() {
                 btn.textContent = showSymbols ? 'On' : 'Off';
                 btn.classList.toggle('active', showSymbols);
             }
+        }
+        if (s.chartMode) {
+            chartMode = s.chartMode;
+            document.querySelectorAll('.tab[data-chart]').forEach(t => {
+                t.classList.toggle('active', t.dataset.chart === chartMode);
+            });
+            const bubbleCtrl = document.getElementById('bubbleSizeCtrl');
+            if (bubbleCtrl) {
+                bubbleCtrl.style.display = (chartMode === 'scatter') ? 'block' : 'none';
+            }
+        }
+        if (s.bubbleScale) {
+            bubbleScale = s.bubbleScale;
+            document.getElementById('bubbleSizeVal').textContent = bubbleScale.toFixed(1);
+            document.getElementById('bubbleSizeRange').value = bubbleScale;
         }
         if (s.minValue) document.getElementById('minValue').value = s.minValue;
         if (s.coinFilter) {
@@ -831,6 +850,28 @@ function updateColorSettings() {
     }
 }
 
+function updateBubbleSize(val) {
+    bubbleScale = parseFloat(val);
+    document.getElementById('bubbleSizeVal').textContent = bubbleScale.toFixed(1);
+    renderScatterPlot();
+    saveSettings();
+}
+
+function setChartMode(el) {
+    document.querySelectorAll('.tab[data-chart]').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    chartMode = el.dataset.chart;
+    
+    // Show/hide bubble size control based on mode
+    const bubbleCtrl = document.getElementById('bubbleSizeCtrl');
+    if (bubbleCtrl) {
+        bubbleCtrl.style.display = (chartMode === 'scatter') ? 'block' : 'none';
+    }
+
+    renderScatterPlot();
+    saveSettings();
+}
+
 // ── Chart Logic ──
 let scatterChart = null;
 
@@ -844,14 +885,11 @@ function renderScatterPlot() {
     }
 
     const btcPrice = parseFloat(currentPrices['BTC'] || 0);
+    const currencyMeta = CURRENCY_META[activeEntryCurrency || 'USD'] || CURRENCY_META.USD;
+    const sym = showSymbols ? currencyMeta.symbol : '';
+    const entryLabel = `Entry Price (${activeEntryCurrency || 'USD'})`;
 
-    // Find max volume for scaling
-    const maxVol = Math.max(...displayedRows.map(r => {
-        if (r.coin === 'BTC') return Math.abs(r.szi);
-        if (btcPrice > 0) return r.positionValue / btcPrice;
-        return 0;
-    }), 0.0001); // Avoid div by zero
-
+    // 1. Prepare Data
     const data = displayedRows.map(r => {
         let volBTC = 0;
         if (r.coin === 'BTC') {
@@ -861,16 +899,10 @@ function renderScatterPlot() {
         }
 
         const entryCorr = getCorrelatedEntry(r);
-
-        // Scale radius: Min 3px, Max 20px
-        // Using square root to make area proportional to volume (better visual perception)
-        const radius = 3 + (Math.sqrt(volBTC) / Math.sqrt(maxVol)) * 17;
-
         return {
             x: entryCorr,
             y: volBTC,
-            r: radius, // Chart.js bubble radius
-            _raw: r    // Store raw data for tooltip
+            _raw: r
         };
     });
 
@@ -880,20 +912,11 @@ function renderScatterPlot() {
     }
 
     section.style.display = 'block';
-
-    const longs = data.filter(d => d._raw.side === 'long');
-    const shorts = data.filter(d => d._raw.side === 'short');
-
     const canvas = document.getElementById('scatterChart');
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
 
-    const entryLabel = `Entry Price (${activeEntryCurrency || 'USD'})`;
-
-    // Prepare annotation for current BTC price (or reference price)
-    // If activeEntryCurrency is USD, we show BTC price in USD.
-    // If activeEntryCurrency is BTC, we show 1.0.
-    // If activeEntryCurrency is other, we convert BTC price to that currency.
+    // 2. Prepare Reference Price
     let refPrice = btcPrice;
     if (activeEntryCurrency === 'BTC') {
         refPrice = 1;
@@ -901,12 +924,10 @@ function renderScatterPlot() {
         const rate = fxRates[activeEntryCurrency] || 1;
         refPrice = btcPrice * rate;
     }
-
-    const currencyMeta = CURRENCY_META[activeEntryCurrency || 'USD'] || CURRENCY_META.USD;
-    const sym = showSymbols ? currencyMeta.symbol : '';
     const priceStr = refPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     const labelText = `BTC: ${sym}${priceStr}`;
-
+    
+    // Annotations (shared)
     const annotations = {
         currentPriceLine: {
             type: 'line',
@@ -919,27 +940,196 @@ function renderScatterPlot() {
         }
     };
 
-    if (scatterChart) {
-        scatterChart.data.datasets[0].data = longs;
-        scatterChart.data.datasets[0].backgroundColor = longs.map(d => getPointColor('long', d._raw.leverageValue));
-        scatterChart.data.datasets[0].borderColor = longs.map(d => getPointColor('long', d._raw.leverageValue, true));
-        scatterChart.data.datasets[0].hoverBackgroundColor = longs.map(d => getPointColor('long', d._raw.leverageValue, true));
+    // 3. Configure Chart based on Mode
+    let datasets = [];
+    let chartType = 'bubble';
+    let scales = {};
+    let tooltipCallback = null;
 
-        scatterChart.data.datasets[1].data = shorts;
-        scatterChart.data.datasets[1].backgroundColor = shorts.map(d => getPointColor('short', d._raw.leverageValue));
-        scatterChart.data.datasets[1].borderColor = shorts.map(d => getPointColor('short', d._raw.leverageValue, true));
-        scatterChart.data.datasets[1].hoverBackgroundColor = shorts.map(d => getPointColor('short', d._raw.leverageValue, true));
-
-        scatterChart.options.scales.x.title.text = entryLabel;
-        scatterChart.options.plugins.annotation.annotations = annotations;
+    if (chartMode === 'column') {
+        // Histogram Mode
+        chartType = 'bar';
         
-        // Update BTC Price Label data
-        scatterChart.options.plugins.btcPriceLabel = { price: refPrice, text: labelText };
+        // Create Bins
+        const xValues = data.map(d => d.x);
+        const minX = Math.min(...xValues, refPrice);
+        const maxX = Math.max(...xValues, refPrice);
+        
+        // Smart bin count based on range distribution, but fixed 50 is usually fine
+        const numBins = 50;
+        const range = maxX - minX || 1;
+        const binSize = range / numBins;
+        
+        // Initialize bins
+        // Structure: { x: center, long: 0, short: 0 }
+        const bins = [];
+        for (let i = 0; i < numBins; i++) {
+            bins.push({ 
+                x: minX + (i * binSize) + (binSize / 2), // center of bin
+                xStart: minX + (i * binSize),
+                xEnd: minX + ((i + 1) * binSize),
+                long: 0, 
+                short: 0 
+            });
+        }
 
-        // Ensure padding is updated for existing chart
+        // Fill bins
+        data.forEach(d => {
+            const binIdx = Math.min(Math.floor((d.x - minX) / binSize), numBins - 1);
+            if (binIdx >= 0) {
+                if (d._raw.side === 'long') bins[binIdx].long += d.y;
+                else bins[binIdx].short += d.y;
+            }
+        });
+
+        datasets = [
+            {
+                label: 'Longs',
+                data: bins.map(b => ({ x: b.x, y: b.long })),
+                backgroundColor: 'rgba(34, 197, 94, 0.7)',
+                borderColor: 'rgba(34, 197, 94, 1)',
+                borderWidth: 1,
+                barPercentage: 1.0,
+                categoryPercentage: 1.0
+            },
+            {
+                label: 'Shorts',
+                data: bins.map(b => ({ x: b.x, y: b.short })),
+                backgroundColor: 'rgba(239, 68, 68, 0.7)',
+                borderColor: 'rgba(239, 68, 68, 1)',
+                borderWidth: 1,
+                barPercentage: 1.0,
+                categoryPercentage: 1.0
+            }
+        ];
+
+        scales = {
+            x: {
+                type: 'linear',
+                title: { display: true, text: entryLabel, color: '#9ca3af' },
+                grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                stacked: true,
+                offset: false,
+                ticks: {
+                    color: '#9ca3af',
+                    callback: function(value) {
+                        return value.toLocaleString(undefined, { maximumFractionDigits: 0 });
+                    }
+                }
+            },
+            y: {
+                type: 'linear',
+                title: { display: true, text: 'Volume (BTC)', color: '#9ca3af' },
+                grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                stacked: true,
+                beginAtZero: true
+            }
+        };
+
+        tooltipCallback = {
+            label: function(context) {
+                const raw = context.raw;
+                const side = context.dataset.label;
+                return `${side}: ${raw.y.toFixed(4)} ₿ @ ~${raw.x.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+            }
+        };
+
+    } else {
+        // Scatter (Bubble) Mode
+        chartType = 'bubble';
+        
+        const maxVol = Math.max(...data.map(d => d.y), 0.0001);
+        
+        const bubbleData = data.map(d => {
+            // Apply bubbleScale
+            const radius = (3 + (Math.sqrt(d.y) / Math.sqrt(maxVol)) * 17) * bubbleScale;
+            return {
+                x: d.x,
+                y: d.y,
+                r: radius,
+                _raw: d._raw
+            };
+        });
+
+        const longs = bubbleData.filter(d => d._raw.side === 'long');
+        const shorts = bubbleData.filter(d => d._raw.side === 'short');
+
+        datasets = [
+            {
+                label: 'Longs',
+                data: longs,
+                backgroundColor: longs.map(d => getPointColor('long', d._raw.leverageValue)),
+                borderColor: longs.map(d => getPointColor('long', d._raw.leverageValue, true)),
+                borderWidth: 1,
+                hoverBackgroundColor: longs.map(d => getPointColor('long', d._raw.leverageValue, true)),
+                hoverBorderColor: '#fff',
+                hoverBorderWidth: 2
+            },
+            {
+                label: 'Shorts',
+                data: shorts,
+                backgroundColor: shorts.map(d => getPointColor('short', d._raw.leverageValue)),
+                borderColor: shorts.map(d => getPointColor('short', d._raw.leverageValue, true)),
+                borderWidth: 1,
+                hoverBackgroundColor: shorts.map(d => getPointColor('short', d._raw.leverageValue, true)),
+                hoverBorderColor: '#fff',
+                hoverBorderWidth: 2
+            }
+        ];
+
+        scales = {
+            x: {
+                type: 'linear',
+                title: { display: true, text: entryLabel, color: '#9ca3af' },
+                grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                ticks: {
+                    color: '#9ca3af',
+                    callback: function(value) {
+                        return value.toLocaleString(undefined, { maximumFractionDigits: 0 });
+                    }
+                }
+            },
+            y: {
+                type: 'linear',
+                title: { display: true, text: 'Volume (BTC)', color: '#9ca3af' },
+                grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                beginAtZero: true
+            }
+        };
+
+        tooltipCallback = {
+            label: function(context) {
+                const d = context.raw;
+                const r = d._raw;
+                return [
+                    `${r.coin} ${r.side.toUpperCase()} (${r.leverageValue}x)`,
+                    `Entry (Corr): ${d.x.toLocaleString(undefined, { maximumFractionDigits: 2 })} ${activeEntryCurrency || 'USD'}`,
+                    `Vol: ${d.y.toFixed(4)} ₿`,
+                    `Value: $${fmt(r.positionValue)}`,
+                    `Addr: ${fmtAddr(r.address)}`
+                ];
+            }
+        };
+    }
+
+    // 4. Handle Chart Instance
+    if (scatterChart) {
+        if (scatterChart.config.type !== chartType) {
+            scatterChart.destroy();
+            scatterChart = null;
+        }
+    }
+
+    if (scatterChart) {
+        scatterChart.data.datasets = datasets;
+        scatterChart.options.scales = scales;
+        scatterChart.options.plugins.annotation.annotations = annotations;
+        scatterChart.options.plugins.btcPriceLabel = { price: refPrice, text: labelText };
+        scatterChart.options.plugins.tooltip.callbacks = tooltipCallback;
+        // Ensure padding
         if (!scatterChart.options.layout) scatterChart.options.layout = {};
         if (!scatterChart.options.layout.padding) scatterChart.options.layout.padding = {};
-        scatterChart.options.layout.padding.bottom = 40; 
+        scatterChart.options.layout.padding.bottom = 40;
         
         scatterChart.update();
     } else {
@@ -947,36 +1137,13 @@ function renderScatterPlot() {
         Chart.defaults.borderColor = 'rgba(255, 255, 255, 0.1)';
 
         scatterChart = new Chart(ctx, {
-            type: 'bubble', // Changed from 'scatter' to 'bubble' for explicit radius support
+            type: chartType,
             data: {
-                datasets: [
-                    {
-                        label: 'Longs',
-                        data: longs,
-                        backgroundColor: longs.map(d => getPointColor('long', d._raw.leverageValue)),
-                        borderColor: longs.map(d => getPointColor('long', d._raw.leverageValue, true)),
-                        borderWidth: 1,
-                        hoverBackgroundColor: longs.map(d => getPointColor('long', d._raw.leverageValue, true)),
-                        hoverBorderColor: '#fff',
-                        hoverBorderWidth: 2
-                    },
-                    {
-                        label: 'Shorts',
-                        data: shorts,
-                        backgroundColor: shorts.map(d => getPointColor('short', d._raw.leverageValue)),
-                        borderColor: shorts.map(d => getPointColor('short', d._raw.leverageValue, true)),
-                        borderWidth: 1,
-                        hoverBackgroundColor: shorts.map(d => getPointColor('short', d._raw.leverageValue, true)),
-                        hoverBorderColor: '#fff',
-                        hoverBorderWidth: 2
-                    }
-                ]
+                datasets: datasets
             },
             options: {
                 layout: {
-                    padding: {
-                        bottom: 40
-                    }
+                    padding: { bottom: 40 }
                 },
                 responsive: true,
                 maintainAspectRatio: false,
@@ -991,8 +1158,8 @@ function renderScatterPlot() {
                         zoom: {
                             wheel: { 
                                 enabled: true,
-                                speed: 0.05, // Slower zoom speed
-                                modifierKey: 'ctrl', // Require Ctrl key to avoid page scroll conflict
+                                speed: 0.05,
+                                modifierKey: 'ctrl',
                             },
                             pinch: { enabled: true },
                             drag: {
@@ -1000,14 +1167,13 @@ function renderScatterPlot() {
                                 backgroundColor: 'rgba(59, 130, 246, 0.2)',
                                 borderColor: 'rgba(59, 130, 246, 0.4)',
                                 borderWidth: 1,
-                                modifierKey: 'shift', // Shift + Drag to zoom area
+                                modifierKey: 'shift',
                             },
                             mode: 'xy',
                         },
                         pan: {
                             enabled: true,
                             mode: 'xy',
-                            // modifierKey removed for free pan
                         }
                     },
                     btcPriceLabel: {
@@ -1018,7 +1184,6 @@ function renderScatterPlot() {
                         annotations: annotations
                     },
                     tooltip: {
-                        // Allow auto positioning to avoid covering info
                         caretPadding: 30,
                         padding: 10,
                         backgroundColor: 'rgba(7, 12, 26, 0.95)',
@@ -1026,40 +1191,10 @@ function renderScatterPlot() {
                         borderWidth: 1,
                         titleColor: '#fff',
                         bodyColor: '#e2e8f4',
-                        callbacks: {
-                            label: function(context) {
-                                const d = context.raw;
-                                const r = d._raw;
-                                return [
-                                    `${r.coin} ${r.side.toUpperCase()} (${r.leverageValue}x)`,
-                                    `Entry (Corr): ${d.x.toLocaleString(undefined, { maximumFractionDigits: 2 })} ${activeEntryCurrency || 'USD'}`,
-                                    `Vol: ${d.y.toFixed(4)} ₿`,
-                                    `Value: $${fmt(r.positionValue)}`,
-                                    `Addr: ${fmtAddr(r.address)}`
-                                ];
-                            }
-                        }
+                        callbacks: tooltipCallback
                     }
                 },
-                scales: {
-                    x: {
-                        type: 'linear',
-                        title: { display: true, text: entryLabel, color: '#9ca3af' },
-                        grid: { color: 'rgba(255, 255, 255, 0.05)' },
-                        ticks: {
-                            color: '#9ca3af',
-                            callback: function(value) {
-                                return value.toLocaleString(undefined, { maximumFractionDigits: 0 });
-                            }
-                        }
-                    },
-                    y: {
-                        type: 'linear',
-                        title: { display: true, text: 'Volume (BTC)', color: '#9ca3af' },
-                        grid: { color: 'rgba(255, 255, 255, 0.05)' },
-                        beginAtZero: true
-                    }
-                }
+                scales: scales
             },
             plugins: [{
                 id: 'btcPriceLabel',
@@ -1070,7 +1205,6 @@ function renderScatterPlot() {
                     const { ctx, chartArea: { bottom, left, right }, scales: { x } } = chart;
                     const xVal = x.getPixelForValue(opts.price);
                     
-                    // Only draw if within chart horizontal bounds
                     if (xVal < left || xVal > right) return;
                     
                     const text = opts.text;
@@ -1078,16 +1212,14 @@ function renderScatterPlot() {
                     ctx.font = 'bold 11px sans-serif';
                     const textWidth = ctx.measureText(text).width + 16;
                     const textHeight = 22;
-                    const yPos = bottom + 25; // Position below axis ticks
+                    const yPos = bottom + 25;
                     
-                    // Draw Label Background (pill shape)
                     ctx.fillStyle = 'rgba(255, 165, 0, 0.9)';
                     ctx.beginPath();
                     const r = 4;
                     ctx.roundRect(xVal - textWidth / 2, yPos, textWidth, textHeight, r);
                     ctx.fill();
                     
-                    // Small triangle pointer pointing up
                     ctx.beginPath();
                     ctx.moveTo(xVal, yPos);
                     ctx.lineTo(xVal - 5, yPos + 6);
@@ -1095,7 +1227,6 @@ function renderScatterPlot() {
                     ctx.fillStyle = 'rgba(255, 165, 0, 0.9)';
                     ctx.fill();
                     
-                    // Draw Text
                     ctx.fillStyle = '#000';
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'middle';
@@ -1116,7 +1247,6 @@ function renderScatterPlot() {
                 afterEvent: (chart, args) => {
                     const { inChartArea } = args;
                     const { x, y } = args.event;
-                    
                     chart.crosshair = { x, y, visible: inChartArea };
                     args.changed = true;
                 },
@@ -1127,7 +1257,6 @@ function renderScatterPlot() {
 
                         ctx.save();
                         
-                        // Draw lines
                         ctx.beginPath();
                         ctx.lineWidth = options.width;
                         ctx.strokeStyle = options.color;
@@ -1139,42 +1268,142 @@ function renderScatterPlot() {
                         ctx.lineTo(right, y);
                         ctx.stroke();
 
-                        // Draw Labels
                         ctx.font = '11px sans-serif';
                         ctx.textAlign = 'center';
                         ctx.textBaseline = 'middle';
                         
-                        // X-Axis Label
                         const xValue = xScale.getValueForPixel(x);
-                        // Using toLocaleString for consistent formatting
                         const xLabel = xValue.toLocaleString(undefined, { maximumFractionDigits: 2 });
                         const xLabelWidth = ctx.measureText(xLabel).width + 12;
                         const xLabelHeight = 20;
                         
-                        // Draw X Label Background
                         ctx.fillStyle = 'rgba(7, 12, 26, 0.9)';
                         ctx.fillRect(x - xLabelWidth / 2, bottom, xLabelWidth, xLabelHeight);
                         
-                        // Draw X Label Text
                         ctx.fillStyle = '#e2e8f4';
                         ctx.fillText(xLabel, x, bottom + 10);
 
-                        // Y-Axis Label
                         const yValue = yScale.getValueForPixel(y);
                         const yLabel = yValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 });
                         const yLabelWidth = ctx.measureText(yLabel).width + 12;
                         const yLabelHeight = 20;
                         
-                        // Draw Y Label Background
                         ctx.fillStyle = 'rgba(7, 12, 26, 0.9)';
                         ctx.fillRect(left - yLabelWidth, y - yLabelHeight / 2, yLabelWidth, yLabelHeight);
                         
-                        // Draw Y Label Text
                         ctx.textAlign = 'right';
                         ctx.fillStyle = '#e2e8f4';
                         ctx.fillText(yLabel, left - 6, y);
 
                         ctx.restore();
+                    }
+                }
+            }, {
+                id: 'dragScales',
+                beforeEvent: (chart, args) => {
+                    const { event } = args;
+                    const { x, y, type } = event;
+                    const scales = chart.scales;
+                    
+                    if (!chart.dragScaleState) {
+                        chart.dragScaleState = {
+                            dragging: false,
+                            axis: null,
+                            startPos: 0,
+                            initialMin: 0,
+                            initialMax: 0
+                        };
+                    }
+                    const state = chart.dragScaleState;
+
+                    // Helper to check bounds
+                    const inX = x >= scales.x.left && x <= scales.x.right && y >= scales.x.top && y <= scales.x.bottom;
+                    const inY = x >= scales.y.left && x <= scales.y.right && y >= scales.y.top && y <= scales.y.bottom;
+
+                    // 1. Handle Pan Blocking (Hover or Drag)
+                    if (chart.options.plugins.zoom && chart.options.plugins.zoom.pan) {
+                        if (state.dragging || inX || inY) {
+                            if (chart.options.plugins.zoom.pan.enabled !== false) {
+                                chart.options.plugins.zoom.pan.enabled = false;
+                            }
+                        } else {
+                            if (chart.options.plugins.zoom.pan.enabled !== true) {
+                                chart.options.plugins.zoom.pan.enabled = true;
+                            }
+                        }
+                    }
+
+                    // 2. Handle Cursor Style
+                    if (type === 'mousemove' && !state.dragging) {
+                        if (inX) {
+                            event.native.target.style.cursor = 'col-resize';
+                        } else if (inY) {
+                            event.native.target.style.cursor = 'row-resize';
+                        } else {
+                            event.native.target.style.cursor = 'default';
+                        }
+                    }
+
+                    // 3. Start Drag
+                    if (type === 'mousedown') {
+                        if (inX) {
+                            console.log('Drag started on X');
+                            state.dragging = true;
+                            state.axis = 'x';
+                            state.startPos = x;
+                            state.initialMin = scales.x.min;
+                            state.initialMax = scales.x.max;
+                            return false; // Stop propagation
+                        } else if (inY) {
+                            console.log('Drag started on Y');
+                            state.dragging = true;
+                            state.axis = 'y';
+                            state.startPos = y;
+                            state.initialMin = scales.y.min;
+                            state.initialMax = scales.y.max;
+                            return false; // Stop propagation
+                        }
+                    }
+
+                    // 4. Dragging
+                    if (type === 'mousemove' && state.dragging) {
+                        const axis = state.axis;
+                        const currentPos = axis === 'x' ? x : y;
+                        const delta = state.startPos - currentPos;
+                        
+                        const range = state.initialMax - state.initialMin;
+                        const center = (state.initialMin + state.initialMax) / 2;
+                        
+                        // Sensitivity
+                        const sensitivity = 0.002;
+                        let scaleFactor = 1;
+                        
+                        if (axis === 'y') {
+                            scaleFactor = Math.exp(-delta * sensitivity);
+                        } else {
+                            scaleFactor = Math.exp(delta * sensitivity);
+                        }
+                        
+                        const newRange = range * scaleFactor;
+                        const newMin = center - newRange / 2;
+                        const newMax = center + newRange / 2;
+                        
+                        // Update scale options
+                        chart.options.scales[axis].min = newMin;
+                        chart.options.scales[axis].max = newMax;
+                        
+                        chart.update('none');
+                        return false; // Stop propagation
+                    }
+
+                    // 5. End Drag
+                    if (type === 'mouseup' || type === 'mouseout') {
+                        if (state.dragging) {
+                            console.log('Drag ended');
+                            state.dragging = false;
+                            event.native.target.style.cursor = 'default';
+                            return false;
+                        }
                     }
                 }
             }]
