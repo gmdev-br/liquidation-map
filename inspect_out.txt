@@ -1,0 +1,67 @@
+Testing address: 0x162cc7c861ebd0c06b3d72319201150482518185
+
+=== marginSummary ===
+{
+  "accountValue": "5994239.4403999997",
+  "totalNtlPos": "3183829.027239",
+  "totalRawUsd": "8367110.8930129996",
+  "totalMarginUsed": "539143.551458"
+}
+
+=== crossMarginSummary ===
+{
+  "accountValue": "5990901.7626449997",
+  "totalNtlPos": "3174208.803239",
+  "totalRawUsd": "8354152.991258",
+  "totalMarginUsed": "535805.873703"
+}
+
+=== First position (full) ===
+{
+  "type": "oneWay",
+  "position": {
+    "coin": "BTC",
+    "szi": "-2.20282",
+    "leverage": {
+      "type": "cross",
+      "value": 20
+    },
+    "entryPx": "67461.9",
+    "positionValue": "148578.00618",
+    "unrealizedPnl": "28.467513",
+    "returnOnEquity": "0.0038312615",
+    "liquidationPx": "2690102.0335325501",
+    "marginUsed": "7428.900309",
+    "maxLeverage": 40,
+    "cumFunding": {
+      "allTime": "-179582.179346",
+      "sinceOpen": "-0.125556",
+      "sinceChange": "0.0"
+    }
+  }
+}
+
+=== Second position (full) ===
+{
+  "type": "oneWay",
+  "position": {
+    "coin": "ETH",
+    "szi": "-60.7303",
+    "leverage": {
+      "type": "cross",
+      "value": 20
+    },
+    "entryPx": "1979.21",
+    "positionValue": "120203.48279",
+    "unrealizedPnl": "-5.378861",
+    "returnOnEquity": "-0.0008949993",
+    "liquidationPx": "96409.1464552872",
+    "marginUsed": "6010.174139",
+    "maxLeverage": 25,
+    "cumFunding": {
+      "allTime": "-131781.673559",
+      "sinceOpen": "0.0",
+      "sinceChange": "0.0"
+    }
+  }
+}
