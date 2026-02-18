@@ -16,6 +16,9 @@ let selectedCoins = [];   // Array for multi-select
 let priceMode = 'realtime'; // 'realtime' or 'dailyclose'
 let priceTicker = null;
 let dailyCloseCache = {}; // { COIN: price }
+let columnWidths = {};    // { th-id: width_px }
+let rankingLimit = 10;
+let rankingTicker = null;
 
 // Currency conversion
 const CURRENCY_META = {
@@ -182,6 +185,8 @@ function saveSettings() {
         selectedCoins: selectedCoins,
         priceMode: priceMode,
         activeWindow: activeWindow,
+        columnWidths: columnWidths,
+        rankingLimit: rankingLimit,
         sortKey: sortKey,
         sortDir: sortDir
     };
@@ -221,6 +226,14 @@ function loadSettings() {
             priceMode = s.priceMode;
             updatePriceModeUI();
         }
+        if (s.columnWidths) {
+            columnWidths = s.columnWidths;
+            applyColumnWidths();
+        }
+        if (s.rankingLimit) {
+            rankingLimit = s.rankingLimit;
+            document.getElementById('rankingLimit').value = rankingLimit;
+        }
         if (s.activeWindow) {
             activeWindow = s.activeWindow;
             document.querySelectorAll('.tab').forEach(t => {
@@ -235,12 +248,21 @@ function loadSettings() {
 function sortBy(key) {
     if (sortKey === key) sortDir *= -1;
     else { sortKey = key; sortDir = -1; }
-    document.querySelectorAll('th[id^="th-"]').forEach(t => {
-        t.classList.remove('sorted');
-        t.textContent = t.textContent.replace(' ▲', '').replace(' ▼', '');
+    document.querySelectorAll('th[id^="th-"]').forEach(th => {
+        th.classList.remove('sorted');
+        const label = th.querySelector('.th-label');
+        if (label) {
+            label.textContent = label.textContent.replace(' ▲', '').replace(' ▼', '').replace(' ↕', '') + ' ↕';
+        }
     });
     const th = document.getElementById('th-' + key);
-    if (th) { th.classList.add('sorted'); th.textContent += sortDir === -1 ? ' ▼' : ' ▲'; }
+    if (th) {
+        th.classList.add('sorted');
+        const label = th.querySelector('.th-label');
+        if (label) {
+            label.textContent = label.textContent.replace(' ↕', '') + (sortDir === -1 ? ' ▼' : ' ▲');
+        }
+    }
     renderTable();
 }
 
@@ -632,6 +654,7 @@ function selectCoin(value, label) {
     renderCoinDropdown(document.getElementById('coinSearch').value);
     renderTable();
     renderQuotesPanel();
+    fetchMarketCapRanking(); // Update ranking panel selection state
 }
 
 function updateCoinSearchLabel() {
@@ -702,6 +725,8 @@ async function init() {
             updateCoinFilter(allCoins);
         }
         loadSettings();
+        fetchMarketCapRanking();
+        startRankingTicker();
         setStatus('Ready', 'idle');
     } catch (e) {
         console.warn('Init failed', e);
@@ -932,6 +957,7 @@ function startPriceTicker() {
                     }
                 }
             });
+            renderTable(); // Update correlated entries and other price-dependent fields
         }
     }, 3000);
 }
@@ -951,6 +977,7 @@ function removeCoin(coin) {
         renderCoinDropdown(document.getElementById('coinSearch').value);
         renderTable();
         renderQuotesPanel();
+        fetchMarketCapRanking(); // Update ranking panel selection state
         saveSettings();
     }
 }
@@ -988,6 +1015,98 @@ async function fetchDailyClose(coin) {
         console.warn(`Failed to fetch daily close for ${coin}`, e);
         dailyCloseCache[coin] = 0;
     }
+}
+
+// ── Column Resizing ──────────────────────────────────────────────────
+
+function startResizing(e, resizer) {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const th = resizer.parentElement;
+    const startX = e.pageX;
+    const startWidth = th.offsetWidth;
+
+    document.body.classList.add('resizing');
+
+    const onMouseMove = (e) => {
+        const width = startWidth + (e.pageX - startX);
+        if (width > 30) {
+            th.style.width = width + 'px';
+            columnWidths[th.id] = width;
+        }
+    };
+
+    const onMouseUp = () => {
+        document.body.classList.remove('resizing');
+        window.removeEventListener('mousemove', onMouseMove);
+        window.removeEventListener('mouseup', onMouseUp);
+        saveSettings();
+    };
+
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+}
+
+function applyColumnWidths() {
+    for (const id in columnWidths) {
+        const th = document.getElementById(id);
+        if (th) {
+            th.style.width = columnWidths[id] + 'px';
+        }
+    }
+}
+
+// ── Market Cap Ranking ───────────────────────────────────────────────
+
+function updateRankingLimit() {
+    const val = parseInt(document.getElementById('rankingLimit').value);
+    if (!isNaN(val) && val > 0) {
+        rankingLimit = val;
+        saveSettings();
+        fetchMarketCapRanking();
+    }
+}
+
+async function fetchMarketCapRanking() {
+    const panel = document.getElementById('ranking-panel');
+    if (!panel) return;
+
+    try {
+        const url = `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=${rankingLimit}&page=1&sparkline=false&price_change_percentage=24h`;
+        const resp = await fetch(url);
+        if (!resp.ok) throw new Error('CoinGecko API error');
+        const data = await resp.json();
+
+        panel.innerHTML = data.map(coin => {
+            const sym = coin.symbol.toUpperCase();
+            const isSel = selectedCoins.includes(sym);
+            const mcap = coin.market_cap >= 1e9
+                ? (coin.market_cap / 1e9).toFixed(2) + 'B'
+                : (coin.market_cap / 1e6).toFixed(1) + 'M';
+
+            const change = coin.price_change_percentage_24h || 0;
+            const changeClass = change >= 0 ? 'up' : 'down';
+            const changeSign = change >= 0 ? '+' : '';
+
+            return `
+                <div class="ranking-card${isSel ? ' selected' : ''}" onclick="selectCoin('${sym}', '${sym}')">
+                    <div class="ranking-rank">#${coin.market_cap_rank}</div>
+                    <div class="ranking-coin">${sym}</div>
+                    <div class="ranking-mcap">$${mcap}</div>
+                    <div class="ranking-change ${changeClass}">${changeSign}${change.toFixed(2)}%</div>
+                </div>
+            `;
+        }).join('');
+    } catch (e) {
+        console.warn('Market Cap fetch failed', e);
+        panel.innerHTML = `<div style="padding:10px; font-size:11px; color:var(--muted)">Ranking unavailable (Rate limited)</div>`;
+    }
+}
+
+function startRankingTicker() {
+    if (rankingTicker) clearInterval(rankingTicker);
+    rankingTicker = setInterval(fetchMarketCapRanking, 600000); // Poll every 10 mins
 }
 
 // Initialize

@@ -80,10 +80,19 @@
                 <button class="tab" data-mode="dailyclose" onclick="setPriceMode(this)">Daily Close</button>
             </div>
         </div>
+        <div class="filter-sep"></div>
+        <div class="ctrl">
+            <label>Top N Ranking</label>
+            <input type="number" id="rankingLimit" value="10" min="1" max="100" class="col-filter" style="width:70px"
+                oninput="updateRankingLimit()">
+        </div>
     </div>
 
     <!-- Quotes panel: shown when coins are selected -->
     <div id="quotes-panel" style="display:none"></div>
+
+    <!-- Ranking panel: shown Top N cryptos -->
+    <div id="ranking-panel"></div>
 
     <div class="progress-bar">
         <div class="progress-fill" id="progressFill"></div>
@@ -116,19 +125,49 @@
         <table>
             <thead>
                 <tr>
-                    <th>#</th>
-                    <th>Address</th>
-                    <th id="th-coin" onclick="sortBy('coin')">Coin ↕</th>
-                    <th id="th-szi" onclick="sortBy('szi')">Size ↕</th>
-                    <th>Leverage</th>
-                    <th id="th-positionValue" onclick="sortBy('positionValue')">Value ↕</th>
-                    <th id="th-valueCcy" onclick="sortBy('valueCcy')" style="color:var(--gold)">Value (CCY) ↕</th>
-                    <th id="th-entryPx" onclick="sortBy('entryPx')">Avg Entry ↕</th>
-                    <th id="th-entryCcy" onclick="sortBy('entryCcy')" style="color:var(--gold)">Avg Entry (Corr) ↕</th>
-                    <th id="th-unrealizedPnl" onclick="sortBy('unrealizedPnl')">UPNL ↕</th>
-                    <th id="th-funding" onclick="sortBy('funding')">Funding ↕</th>
-                    <th>Dist. to Liq.</th>
-                    <th id="th-accountValue" onclick="sortBy('accountValue')">Acct. Value ↕</th>
+                    <th id="th-num"><span class="th-label">#</span>
+                        <div class="resizer" onmousedown="startResizing(event, this)"></div>
+                    </th>
+                    <th id="th-address"><span class="th-label">Address</span>
+                        <div class="resizer" onmousedown="startResizing(event, this)"></div>
+                    </th>
+                    <th id="th-coin" onclick="sortBy('coin')"><span class="th-label">Coin ↕</span>
+                        <div class="resizer" onmousedown="startResizing(event, this)"></div>
+                    </th>
+                    <th id="th-szi" onclick="sortBy('szi')"><span class="th-label">Size ↕</span>
+                        <div class="resizer" onmousedown="startResizing(event, this)"></div>
+                    </th>
+                    <th id="th-leverage"><span class="th-label">Leverage</span>
+                        <div class="resizer" onmousedown="startResizing(event, this)"></div>
+                    </th>
+                    <th id="th-positionValue" onclick="sortBy('positionValue')"><span class="th-label">Value ↕</span>
+                        <div class="resizer" onmousedown="startResizing(event, this)"></div>
+                    </th>
+                    <th id="th-valueCcy" onclick="sortBy('valueCcy')" style="color:var(--gold)"><span
+                            class="th-label">Value (CCY) ↕</span>
+                        <div class="resizer" onmousedown="startResizing(event, this)"></div>
+                    </th>
+                    <th id="th-entryPx" onclick="sortBy('entryPx')"><span class="th-label">Avg Entry ↕</span>
+                        <div class="resizer" onmousedown="startResizing(event, this)"></div>
+                    </th>
+                    <th id="th-entryCcy" onclick="sortBy('entryCcy')" style="color:var(--gold)"><span
+                            class="th-label">Avg Entry (Corr) ↕</span>
+                        <div class="resizer" onmousedown="startResizing(event, this)"></div>
+                    </th>
+                    <th id="th-unrealizedPnl" onclick="sortBy('unrealizedPnl')"><span class="th-label">UPNL ↕</span>
+                        <div class="resizer" onmousedown="startResizing(event, this)"></div>
+                    </th>
+                    <th id="th-funding" onclick="sortBy('funding')"><span class="th-label">Funding ↕</span>
+                        <div class="resizer" onmousedown="startResizing(event, this)"></div>
+                    </th>
+                    <th id="th-distToLiq"><span class="th-label">Dist. to Liq.</span>
+                        <div class="resizer" onmousedown="startResizing(event, this)">
+                        </div>
+                    </th>
+                    <th id="th-accountValue" onclick="sortBy('accountValue')"><span class="th-label">Acct. Value
+                            ↕</span>
+                        <div class="resizer" onmousedown="startResizing(event, this)"></div>
+                    </th>
                 </tr>
                 <tr class="filter-row">
                     <!-- # -->
@@ -141,7 +180,7 @@
                     <!-- Coin -->
                     <th class="filter-cell">
                         <!-- searchable coin combobox -->
-                        <div class="combobox" id="coinCombobox">
+                        <div class="combobox col-filter" id="coinCombobox">
                             <div class="combobox-input-wrap">
                                 <input type="text" id="coinSearch" class="col-filter combobox-input"
                                     placeholder="Select coins…" autocomplete="off" oninput="onCoinSearch()"
@@ -152,7 +191,7 @@
                         </div>
                         <input type="hidden" id="coinFilter" value="">
                         <!-- side combobox -->
-                        <div class="combobox col-filter" id="cb-sideFilter" style="margin-top:4px">
+                        <div class="combobox col-filter" id="cb-sideFilter" style="margin-top:4px; width:100%">
                             <div class="combobox-input-wrap">
                                 <input type="text" id="cb-sideFilter-search" class="combobox-input col-filter"
                                     placeholder="L + S" autocomplete="off" readonly onfocus="cbOpen('sideFilter')"
@@ -175,7 +214,7 @@
                         <input type="number" id="maxLev" value="" step="1" min="1" placeholder="Max x"
                             class="col-filter" style="margin-top:3px" oninput="renderTable()">
                         <!-- lev type combobox -->
-                        <div class="combobox col-filter" id="cb-levTypeFilter" style="margin-top:4px">
+                        <div class="combobox col-filter" id="cb-levTypeFilter" style="margin-top:4px; width:100%">
                             <div class="combobox-input-wrap">
                                 <input type="text" id="cb-levTypeFilter-search" class="combobox-input col-filter"
                                     placeholder="All types" autocomplete="off" readonly

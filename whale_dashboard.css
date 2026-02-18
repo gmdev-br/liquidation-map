@@ -528,7 +528,124 @@ select option {
     z-index: 301 !important;
 }
 
-/* ── Quotes Panel ── */
+/* ── Ranking Panel ── */
+#ranking-panel {
+    display: flex;
+    gap: 10px;
+    padding: 10px 24px;
+    overflow-x: auto;
+    background: rgba(10, 15, 30, 0.4);
+    border-bottom: 1px solid var(--glass-border);
+    position: relative;
+    z-index: 75;
+    scrollbar-width: thin;
+    scrollbar-color: var(--glass-border) transparent;
+    flex-wrap: nowrap;
+    align-items: center;
+}
+
+#ranking-panel::-webkit-scrollbar {
+    height: 4px;
+}
+
+#ranking-panel::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+#ranking-panel::-webkit-scrollbar-thumb {
+    background: var(--glass-border);
+    border-radius: 2px;
+}
+
+.ranking-card {
+    flex-shrink: 0;
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--r-md);
+    padding: 8px 14px;
+    min-width: 140px;
+    backdrop-filter: var(--glass-blur-sm);
+    -webkit-backdrop-filter: var(--glass-blur-sm);
+    transition: all 0.2s;
+    display: flex;
+    flex-direction: column;
+    cursor: pointer;
+}
+
+.ranking-card:hover {
+    background: rgba(255, 255, 255, 0.08);
+    transform: translateY(-2px);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.ranking-card.selected {
+    border-color: var(--gold);
+    background: rgba(255, 191, 0, 0.1);
+    box-shadow: 0 0 10px rgba(255, 191, 0, 0.1);
+}
+
+.ranking-rank {
+    font-size: 9px;
+    font-weight: 800;
+    color: var(--muted);
+    margin-bottom: 2px;
+    opacity: 0.6;
+}
+
+.ranking-coin {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 4px;
+}
+
+.ranking-mcap {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--gold);
+    font-weight: 600;
+}
+
+.ranking-change {
+    font-size: 10px;
+    font-weight: 600;
+    margin-top: 4px;
+}
+
+/* ── Resizing Fix ── */
+.filter-cell {
+    padding: 6px 8px !important;
+    border-bottom: 2px solid var(--glass-border) !important;
+    vertical-align: top;
+    min-width: 0;
+    /* Allow shrinking */
+}
+
+.col-filter {
+    display: block;
+    width: 100% !important;
+    /* Force width within the cell */
+    box-sizing: border-box;
+    min-width: 0;
+    /* Important for table-layout: fixed */
+}
+
+.combobox.col-filter {
+    padding: 0;
+    /* Reset padding for comboboxes in headers */
+    border: none;
+    background: transparent;
+}
+
+.combobox-input.col-filter {
+    width: 100% !important;
+}
+
+.combobox-dropdown {
+    min-width: 120px;
+    /* Don't let dropdown shrink TOO much */
+}
+
 #quotes-panel {
     display: flex;
     gap: 10px;
@@ -823,6 +940,8 @@ table {
     width: 100%;
     border-collapse: collapse;
     min-width: 1000px;
+    table-layout: fixed;
+    /* Crucial for resizable columns */
 }
 
 thead tr {
@@ -831,7 +950,8 @@ thead tr {
     -webkit-backdrop-filter: var(--glass-blur);
     position: sticky;
     top: 0;
-    z-index: 10;
+    z-index: 100;
+    /* Increased z-index */
 }
 
 th {
@@ -846,7 +966,40 @@ th {
     border-bottom: 1px solid var(--glass-border);
     cursor: pointer;
     user-select: none;
-    transition: color 0.15s;
+    transition: background 0.15s, color 0.15s;
+    position: relative;
+    /* Anchor for resizer */
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.th-label {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding-right: 8px;
+    /* Leave some space for sort arrows */
+}
+
+.resizer {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 6px;
+    height: 100%;
+    cursor: col-resize;
+    z-index: 10;
+    transition: background 0.2s;
+}
+
+.resizer:hover,
+.resizing .resizer {
+    background: rgba(59, 130, 246, 0.4);
+}
+
+.resizing {
+    cursor: col-resize;
+    user-select: none;
 }
 
 th:hover {
