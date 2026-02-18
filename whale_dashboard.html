@@ -77,11 +77,14 @@
         </div>
         <div class="filter-sep"></div>
         <div class="ctrl">
-            <label title="Low & High leverage for color gradient">Color Lev</label>
-            <div style="display:flex; gap:4px">
-                <input type="number" id="colorMinLev" value="1" min="1" max="100" class="col-filter" style="width:50px" title="Low Leverage (Color Start)" onchange="updateColorSettings()">
-                <span style="color:var(--muted)">-</span>
-                <input type="number" id="colorMaxLev" value="50" min="1" max="100" class="col-filter" style="width:50px" title="High Leverage (Color End)" onchange="updateColorSettings()">
+            <label title="Chart Filters">Chart Filters</label>
+            <div style="display:flex; flex-direction:column">
+                <div style="display:flex; align-items:center; gap:4px; margin-top:2px; padding-top:2px">
+                    <span style="font-size:11px; color:#9ca3af">High Lev ></span>
+                    <input type="number" id="chartHighLevSplit" value="50" min="1" max="100" style="width:40px; padding:2px" title="Leverage Split Threshold" onchange="updateChartFilters()">
+                    <span style="font-size:11px; color:#9ca3af; margin-left:6px">Color Max</span>
+                    <input type="number" id="colorMaxLev" value="50" min="1" max="100" style="width:35px; padding:2px" title="High Color Leverage" onchange="updateColorSettings()">
+                </div>
             </div>
         </div>
         <div class="filter-sep"></div>

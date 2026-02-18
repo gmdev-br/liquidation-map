@@ -41,8 +41,8 @@ let rankingLimit = 10;
 let rankingTicker = null;
 let chartHeight = 400; // default height in px
 let liqChartHeight = 400; // default height for liquidation chart
-let colorMinLev = 1;
 let colorMaxLev = 50;
+let chartHighLevSplit = 50; // Threshold for Low/High leverage split
 let chartMode = 'scatter'; // 'scatter' or 'column'
 let bubbleScale = 1.0;
 let aggregationFactor = 50;
@@ -287,8 +287,8 @@ function saveSettings() {
         activeWindow: activeWindow,
         columnWidths: columnWidths,
         rankingLimit: rankingLimit,
-        colorMinLev: colorMinLev,
         colorMaxLev: colorMaxLev,
+        chartHighLevSplit: chartHighLevSplit,
         sortKey: sortKey,
         sortDir: sortDir,
         showSymbols: showSymbols,
@@ -411,13 +411,14 @@ function loadSettings() {
             rankingLimit = s.rankingLimit;
             document.getElementById('rankingLimit').value = rankingLimit;
         }
-        if (s.colorMinLev) {
-            colorMinLev = s.colorMinLev;
-            document.getElementById('colorMinLev').value = colorMinLev;
-        }
         if (s.colorMaxLev) {
             colorMaxLev = s.colorMaxLev;
             document.getElementById('colorMaxLev').value = colorMaxLev;
+        }
+        if (s.chartHighLevSplit !== undefined) {
+            chartHighLevSplit = s.chartHighLevSplit;
+            const el = document.getElementById('chartHighLevSplit');
+            if(el) el.value = chartHighLevSplit;
         }
         if (s.activeWindow) {
             activeWindow = s.activeWindow;
@@ -573,7 +574,7 @@ function processState(whale, state) {
             szi: size,
             side: size > 0 ? 'long' : 'short',
             leverageType: pos.leverage?.type || 'cross',
-            leverageValue: pos.leverage?.value || 1,
+            leverageValue: parseInt(pos.leverage?.value || 1, 10),
             positionValue: parseFloat(pos.positionValue),
             entryPx: entryPx,
             markPrice: markPrice,
@@ -892,39 +893,82 @@ function updateCoinFilter(initialCoins = null) {
 }
 
 // ── Color Helpers ──
-function getPointColor(side, leverage, isBorder = false) {
-    const minLev = colorMinLev;
+function getPointColor(side, leverage, isHighLev, isBorder = false) {
+    const splitVal = parseInt(chartHighLevSplit, 10);
     const maxLev = colorMaxLev;
-    let factor = (leverage - minLev) / (maxLev - minLev);
+    
+    let factor = 0;
+    
+    // Calculate factor relative to the dataset range
+    if (!isHighLev) {
+        // Range: 1 to Split
+        // If split is 1, factor is 0.
+        if (splitVal > 1) {
+            factor = (leverage - 1) / (splitVal - 1);
+        }
+    } else {
+        // Range: Split to Max
+        if (maxLev > splitVal) {
+            factor = (leverage - splitVal) / (maxLev - splitVal);
+        }
+    }
+    
+    // Clamp factor
     if (factor < 0) factor = 0;
     if (factor > 1) factor = 1;
 
     const alpha = isBorder ? 1 : 0.6;
 
     if (side === 'long') {
-        // Low: Yellow (234, 179, 8) -> High: Green (34, 197, 94)
-        const r = Math.round(234 + (34 - 234) * factor);
-        const g = Math.round(179 + (197 - 179) * factor);
-        const b = Math.round(8 + (94 - 8) * factor);
-        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        if (!isHighLev) {
+            // Low Leverage: Yellow (234, 179, 8) -> Dark Gold/Orange (202, 138, 4)
+            // Ensures low leverage longs stay in the yellow/orange spectrum
+            const r = Math.round(234 + (202 - 234) * factor);
+            const g = Math.round(179 + (138 - 179) * factor);
+            const b = Math.round(8 + (4 - 8) * factor);
+            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        } else {
+            // High Leverage: Green (34, 197, 94) -> Dark Green (21, 128, 61)
+            // Ensures high leverage longs are distinctly green
+            const r = Math.round(34 + (21 - 34) * factor);
+            const g = Math.round(197 + (128 - 197) * factor);
+            const b = Math.round(94 + (61 - 94) * factor);
+            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        }
     } else {
-        // Low: Fuchsia (217, 70, 239) -> High: Red (239, 68, 68)
-        const r = Math.round(217 + (239 - 217) * factor);
-        const g = Math.round(70 + (68 - 70) * factor);
-        const b = Math.round(239 + (68 - 239) * factor);
-        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        if (!isHighLev) {
+            // Low Leverage: Fuchsia (217, 70, 239) -> Dark Purple (126, 34, 206)
+            // Ensures low leverage shorts stay in the pink/purple spectrum
+            const r = Math.round(217 + (126 - 217) * factor);
+            const g = Math.round(70 + (34 - 70) * factor);
+            const b = Math.round(239 + (206 - 239) * factor);
+            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        } else {
+            // High Leverage: Red (239, 68, 68) -> Dark Red (153, 27, 27)
+            // Ensures high leverage shorts are distinctly red
+            const r = Math.round(239 + (153 - 239) * factor);
+            const g = Math.round(68 + (27 - 68) * factor);
+            const b = Math.round(68 + (27 - 68) * factor);
+            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        }
     }
 }
 
 function updateColorSettings() {
-    const min = parseInt(document.getElementById('colorMinLev').value, 10);
     const max = parseInt(document.getElementById('colorMaxLev').value, 10);
-    if (!isNaN(min) && !isNaN(max) && max > min) {
-        colorMinLev = min;
+    if (!isNaN(max) && max > 1) {
         colorMaxLev = max;
         renderCharts();
         saveSettings();
     }
+}
+
+function updateChartFilters() {
+    const hSplit = parseInt(document.getElementById('chartHighLevSplit').value, 10);
+    if (!isNaN(hSplit)) chartHighLevSplit = hSplit;
+
+    saveSettings();
+    renderCharts();
 }
 
 function updateBubbleSize(val) {
@@ -999,6 +1043,10 @@ function renderScatterPlot() {
             y: volBTC,
             _raw: r
         };
+    }).filter(d => {
+        // No pre-filtering by leverage/side variables anymore,
+        // relying on Chart.js legend visibility toggling.
+        return true;
     });
 
     if (data.length === 0) {
@@ -1134,6 +1182,12 @@ function renderScatterPlot() {
         chartType = 'bubble';
         
         const maxVol = Math.max(...data.map(d => d.y), 0.0001);
+        const minX = Math.min(...data.map(d => d.x));
+        const maxX = Math.max(...data.map(d => d.x));
+        const maxY = maxVol;
+
+        const xPadding = (maxX - minX) * 0.05 || 1;
+        const yPadding = maxY * 0.05 || 1;
         
         const bubbleData = data.map(d => {
             // Apply bubbleScale
@@ -1146,27 +1200,50 @@ function renderScatterPlot() {
             };
         });
 
-        const longs = bubbleData.filter(d => d._raw.side === 'long');
-        const shorts = bubbleData.filter(d => d._raw.side === 'short');
+        const splitVal = parseInt(chartHighLevSplit, 10);
+        const longsLow = bubbleData.filter(d => d._raw.side === 'long' && parseFloat(d._raw.leverageValue) <= splitVal);
+        const longsHigh = bubbleData.filter(d => d._raw.side === 'long' && parseFloat(d._raw.leverageValue) > splitVal);
+        const shortsLow = bubbleData.filter(d => d._raw.side === 'short' && parseFloat(d._raw.leverageValue) <= splitVal);
+        const shortsHigh = bubbleData.filter(d => d._raw.side === 'short' && parseFloat(d._raw.leverageValue) > splitVal);
 
         datasets = [
             {
-                label: 'Longs',
-                data: longs,
-                backgroundColor: longs.map(d => getPointColor('long', d._raw.leverageValue)),
-                borderColor: longs.map(d => getPointColor('long', d._raw.leverageValue, true)),
+                label: `Longs (≤${splitVal}x)`,
+                data: longsLow,
+                backgroundColor: longsLow.map(d => getPointColor('long', parseFloat(d._raw.leverageValue), false)),
+                borderColor: longsLow.map(d => getPointColor('long', parseFloat(d._raw.leverageValue), false, true)),
                 borderWidth: 1,
-                hoverBackgroundColor: longs.map(d => getPointColor('long', d._raw.leverageValue, true)),
+                hoverBackgroundColor: longsLow.map(d => getPointColor('long', parseFloat(d._raw.leverageValue), false, true)),
                 hoverBorderColor: '#fff',
                 hoverBorderWidth: 2
             },
             {
-                label: 'Shorts',
-                data: shorts,
-                backgroundColor: shorts.map(d => getPointColor('short', d._raw.leverageValue)),
-                borderColor: shorts.map(d => getPointColor('short', d._raw.leverageValue, true)),
+                label: `Longs (>${splitVal}x)`,
+                data: longsHigh,
+                backgroundColor: longsHigh.map(d => getPointColor('long', parseFloat(d._raw.leverageValue), true)),
+                borderColor: longsHigh.map(d => getPointColor('long', parseFloat(d._raw.leverageValue), true, true)),
                 borderWidth: 1,
-                hoverBackgroundColor: shorts.map(d => getPointColor('short', d._raw.leverageValue, true)),
+                hoverBackgroundColor: longsHigh.map(d => getPointColor('long', parseFloat(d._raw.leverageValue), true, true)),
+                hoverBorderColor: '#fff',
+                hoverBorderWidth: 2
+            },
+            {
+                label: `Shorts (≤${splitVal}x)`,
+                data: shortsLow,
+                backgroundColor: shortsLow.map(d => getPointColor('short', parseFloat(d._raw.leverageValue), false)),
+                borderColor: shortsLow.map(d => getPointColor('short', parseFloat(d._raw.leverageValue), false, true)),
+                borderWidth: 1,
+                hoverBackgroundColor: shortsLow.map(d => getPointColor('short', parseFloat(d._raw.leverageValue), false, true)),
+                hoverBorderColor: '#fff',
+                hoverBorderWidth: 2
+            },
+            {
+                label: `Shorts (>${splitVal}x)`,
+                data: shortsHigh,
+                backgroundColor: shortsHigh.map(d => getPointColor('short', parseFloat(d._raw.leverageValue), true)),
+                borderColor: shortsHigh.map(d => getPointColor('short', parseFloat(d._raw.leverageValue), true, true)),
+                borderWidth: 1,
+                hoverBackgroundColor: shortsHigh.map(d => getPointColor('short', parseFloat(d._raw.leverageValue), true, true)),
                 hoverBorderColor: '#fff',
                 hoverBorderWidth: 2
             }
@@ -1177,6 +1254,8 @@ function renderScatterPlot() {
                 type: 'linear',
                 title: { display: true, text: entryLabel, color: '#9ca3af' },
                 grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                min: minX - xPadding,
+                max: maxX + xPadding,
                 ticks: {
                     color: '#9ca3af',
                     callback: function(value) {
@@ -1188,7 +1267,9 @@ function renderScatterPlot() {
                 type: 'linear',
                 title: { display: true, text: 'Volume (BTC)', color: '#9ca3af' },
                 grid: { color: 'rgba(255, 255, 255, 0.05)' },
-                beginAtZero: true
+                beginAtZero: true,
+                min: 0,
+                max: maxY + yPadding
             }
         };
 
@@ -1216,6 +1297,24 @@ function renderScatterPlot() {
     }
 
     if (scatterChart) {
+        // Preserve hidden state by INDEX to avoid label mismatches
+        const hiddenIndices = [];
+        if (scatterChart.data && scatterChart.data.datasets) {
+            scatterChart.data.datasets.forEach((ds, i) => {
+                // isDatasetVisible returns true if visible. We want to know if it is HIDDEN.
+                if (!scatterChart.isDatasetVisible(i)) {
+                    hiddenIndices.push(i);
+                }
+            });
+        }
+        
+        // Apply hidden state to new datasets by index
+        datasets.forEach((ds, i) => {
+            if (hiddenIndices.includes(i)) {
+                ds.hidden = true;
+            }
+        });
+
         scatterChart.data.datasets = datasets;
         
         // Preserve zoom state if scales exist
@@ -1272,6 +1371,34 @@ function renderScatterPlot() {
                     intersect: true
                 },
                 plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        labels: {
+                            color: '#9ca3af',
+                            usePointStyle: true,
+                            font: { size: 11 },
+                            generateLabels: function(chart) {
+                                const original = Chart.defaults.plugins.legend.labels.generateLabels(chart);
+                                original.forEach(label => {
+                                    if (label.text.includes('Longs (≤')) {
+                                        label.fillStyle = 'rgba(234, 179, 8, 0.8)';
+                                        label.strokeStyle = 'rgba(234, 179, 8, 1)';
+                                    } else if (label.text.includes('Longs (>')) {
+                                        label.fillStyle = 'rgba(34, 197, 94, 0.8)';
+                                        label.strokeStyle = 'rgba(34, 197, 94, 1)';
+                                    } else if (label.text.includes('Shorts (≤')) {
+                                        label.fillStyle = 'rgba(217, 70, 239, 0.8)';
+                                        label.strokeStyle = 'rgba(217, 70, 239, 1)';
+                                    } else if (label.text.includes('Shorts (>')) {
+                                        label.fillStyle = 'rgba(239, 68, 68, 0.8)';
+                                        label.strokeStyle = 'rgba(239, 68, 68, 1)';
+                                    }
+                                });
+                                return original;
+                            }
+                        }
+                    },
                     zoom: {
                         zoom: {
                             wheel: { 
@@ -1564,7 +1691,19 @@ function renderLiqScatterPlot() {
             y: volBTC,
             _raw: r
         };
-    }).filter(d => d !== null);
+    }).filter(d => {
+        if (d === null) return false;
+        
+        const r = d._raw;
+        const lev = Math.abs(r.leverageValue);
+        
+        if (r.side === 'long') {
+             // No pre-filtering
+        } else { // short
+             // No pre-filtering
+        }
+        return true;
+    });
 
     if (data.length === 0) {
         section.style.display = 'none';
@@ -1700,6 +1839,12 @@ function renderLiqScatterPlot() {
         chartType = 'bubble';
         
         const maxVol = Math.max(...data.map(d => d.y), 0.0001);
+        const minX = Math.min(...data.map(d => d.x));
+        const maxX = Math.max(...data.map(d => d.x));
+        // For log scale, min cannot be 0.
+        const minY = Math.min(...data.map(d => d.y).filter(y => y > 0)) || 0.0001;
+
+        const xPadding = (maxX - minX) * 0.05 || 1;
         
         const bubbleData = data.map(d => {
             const radius = (3 + (Math.sqrt(d.y) / Math.sqrt(maxVol)) * 17) * bubbleScale;
@@ -1711,27 +1856,52 @@ function renderLiqScatterPlot() {
             };
         });
 
-        const longs = bubbleData.filter(d => d._raw.side === 'long');
-        const shorts = bubbleData.filter(d => d._raw.side === 'short');
+        const splitVal = parseInt(chartHighLevSplit, 10);
+        const longsLow = bubbleData.filter(d => d._raw.side === 'long' && parseFloat(d._raw.leverageValue) <= splitVal);
+        const longsHigh = bubbleData.filter(d => d._raw.side === 'long' && parseFloat(d._raw.leverageValue) > splitVal);
+        const shortsLow = bubbleData.filter(d => d._raw.side === 'short' && parseFloat(d._raw.leverageValue) <= splitVal);
+        const shortsHigh = bubbleData.filter(d => d._raw.side === 'short' && parseFloat(d._raw.leverageValue) > splitVal);
 
         datasets = [
             {
-                label: 'Longs',
-                data: longs,
-                backgroundColor: longs.map(d => getPointColor('long', d._raw.leverageValue)),
-                borderColor: longs.map(d => getPointColor('long', d._raw.leverageValue, true)),
+                label: `Longs (≤${splitVal}x)`,
+                data: longsLow,
+                backgroundColor: longsLow.map(d => getPointColor('long', parseFloat(d._raw.leverageValue), false)),
+                borderColor: longsLow.map(d => getPointColor('long', parseFloat(d._raw.leverageValue), false, true)),
                 borderWidth: 1,
-                hoverBackgroundColor: longs.map(d => getPointColor('long', d._raw.leverageValue, true)),
+                hoverBackgroundColor: longsLow.map(d => getPointColor('long', parseFloat(d._raw.leverageValue), false, true)),
                 hoverBorderColor: '#fff',
+                hoverBorderWidth: 2
             },
             {
-                label: 'Shorts',
-                data: shorts,
-                backgroundColor: shorts.map(d => getPointColor('short', d._raw.leverageValue)),
-                borderColor: shorts.map(d => getPointColor('short', d._raw.leverageValue, true)),
+                label: `Longs (>${splitVal}x)`,
+                data: longsHigh,
+                backgroundColor: longsHigh.map(d => getPointColor('long', parseFloat(d._raw.leverageValue), true)),
+                borderColor: longsHigh.map(d => getPointColor('long', parseFloat(d._raw.leverageValue), true, true)),
                 borderWidth: 1,
-                hoverBackgroundColor: shorts.map(d => getPointColor('short', d._raw.leverageValue, true)),
+                hoverBackgroundColor: longsHigh.map(d => getPointColor('long', parseFloat(d._raw.leverageValue), true, true)),
                 hoverBorderColor: '#fff',
+                hoverBorderWidth: 2
+            },
+            {
+                label: `Shorts (≤${splitVal}x)`,
+                data: shortsLow,
+                backgroundColor: shortsLow.map(d => getPointColor('short', parseFloat(d._raw.leverageValue), false)),
+                borderColor: shortsLow.map(d => getPointColor('short', parseFloat(d._raw.leverageValue), false, true)),
+                borderWidth: 1,
+                hoverBackgroundColor: shortsLow.map(d => getPointColor('short', parseFloat(d._raw.leverageValue), false, true)),
+                hoverBorderColor: '#fff',
+                hoverBorderWidth: 2
+            },
+            {
+                label: `Shorts (>${splitVal}x)`,
+                data: shortsHigh,
+                backgroundColor: shortsHigh.map(d => getPointColor('short', parseFloat(d._raw.leverageValue), true)),
+                borderColor: shortsHigh.map(d => getPointColor('short', parseFloat(d._raw.leverageValue), true, true)),
+                borderWidth: 1,
+                hoverBackgroundColor: shortsHigh.map(d => getPointColor('short', parseFloat(d._raw.leverageValue), true, true)),
+                hoverBorderColor: '#fff',
+                hoverBorderWidth: 2
             }
         ];
 
@@ -1740,6 +1910,8 @@ function renderLiqScatterPlot() {
                 type: 'linear',
                 title: { display: true, text: entryLabel, color: '#9ca3af' },
                 grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                min: minX - xPadding,
+                max: maxX + xPadding,
                 ticks: {
                     color: '#9ca3af',
                     callback: function(value) {
@@ -1751,6 +1923,8 @@ function renderLiqScatterPlot() {
                 type: 'logarithmic',
                 title: { display: true, text: 'Volume (BTC) [Log]', color: '#9ca3af' },
                 grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                min: minY * 0.9,
+                max: maxVol * 1.1,
                 ticks: {
                     color: '#9ca3af',
                     callback: function(value) {
@@ -1778,6 +1952,23 @@ function renderLiqScatterPlot() {
     }
 
     if (liqChartInstance && liqChartInstance.config.type === chartType) {
+        // Preserve hidden state by INDEX
+        const hiddenIndices = [];
+        if (liqChartInstance.data && liqChartInstance.data.datasets) {
+            liqChartInstance.data.datasets.forEach((ds, i) => {
+                if (!liqChartInstance.isDatasetVisible(i)) {
+                    hiddenIndices.push(i);
+                }
+            });
+        }
+        
+        // Apply hidden state to new datasets
+        datasets.forEach((ds, i) => {
+            if (hiddenIndices.includes(i)) {
+                ds.hidden = true;
+            }
+        });
+
         liqChartInstance.data.datasets = datasets;
         
         const currentX = liqChartInstance.scales.x;
@@ -1828,7 +2019,34 @@ function renderLiqScatterPlot() {
                 intersect: false
             },
             plugins: {
-                legend: { display: false },
+                legend: {
+                    display: true,
+                    position: 'top',
+                    labels: {
+                        color: '#9ca3af',
+                        usePointStyle: true,
+                        font: { size: 11 },
+                        generateLabels: function(chart) {
+                            const original = Chart.defaults.plugins.legend.labels.generateLabels(chart);
+                            original.forEach(label => {
+                                if (label.text.includes('Longs (≤')) {
+                                    label.fillStyle = 'rgba(234, 179, 8, 0.8)';
+                                    label.strokeStyle = 'rgba(234, 179, 8, 1)';
+                                } else if (label.text.includes('Longs (>')) {
+                                    label.fillStyle = 'rgba(34, 197, 94, 0.8)';
+                                    label.strokeStyle = 'rgba(34, 197, 94, 1)';
+                                } else if (label.text.includes('Shorts (≤')) {
+                                    label.fillStyle = 'rgba(217, 70, 239, 0.8)';
+                                    label.strokeStyle = 'rgba(217, 70, 239, 1)';
+                                } else if (label.text.includes('Shorts (>')) {
+                                    label.fillStyle = 'rgba(239, 68, 68, 0.8)';
+                                    label.strokeStyle = 'rgba(239, 68, 68, 1)';
+                                }
+                            });
+                            return original;
+                        }
+                    }
+                },
                 tooltip: {
                     backgroundColor: 'rgba(15, 23, 42, 0.9)',
                     titleColor: '#fff',
