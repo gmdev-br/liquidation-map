@@ -16,6 +16,16 @@
     backdrop-filter: var(--glass-blur-sm);
     -webkit-backdrop-filter: var(--glass-blur-sm);
     transition: border-color 0.2s;
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+}
+
+/* Mobile status badge */
+@media (max-width: 767px) {
+    .status-badge {
+        padding: 4px 12px;
+        font-size: 10px;
+    }
 }
 
 .dot {
@@ -53,6 +63,16 @@
     font-weight: 600;
     backdrop-filter: var(--glass-blur-sm);
     -webkit-backdrop-filter: var(--glass-blur-sm);
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+}
+
+/* Mobile coin badge */
+@media (max-width: 767px) {
+    .coin-badge {
+        padding: 2px 8px;
+        font-size: 10px;
+    }
 }
 
 .coin-badge.long {

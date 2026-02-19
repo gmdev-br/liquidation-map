@@ -25,13 +25,185 @@ import {
     renderColumnDropdown as renderColumnDropdownFn, toggleColumn as toggleColumnFn, showAllColumns as showAllColumnsFn, hideAllColumns as hideAllColumnsFn, updateColumnSelectDisplay, applyColumnOrder,
     applyColumnWidths, applyColumnVisibility, toggleShowSymbols, updatePriceInterval, updateDecimalPlaces, updateLeverageColors
 } from './handlers.js';
+import { initColumnWidthControl, applyColumnWidth } from '../ui/columnWidth.js';
 import { setWindow, setStatus, setProgress } from '../ui/status.js';
 import { sortBy } from '../ui/filters.js';
 import { CURRENCY_META } from '../config.js';
 
+// ── Swipe Gestures for Navigation ──
+function setupSwipeGestures() {
+    let touchStartX = 0;
+    let touchStartY = 0;
+    const swipeThreshold = 50;
+    
+    function handleTouchStart(e) {
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+    }
+    
+    function handleTouchEnd(e) {
+        if (!touchStartX || !touchStartY) return;
+        
+        const touchEndX = e.changedTouches[0].clientX;
+        const touchEndY = e.changedTouches[0].clientY;
+        
+        const diffX = touchEndX - touchStartX;
+        const diffY = touchEndY - touchStartY;
+        
+        // Only handle horizontal swipes
+        if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > swipeThreshold) {
+            // Check if we're on a tab element
+            const target = e.target;
+            const tab = target.closest('.tab');
+            
+            if (tab) {
+                const tabs = Array.from(tab.parentElement.querySelectorAll('.tab'));
+                const currentIndex = tabs.indexOf(tab);
+                
+                if (diffX > 0 && currentIndex > 0) {
+                    // Swipe right - go to previous tab
+                    tabs[currentIndex - 1].click();
+                } else if (diffX < 0 && currentIndex < tabs.length - 1) {
+                    // Swipe left - go to next tab
+                    tabs[currentIndex + 1].click();
+                }
+            }
+        }
+        
+        touchStartX = 0;
+        touchStartY = 0;
+    }
+    
+    document.addEventListener('touchstart', handleTouchStart, { passive: true });
+    document.addEventListener('touchend', handleTouchEnd);
+}
+
+// ── Pull-to-Refresh ──
+function setupPullToRefresh() {
+    let startY = 0;
+    let isPulling = false;
+    const pullThreshold = 100;
+    const pullToRefresh = document.getElementById('pullToRefresh');
+    
+    if (!pullToRefresh) return;
+
+    function handleTouchStart(e) {
+        if (window.scrollY === 0) {
+            startY = e.touches[0].clientY;
+        }
+    }
+
+    function handleTouchMove(e) {
+        if (window.scrollY !== 0) return;
+
+        const currentY = e.touches[0].clientY;
+        const diff = currentY - startY;
+
+        if (diff > 0 && !isPulling) {
+            isPulling = true;
+        }
+
+        if (isPulling && diff > 0) {
+            e.preventDefault();
+            const progress = Math.min(diff / pullThreshold, 1);
+            pullToRefresh.style.transform = `translateY(${diff}px)`;
+            
+            if (progress >= 1) {
+                pullToRefresh.classList.add('active');
+            } else {
+                pullToRefresh.classList.remove('active');
+            }
+        }
+    }
+
+    function handleTouchEnd() {
+        if (!isPulling) return;
+
+        const isActive = pullToRefresh.classList.contains('active');
+        
+        if (isActive) {
+            // Trigger refresh
+            window.location.reload();
+        } else {
+            // Reset
+            pullToRefresh.style.transform = 'translateY(-100%)';
+            pullToRefresh.classList.remove('active');
+        }
+
+        isPulling = false;
+        startY = 0;
+    }
+
+    document.addEventListener('touchstart', handleTouchStart, { passive: true });
+    document.addEventListener('touchmove', handleTouchMove, { passive: false });
+    document.addEventListener('touchend', handleTouchEnd);
+}
+
+// ── Splash Screen ──
+function setupSplashScreen() {
+    const splashScreen = document.getElementById('splashScreen');
+    if (!splashScreen) return;
+
+    // Hide splash screen after page loads
+    window.addEventListener('load', () => {
+        setTimeout(() => {
+            splashScreen.classList.add('hidden');
+            setTimeout(() => {
+                splashScreen.style.display = 'none';
+            }, 300);
+        }, 1000);
+    });
+}
+
 function setupEventListeners() {
     // Setup click outside handler for comboboxes
     setupClickOutsideHandler();
+
+    // Setup pull-to-refresh
+    setupPullToRefresh();
+
+    // Setup splash screen
+    setupSplashScreen();
+
+    // Setup swipe gestures
+    setupSwipeGestures();
+
+    // Mobile menu toggle
+    const menuToggle = document.getElementById('menuToggle');
+    const mobileMenu = document.getElementById('mobileMenu');
+    const mobileMenuOverlay = document.getElementById('mobileMenuOverlay');
+    const mobileMenuClose = document.getElementById('mobileMenuClose');
+
+    function openMobileMenu() {
+        mobileMenu.classList.add('active');
+        mobileMenuOverlay.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeMobileMenu() {
+        mobileMenu.classList.remove('active');
+        mobileMenuOverlay.classList.remove('active');
+        document.body.style.overflow = '';
+    }
+
+    if (menuToggle) {
+        menuToggle.addEventListener('click', openMobileMenu);
+    }
+
+    if (mobileMenuClose) {
+        mobileMenuClose.addEventListener('click', closeMobileMenu);
+    }
+
+    if (mobileMenuOverlay) {
+        mobileMenuOverlay.addEventListener('click', closeMobileMenu);
+    }
+
+    // Close menu on escape key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            closeMobileMenu();
+        }
+    });
 
     // Scan controls
     const scanBtn = document.getElementById('scanBtn');
@@ -121,9 +293,13 @@ function setupEventListeners() {
     });
 
     // Show symbols toggle
-    const btnShowSym = document.getElementById('btnShowSym');
-    if (btnShowSym) {
-        btnShowSym.addEventListener('click', toggleShowSymbols);
+    const btnShowSymMobile = document.getElementById('btnShowSymMobile');
+    const btnShowSymDesktop = document.getElementById('btnShowSymDesktop');
+    if (btnShowSymMobile) {
+        btnShowSymMobile.addEventListener('click', toggleShowSymbols);
+    }
+    if (btnShowSymDesktop) {
+        btnShowSymDesktop.addEventListener('click', toggleShowSymbols);
     }
 
     // Ranking limit
@@ -146,7 +322,7 @@ function setupEventListeners() {
     // Bubble size
     const bubbleSizeRange = document.getElementById('bubbleSizeRange');
     if (bubbleSizeRange) {
-        bubbleSizeRange.addEventListener('change', (e) => {
+        bubbleSizeRange.addEventListener('input', (e) => {
             updateBubbleSize(e.target.value);
         });
     }
@@ -154,7 +330,7 @@ function setupEventListeners() {
     // Bubble opacity
     const bubbleOpacityRange = document.getElementById('bubbleOpacityRange');
     if (bubbleOpacityRange) {
-        bubbleOpacityRange.addEventListener('change', (e) => {
+        bubbleOpacityRange.addEventListener('input', (e) => {
             updateBubbleOpacity(e.target.value);
         });
     }
@@ -162,7 +338,7 @@ function setupEventListeners() {
     // Aggregation
     const aggregationRange = document.getElementById('aggregationRange');
     if (aggregationRange) {
-        aggregationRange.addEventListener('change', (e) => {
+        aggregationRange.addEventListener('input', (e) => {
             updateAggregation(e.target.value);
         });
     }
@@ -311,17 +487,6 @@ function setupEventListeners() {
         coinSearch.addEventListener('click', openCombobox);
     }
 
-    // Reset zoom buttons
-    const resetZoomBtn = document.getElementById('resetZoomBtn');
-    if (resetZoomBtn) {
-        resetZoomBtn.addEventListener('click', resetScatterZoom);
-    }
-
-    const resetLiqZoomBtn = document.getElementById('resetLiqZoomBtn');
-    if (resetLiqZoomBtn) {
-        resetLiqZoomBtn.addEventListener('click', resetLiqZoom);
-    }
-
     // Make cbSelect, selectCoin, and toggleColumn globally accessible for inline onmousedown handlers
     window.cbSelect = (id, value, label, onChangeFn, renderTableFn) => {
         // For currency selectors, use onCurrencyChange, otherwise use renderTable
@@ -358,28 +523,6 @@ function setupEventListeners() {
     window.getLiqChartInstance = getLiqChartInstance;
 }
 
-function resetScatterZoom() {
-    const chart = getScatterChart();
-    if (chart) {
-        chart.resetZoom();
-        chart.isZoomed = false;
-        const btn = document.getElementById('resetZoomBtn');
-        if (btn) btn.style.display = 'none';
-        saveSettings(null, null, null, chart, null);
-    }
-}
-
-function resetLiqZoom() {
-    const chart = getLiqChartInstance();
-    if (chart) {
-        chart.resetZoom();
-        chart.isZoomed = false;
-        const btn = document.getElementById('resetLiqZoomBtn');
-        if (btn) btn.style.display = 'none';
-        saveSettings(null, null, null, null, chart);
-    }
-}
-
 function setupResizable(element, callback) {
     const resizer = element.querySelector('.chart-resizer');
     if (!resizer) return;
@@ -408,6 +551,12 @@ function setupResizable(element, callback) {
     });
 }
 
+function applyColumnWidthAfterRender() {
+    const width = document.getElementById('columnWidthInput')?.value || 100;
+    console.log('applyColumnWidthAfterRender called with width:', width);
+    applyColumnWidth(parseInt(width, 10));
+}
+
 function initializeCharts() {
     renderScatterPlot();
     renderLiqScatterPlot();
@@ -418,18 +567,19 @@ function initializePanels() {
     updateRankingPanel();
     renderQuotesPanel();
     updatePriceModeUI();
+    initColumnWidthControl();
 }
 
 async function loadInitialState() {
     console.log('loadInitialState: Starting...');
     loadTableData(setAllRows);
-    
+
     // Initialize currency comboboxes FIRST before loading settings
     const currencyOptions = Object.keys(CURRENCY_META).map(ccy => ({
         value: ccy,
         label: ccy
     }));
-    
+
     console.log('Initializing currency comboboxes with options:', currencyOptions);
     cbInit('currencySelect', currencyOptions, onCurrencyChange);
     cbInit('entryCurrencySelect', currencyOptions, onCurrencyChange);
@@ -467,6 +617,9 @@ async function loadInitialState() {
     console.log('loadInitialState: Rendering table...');
     renderTable();
 
+    // Apply column width after table is rendered
+    setTimeout(applyColumnWidthAfterRender, 100);
+
     // Initialize generic comboboxes with options
     cbInit('sideFilter', [
         { value: '', label: 'All' },
@@ -483,10 +636,16 @@ async function loadInitialState() {
     // Currency comboboxes already initialized above in loadInitialState()
 
     // Set initial values from state
-    const btnShowSym = document.getElementById('btnShowSym');
-    if (btnShowSym) {
-        btnShowSym.textContent = getShowSymbols() ? 'On' : 'Off';
-        btnShowSym.classList.toggle('active', getShowSymbols());
+    const btnShowSymMobile = document.getElementById('btnShowSymMobile');
+    const btnShowSymDesktop = document.getElementById('btnShowSymDesktop');
+    const showSymbols = getShowSymbols();
+    if (btnShowSymMobile) {
+        btnShowSymMobile.textContent = showSymbols ? 'Sim' : 'Não';
+        btnShowSymMobile.classList.toggle('active', showSymbols);
+    }
+    if (btnShowSymDesktop) {
+        btnShowSymDesktop.textContent = showSymbols ? 'On' : 'Off';
+        btnShowSymDesktop.classList.toggle('active', showSymbols);
     }
 
     const speedVal = document.getElementById('speedVal');

@@ -31,7 +31,7 @@
     width: 26px;
     height: 26px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #2563eb, #7c3aed);
+    background: linear-gradient(135deg, #6b7280, #4b5563);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -39,7 +39,7 @@
     font-weight: 700;
     color: #fff;
     flex-shrink: 0;
-    box-shadow: 0 0 10px rgba(99, 102, 241, 0.35);
+    box-shadow: 0 0 10px rgba(107, 114, 128, 0.35);
 }
 
 .addr-text {

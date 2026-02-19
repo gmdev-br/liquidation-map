@@ -21,10 +21,16 @@ import { selectCoin, updateCoinSearchLabel } from '../ui/combobox.js';
 
 export function toggleShowSymbols() {
     setShowSymbols(!getShowSymbols());
-    const btn = document.getElementById('btnShowSym');
-    if (btn) {
-        btn.textContent = getShowSymbols() ? 'On' : 'Off';
-        btn.classList.toggle('active', getShowSymbols());
+    const isActive = getShowSymbols();
+    const btnMobile = document.getElementById('btnShowSymMobile');
+    const btnDesktop = document.getElementById('btnShowSymDesktop');
+    if (btnMobile) {
+        btnMobile.textContent = isActive ? 'Sim' : 'Não';
+        btnMobile.classList.toggle('active', isActive);
+    }
+    if (btnDesktop) {
+        btnDesktop.textContent = isActive ? 'On' : 'Off';
+        btnDesktop.classList.toggle('active', isActive);
     }
     saveSettings();
     renderTable();

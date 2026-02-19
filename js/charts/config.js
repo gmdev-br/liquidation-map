@@ -6,7 +6,10 @@
 import { 
     crosshairPlugin, 
     btcPriceLabelPlugin,
-    btcGridPlugin,
+    btcGridPlugin
+} from './chart-mechanics-adapted.js';
+
+import { 
     originalZoomConfig,
     liqZoomConfig,
     originalScaleResizing,
@@ -25,9 +28,7 @@ export const chartPlugins = {
 
 export const chartMechanics = {
     setupChartHeightResizing,
-    setupColumnResizing,
-    resetScatterZoom,
-    resetLiqZoom
+    setupColumnResizing
 };
 
 export const chartOptions = {

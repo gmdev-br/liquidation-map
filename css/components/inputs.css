@@ -19,6 +19,32 @@ select {
     transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
     -webkit-appearance: none;
     appearance: none;
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+    min-height: 44px;
+    box-sizing: border-box;
+}
+
+/* Mobile inputs */
+@media (max-width: 767px) {
+    input[type="number"],
+    input[type="text"],
+    select {
+        font-size: 14px;
+        padding: 8px 10px;
+        min-height: 44px;
+        width: 100%;
+    }
+}
+
+@media (max-width: 479px) {
+    input[type="number"],
+    input[type="text"],
+    select {
+        font-size: 13px;
+        padding: 6px 8px;
+        min-height: 40px;
+    }
 }
 
 /* Custom arrow for selects */
@@ -39,9 +65,9 @@ input[type="number"]:focus,
 input[type="text"]:focus,
 select:focus {
     outline: none;
-    border-color: rgba(59, 130, 246, 0.65);
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.13);
-    background-color: rgba(59, 130, 246, 0.06);
+    border-color: rgba(156, 163, 175, 0.65);
+    box-shadow: 0 0 0 3px rgba(156, 163, 175, 0.13);
+    background-color: rgba(156, 163, 175, 0.06);
 }
 
 /* Hide native number spinners for consistent theme */
@@ -101,7 +127,7 @@ select option {
     right: 0;
     min-width: 140px;
     background: rgba(7, 12, 26, 0.97);
-    border: 1px solid rgba(59, 130, 246, 0.3);
+    border: 1px solid rgba(156, 163, 175, 0.3);
     border-radius: var(--r-md);
     box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.04) inset;
     backdrop-filter: var(--glass-blur);
@@ -131,12 +157,12 @@ select option {
 }
 
 .combobox-item:hover {
-    background: rgba(59, 130, 246, 0.15);
-    color: #93c5fd;
+    background: rgba(156, 163, 175, 0.15);
+    color: #9ca3af;
 }
 
 .combobox-item.selected {
-    background: rgba(59, 130, 246, 0.25);
+    background: rgba(156, 163, 175, 0.25);
     color: #fff;
     border-left: 3px solid var(--accent);
 }
@@ -238,9 +264,9 @@ select option {
 }
 
 .combobox-action-btn:hover {
-    background: rgba(59, 130, 246, 0.15);
-    color: #93c5fd;
-    border-color: rgba(59, 130, 246, 0.3);
+    background: rgba(156, 163, 175, 0.15);
+    color: #9ca3af;
+    border-color: rgba(156, 163, 175, 0.3);
 }
 
 .combobox-action-btn:active {
@@ -251,4 +277,49 @@ select option {
 .combobox-item input[type="checkbox"] {
     cursor: pointer;
     accent-color: var(--accent);
+}
+
+/* ── Color Picker (Liquid Glass Theme) ── */
+input[type="color"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 32px;
+    height: 32px;
+    min-height: 32px;
+    padding: 0;
+    border: none;
+    border-radius: var(--r-sm);
+    cursor: pointer;
+    background: transparent;
+    overflow: hidden;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+input[type="color"]::-webkit-color-swatch-wrapper {
+    padding: 0;
+}
+
+input[type="color"]::-webkit-color-swatch {
+    border: 2px solid var(--glass-border);
+    border-radius: var(--r-sm);
+}
+
+input[type="color"]::-moz-color-swatch {
+    border: 2px solid var(--glass-border);
+    border-radius: var(--r-sm);
+}
+
+input[type="color"]:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 12px rgba(156, 163, 175, 0.25);
+}
+
+input[type="color"]:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(156, 163, 175, 0.2), 0 0 12px rgba(156, 163, 175, 0.35);
+}
+
+input[type="color"]::-webkit-color-swatch:active,
+input[type="color"]::-moz-color-swatch:active {
+    transform: scale(0.98);
 }

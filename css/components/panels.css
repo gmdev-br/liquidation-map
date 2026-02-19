@@ -7,6 +7,7 @@
     display: flex;
     gap: 10px;
     padding: 10px 24px;
+    padding-bottom: calc(10px + var(--safe-bottom));
     overflow-x: auto;
     background: rgba(10, 15, 30, 0.4);
     border-bottom: 1px solid var(--glass-border);
@@ -16,6 +17,15 @@
     scrollbar-color: var(--glass-border) transparent;
     flex-wrap: nowrap;
     align-items: center;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Mobile ranking panel */
+@media (max-width: 767px) {
+    #ranking-panel {
+        padding: 8px 16px;
+        padding-bottom: calc(8px + var(--safe-bottom));
+    }
 }
 
 #ranking-panel::-webkit-scrollbar {
@@ -45,6 +55,13 @@
     flex-direction: column;
     cursor: pointer;
     position: relative;
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+    -webkit-tap-highlight-color: transparent;
+}
+
+.ranking-card:active {
+    transform: scale(0.97);
 }
 
 .ranking-card:hover {
@@ -116,7 +133,7 @@
 .whale-market-cap {
     font-family: var(--mono);
     font-size: 9px;
-    color: var(--blue);
+    color: var(--accent);
     font-weight: 500;
     margin-top: 2px;
     opacity: 0.8;
@@ -140,6 +157,7 @@
     display: flex;
     gap: 10px;
     padding: 10px 24px;
+    padding-bottom: calc(10px + var(--safe-bottom));
     overflow-x: auto;
     background: rgba(4, 6, 15, 0.55);
     border-bottom: 1px solid var(--glass-border);
@@ -149,6 +167,15 @@
     scrollbar-color: var(--glass-border) transparent;
     flex-wrap: nowrap;
     align-items: center;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Mobile quotes panel */
+@media (max-width: 767px) {
+    #quotes-panel {
+        padding: 8px 16px;
+        padding-bottom: calc(8px + var(--safe-bottom));
+    }
 }
 
 #quotes-panel::-webkit-scrollbar {
@@ -173,9 +200,15 @@
     min-width: 130px;
     backdrop-filter: var(--glass-blur-sm);
     -webkit-backdrop-filter: var(--glass-blur-sm);
-    transition: border-color 0.2s, box-shadow 0.2s;
+    transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
     position: relative;
     overflow: hidden;
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+}
+
+.quote-card:active {
+    transform: scale(0.98);
 }
 
 .quote-card:hover {

@@ -21,8 +21,7 @@ import { chartPlugins, chartOptions } from './config.js';
 import { saveSettings } from '../storage/settings.js';
 import { 
     originalZoomConfig,
-    originalScaleResizing,
-    resetScatterZoom
+    originalScaleResizing
 } from './chart-mechanics-adapted.js';
 
 // Import chart plugins - ChartZoom is already registered via CDN
@@ -518,8 +517,6 @@ export function renderScatterPlot() {
         if (scatterChart.options.scales.x) { scatterChart.options.scales.x.min = getSavedScatterState().x.min; scatterChart.options.scales.x.max = getSavedScatterState().x.max; }
         if (scatterChart.options.scales.y) { scatterChart.options.scales.y.min = getSavedScatterState().y.min; scatterChart.options.scales.y.max = getSavedScatterState().y.max; }
         scatterChart.isZoomed = true;
-        const btn = document.getElementById('resetZoomBtn');
-        if (btn) btn.style.display = 'block';
     } else if ((scatterChart.isZoomed || (scatterChart.isZoomedOrPanned && scatterChart.isZoomedOrPanned())) && currentX && currentY) {
         // Apply current min/max to new scales config
         if (scatterChart.options.scales.x) {
@@ -579,7 +576,7 @@ export function setScatterChart(chart) {
 }
 
 // Enable resizing for scatter chart
-enableChartScaleResizing('scatterChart', () => scatterChart, 'resetZoomBtn');
+enableChartScaleResizing('scatterChart', () => scatterChart);
 
 // Helper function
 function getCorrelatedPrice(row, rawPrice, activeEntryCurrency, currentPrices) {

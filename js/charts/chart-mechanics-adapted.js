@@ -123,8 +123,6 @@ export const originalZoomConfig = {
         onPan: function({chart}) { 
             chart.isZoomed = true; 
             saveSettings(); 
-            const btn = document.getElementById('resetZoomBtn');
-            if(btn) btn.style.display = 'block';
         }
     },
     zoom: {
@@ -136,8 +134,8 @@ export const originalZoomConfig = {
         pinch: { enabled: true },
         drag: {
             enabled: true,
-            backgroundColor: 'rgba(59, 130, 246, 0.2)',
-            borderColor: 'rgba(59, 130, 246, 0.4)',
+            backgroundColor: 'rgba(156, 163, 175, 0.2)',
+            borderColor: 'rgba(156, 163, 175, 0.4)',
             borderWidth: 1,
             modifierKey: 'shift',
         },
@@ -145,8 +143,6 @@ export const originalZoomConfig = {
         onZoom: function({chart}) { 
             chart.isZoomed = true; 
             saveSettings(); 
-            const btn = document.getElementById('resetZoomBtn');
-            if(btn) btn.style.display = 'block';
         }
     }
 };
@@ -161,8 +157,6 @@ export const liqZoomConfig = {
         onZoom: ({chart}) => {
              chart.isZoomed = true;
              saveSettings();
-             const btn = document.getElementById('resetLiqZoomBtn');
-             if(btn) btn.style.display = 'block';
         }
     }
 };
@@ -308,8 +302,6 @@ export function resetScatterZoom(chart) {
         chart.resetZoom();
         chart.isZoomed = false;
         saveSettings();
-        const btn = document.getElementById('resetZoomBtn');
-        if (btn) btn.style.display = 'none';
     }
 }
 
@@ -318,8 +310,6 @@ export function resetLiqZoom(chart) {
         chart.resetZoom();
         chart.isZoomed = false;
         saveSettings();
-        const btn = document.getElementById('resetLiqZoomBtn');
-        if (btn) btn.style.display = 'none';
     }
 }
 
@@ -329,49 +319,89 @@ export function setupChartHeightResizing(sectionId, heightKey, updateCallback) {
     if (!section) return;
 
     let isResizing = false;
+    let startY = 0;
     let startHeight = 0;
 
-    section.addEventListener('mousedown', (e) => {
-        if (e.target.classList.contains('chart-resizer-handle')) {
-            isResizing = true;
-            startHeight = section.offsetHeight;
-            
-            document.addEventListener('mousemove', chartResize);
-            document.addEventListener('mouseup', stopChartResize);
-            
-            // Add active class for visual feedback
-            const resizer = section.querySelector('.chart-resizer');
-            if (resizer) resizer.classList.add('active');
-            
-            document.body.style.cursor = 'ns-resize';
-            e.preventDefault(); // prevent text selection
+    // Helper to get Y position from mouse or touch event
+    function getYPosition(e) {
+        if (e.touches && e.touches.length > 0) {
+            return e.touches[0].clientY;
         }
-    });
+        return e.clientY;
+    }
+
+    // Helper to check if event target is the resizer handle
+    function isResizerHandle(e) {
+        const target = e.target;
+        return target.classList.contains('chart-resizer-handle') ||
+               target.closest('.chart-resizer-handle') ||
+               target.classList.contains('chart-resizer');
+    }
+
+    // Start resize
+    function startResize(e) {
+        if (!isResizerHandle(e)) return;
+
+        isResizing = true;
+        startY = getYPosition(e);
+        startHeight = section.offsetHeight;
+
+        document.addEventListener('mousemove', chartResize);
+        document.addEventListener('mouseup', stopChartResize);
+        document.addEventListener('touchmove', chartResize, { passive: false });
+        document.addEventListener('touchend', stopChartResize);
+
+        // Add active class for visual feedback
+        const resizer = section.querySelector('.chart-resizer');
+        if (resizer) resizer.classList.add('active');
+
+        document.body.style.cursor = 'ns-resize';
+        e.preventDefault();
+    }
 
     function chartResize(e) {
         if (!isResizing) return;
-        const deltaY = e.clientY - startHeight;
+        e.preventDefault(); // Prevent scrolling on mobile
+
+        const currentY = getYPosition(e);
+        const deltaY = currentY - startY;
         const newHeight = Math.max(200, startHeight + deltaY);
         updateCallback(newHeight);
     }
 
     function stopChartResize() {
+        if (!isResizing) return;
         isResizing = false;
+
         document.removeEventListener('mousemove', chartResize);
         document.removeEventListener('mouseup', stopChartResize);
-        
+        document.removeEventListener('touchmove', chartResize);
+        document.removeEventListener('touchend', stopChartResize);
+
         const resizer = section.querySelector('.chart-resizer');
         if (resizer) resizer.classList.remove('active');
-        
+
         document.body.style.cursor = '';
         saveSettings(); // Save new height
     }
+
+    section.addEventListener('mousedown', startResize);
+    section.addEventListener('touchstart', startResize, { passive: false });
 }
 
 // ── Column Width Resizing (Adapted) ──
 export function setupColumnResizing() {
     console.log('Setting up column resizing...');
-    document.addEventListener('mousedown', (e) => {
+    
+    // Helper to get X position from mouse or touch event
+    function getXPosition(e) {
+        if (e.touches && e.touches.length > 0) {
+            return e.touches[0].pageX;
+        }
+        return e.pageX;
+    }
+
+    function startResize(e) {
         const th = e.target.closest('th');
         if (!th || !th.id || !th.id.startsWith('th-')) return;
         
@@ -379,7 +409,7 @@ export function setupColumnResizing() {
         if (!resizer || e.target !== resizer) return;
 
         console.log('Column resizer clicked:', th.id);
-        const startX = e.pageX;
+        const startX = getXPosition(e);
         const startWidth = th.offsetWidth;
         
         // Prevent drag-and-drop during resize
@@ -387,24 +417,37 @@ export function setupColumnResizing() {
         e.preventDefault();
         
         document.body.classList.add('resizing');
+        resizer.classList.add('active');
 
-        const onMouseMove = (e) => {
-            const width = startWidth + (e.pageX - startX);
+        const onMove = (e) => {
+            const currentX = getXPosition(e);
+            const width = startWidth + (currentX - startX);
             if (width > 30) {
                 th.style.width = width + 'px';
             }
         };
 
-        const onMouseUp = () => {
+        const onEnd = () => {
             document.body.classList.remove('resizing');
-            window.removeEventListener('mousemove', onMouseMove);
-            window.removeEventListener('mouseup', onMouseUp);
+            resizer.classList.remove('active');
+            window.removeEventListener('mousemove', onMove);
+            window.removeEventListener('mouseup', onEnd);
+            window.removeEventListener('touchmove', onMove, { passive: false });
+            window.removeEventListener('touchend', onEnd);
             saveSettings();
         };
 
-        window.addEventListener('mousemove', onMouseMove);
-        window.addEventListener('mouseup', onMouseUp);
-    });
+        window.addEventListener('mousemove', onMove);
+        window.addEventListener('mouseup', onEnd);
+        window.addEventListener('touchmove', onMove, { passive: false });
+        window.addEventListener('touchend', onEnd);
+    }
+
+    // Mouse events
+    document.addEventListener('mousedown', startResize);
+    
+    // Touch events
+    document.addEventListener('touchstart', startResize, { passive: false });
 
     // Double-click to auto-fit column width
     document.addEventListener('dblclick', (e) => {

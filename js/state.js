@@ -12,6 +12,7 @@ let visibleColumns = [];   // Default all visible
 let columnOrder = [];     // Default order
 let columnWidths = {};    // { th-id: width_px }
 let _columnCloseTimer = null;
+let columnWidth = 100;    // Default column width in px
 
 // Sorting state
 let sortKey = 'accountValue';
@@ -112,7 +113,8 @@ export const getState = () => ({
     maxConcurrency,
     renderPending,
     lastSaveTime,
-    leverageColors
+    leverageColors,
+    columnWidth
 });
 
 // Setters
@@ -233,6 +235,8 @@ export const getLastSaveTime = () => lastSaveTime;
 export const getPriceMode = () => priceMode;
 export const getSelectedCoins = () => selectedCoins;
 export const getLeverageColors = () => leverageColors;
+export const getColumnWidth = () => columnWidth;
 export const setPriceMode = (mode) => {
     priceMode = mode;
 };
+export const setColumnWidth = (value) => { columnWidth = value; };

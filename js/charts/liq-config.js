@@ -2,6 +2,8 @@
 // LIQUID GLASS — Liquidation Chart Configuration
 // ═════════════════════════════════════════════════════════
 
+import { saveSettings } from '../storage/settings.js';
+
 // Chart.js plugins and configurations for liquidation chart
 export const liqChartOptions = {
     responsive: true,
@@ -49,8 +51,6 @@ export const liqChartOptions = {
                 onPan: ({chart}) => {
                      chart.isZoomed = true;
                      saveSettings();
-                     const btn = document.getElementById('resetLiqZoomBtn');
-                     if(btn) btn.style.display = 'block';
                 }
             },
             zoom: {
@@ -61,8 +61,6 @@ export const liqChartOptions = {
                 onZoom: ({chart}) => {
                      chart.isZoomed = true;
                      saveSettings();
-                     const btn = document.getElementById('resetLiqZoomBtn');
-                     if(btn) btn.style.display = 'block';
                 }
             }
         }

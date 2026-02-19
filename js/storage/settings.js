@@ -7,9 +7,9 @@ import {
     getAggregationFactor, getSelectedCoins, getPriceMode, getPriceUpdateInterval, getActiveWindow,
     getVisibleColumns, getColumnOrder, getRankingLimit, getColorMaxLev,
     getChartHighLevSplit, getChartHeight, getLiqChartHeight, getSavedScatterState,
-    getSavedLiqState, getColumnWidths, getActiveCurrency, getActiveEntryCurrency, getDecimalPlaces, getLeverageColors,
+    getSavedLiqState, getColumnWidths, getColumnWidth, getActiveCurrency, getActiveEntryCurrency, getDecimalPlaces, getLeverageColors,
     setSortKey, setSortDir, setSavedScatterState, setSavedLiqState,
-    setColumnOrder, setVisibleColumns, setSelectedCoins, setRankingLimit, setColorMaxLev, setChartHighLevSplit, setChartMode, setBubbleScale, setBubbleOpacity, setAggregationFactor, setPriceMode, setShowSymbols, setPriceUpdateInterval, setDecimalPlaces, setLeverageColors
+    setColumnOrder, setVisibleColumns, setSelectedCoins, setRankingLimit, setColorMaxLev, setChartHighLevSplit, setChartMode, setBubbleScale, setBubbleOpacity, setAggregationFactor, setPriceMode, setShowSymbols, setPriceUpdateInterval, setDecimalPlaces, setLeverageColors, setColumnWidth
 } from '../state.js';
 import { COLUMN_DEFS } from '../config.js';
 import { cbSetValue, updateCoinSearchLabel } from '../ui/combobox.js';
@@ -79,7 +79,8 @@ export function saveSettings(getChartState = null, savedScatterState = null, sav
         decimalPlaces: getDecimalPlaces(),
         visibleColumns: getVisibleColumns(),
         columnOrder: getColumnOrder(),
-        leverageColors: getLeverageColors()
+        leverageColors: getLeverageColors(),
+        columnWidth: getColumnWidth()
     };
     
     console.log('Saving currency settings:', {
@@ -181,10 +182,15 @@ export function loadSettings() {
     
     if (s.showSymbols !== undefined) {
         setShowSymbols(s.showSymbols);
-        const btn = document.getElementById('btnShowSym');
-        if (btn) {
-            btn.textContent = s.showSymbols ? 'On' : 'Off';
-            btn.classList.toggle('active', s.showSymbols);
+        const btnMobile = document.getElementById('btnShowSymMobile');
+        const btnDesktop = document.getElementById('btnShowSymDesktop');
+        if (btnMobile) {
+            btnMobile.textContent = s.showSymbols ? 'Sim' : 'Não';
+            btnMobile.classList.toggle('active', s.showSymbols);
+        }
+        if (btnDesktop) {
+            btnDesktop.textContent = s.showSymbols ? 'On' : 'Off';
+            btnDesktop.classList.toggle('active', s.showSymbols);
         }
     }
     if (s.chartMode) {
@@ -351,5 +357,14 @@ export function loadSettings() {
         document.documentElement.style.setProperty('--long-high-color', '#16a34a');
         document.documentElement.style.setProperty('--short-low-color', '#ef4444');
         document.documentElement.style.setProperty('--short-high-color', '#dc2626');
+    }
+    if (s.columnWidth !== undefined) {
+        setColumnWidth(s.columnWidth);
+        const columnWidthRange = document.getElementById('columnWidthRange');
+        const columnWidthVal = document.getElementById('columnWidthVal');
+        if (columnWidthRange && columnWidthVal) {
+            columnWidthRange.value = s.columnWidth;
+            columnWidthVal.textContent = s.columnWidth;
+        }
     }
 }

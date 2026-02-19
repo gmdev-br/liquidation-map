@@ -45,6 +45,8 @@ body {
     min-height: 100vh;
     overflow-x: hidden;
     position: relative;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
 
 /* Ambient background orbs */
@@ -63,7 +65,7 @@ body::before {
     height: 700px;
     top: -200px;
     left: -200px;
-    background: radial-gradient(circle, rgba(59, 130, 246, 0.12) 0%, transparent 70%);
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.03) 0%, transparent 70%);
 }
 
 body::after {
@@ -71,7 +73,7 @@ body::after {
     height: 600px;
     bottom: -150px;
     right: -150px;
-    background: radial-gradient(circle, rgba(139, 92, 246, 0.10) 0%, transparent 70%);
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.02) 0%, transparent 70%);
 }
 
 /* ── Z-Index Hierarchy ── */
@@ -125,8 +127,13 @@ body::after {
     background: rgba(255, 255, 255, 0.18);
 }
 
+/* iOS scrollbar styling */
+::-webkit-scrollbar {
+    -webkit-appearance: none;
+}
+
 /* ── Selection ── */
 ::selection {
-    background: rgba(59, 130, 246, 0.3);
+    background: rgba(156, 163, 175, 0.3);
     color: #fff;
 }

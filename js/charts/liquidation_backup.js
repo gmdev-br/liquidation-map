@@ -449,5 +449,5 @@ export function setLiqChartInstance(chart) {
 
 // Enable resizing for liquidation chart after it's created
 export function initLiqChartResizing() {
-    enableChartScaleResizing('liqChart', () => liqChartInstance, 'resetLiqZoomBtn');
+    enableChartScaleResizing('liqChart', () => liqChartInstance);
 }

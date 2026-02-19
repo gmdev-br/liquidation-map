@@ -6,6 +6,7 @@
 .table-wrap {
     overflow-x: auto;
     background: transparent;
+    -webkit-overflow-scrolling: touch;
 }
 
 /* ── Table ── */
@@ -13,7 +14,30 @@ table {
     width: 100%;
     border-collapse: collapse;
     min-width: 1000px;
-    table-layout: fixed;
+    table-layout: auto;
+}
+
+/* Apply custom column width */
+th, td {
+    width: var(--column-width, 100px);
+    max-width: var(--column-width, 100px);
+}
+
+/* Mobile table adaptation */
+@media (max-width: 767px) {
+    table {
+        min-width: 700px;
+    }
+
+    th, td {
+        width: var(--column-width-mobile, 100px);
+    }
+}
+
+@media (max-width: 479px) {
+    table {
+        min-width: 650px;
+    }
 }
 
 /* ── Table Header ── */
@@ -23,7 +47,7 @@ thead tr {
     -webkit-backdrop-filter: var(--glass-blur);
     position: sticky;
     top: 0;
-    z-index: 100;
+    z-index: var(--z-glass-elevated);
 }
 
 th {
@@ -42,6 +66,19 @@ th {
     position: relative;
     overflow: hidden;
     text-overflow: ellipsis;
+    min-height: 44px;
+    display: table-cell;
+    vertical-align: middle;
+}
+
+/* Mobile table header adjustments */
+@media (max-width: 767px) {
+    th {
+        padding: 10px 6px;
+        font-size: 10px;
+        min-width: 80px;
+        text-align: left;
+    }
 }
 
 .th-label {
@@ -65,7 +102,7 @@ th {
 
 .resizer:hover,
 .resizing .resizer {
-    background: rgba(59, 130, 246, 0.4);
+    background: rgba(156, 163, 175, 0.4);
 }
 
 .resizing {
@@ -84,7 +121,7 @@ th[draggable="true"]:active {
 
 th.dragging {
     opacity: 0.5;
-    background: rgba(59, 130, 246, 0.2);
+    background: rgba(156, 163, 175, 0.2);
 }
 
 th.drag-over {
@@ -102,13 +139,17 @@ th:hover {
 }
 
 th.sorted {
-    color: #60a5fa;
+    color: #9ca3af;
 }
 
 /* ── Table Body ── */
 tbody tr {
     border-bottom: 1px solid rgba(255, 255, 255, 0.04);
     transition: background 0.15s;
+}
+
+tbody tr:active {
+    background: var(--glass-bg-hover);
 }
 
 tbody tr:hover {
@@ -119,6 +160,15 @@ td {
     padding: 10px 14px;
     vertical-align: middle;
     white-space: nowrap;
+}
+
+/* Mobile table cell adjustments */
+@media (max-width: 767px) {
+    td {
+        padding: 12px 10px;
+        font-size: 12px;
+        min-width: 100px;
+    }
 }
 
 /* ── Expand Row ── */
@@ -156,17 +206,24 @@ td {
     transition: all 0.18s ease;
     backdrop-filter: var(--glass-blur-sm);
     -webkit-backdrop-filter: var(--glass-blur-sm);
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+    -webkit-tap-highlight-color: transparent;
+}
+
+.coin-pill:active {
+    transform: scale(0.95);
 }
 
 .coin-pill:hover {
-    border-color: rgba(59, 130, 246, 0.4);
-    color: #93c5fd;
-    background: rgba(59, 130, 246, 0.08);
+    border-color: rgba(156, 163, 175, 0.4);
+    color: #9ca3af;
+    background: rgba(156, 163, 175, 0.08);
 }
 
 .coin-pill.active {
-    border-color: rgba(59, 130, 246, 0.5);
-    color: #93c5fd;
-    background: rgba(59, 130, 246, 0.14);
-    box-shadow: 0 0 10px rgba(59, 130, 246, 0.15);
+    border-color: rgba(156, 163, 175, 0.5);
+    color: #9ca3af;
+    background: rgba(156, 163, 175, 0.14);
+    box-shadow: 0 0 10px rgba(156, 163, 175, 0.15);
 }

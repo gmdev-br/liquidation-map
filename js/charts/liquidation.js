@@ -22,8 +22,7 @@ import { liqChartOptions } from './liq-config.js';
 import { getCorrelatedPrice } from '../utils/currency.js';
 import { saveSettings } from '../storage/settings.js';
 import { 
-    originalScaleResizing,
-    resetLiqZoom
+    originalScaleResizing
 } from './chart-mechanics-adapted.js';
 
 // Import chart plugins - ChartZoom is already registered via CDN
@@ -491,4 +490,4 @@ export function setLiqChartInstance(chart) {
 }
 
 // Enable resizing for liquidation chart
-enableChartScaleResizing('liqChart', () => liqChartInstance, 'resetLiqZoomBtn');
+enableChartScaleResizing('liqChart', () => liqChartInstance);

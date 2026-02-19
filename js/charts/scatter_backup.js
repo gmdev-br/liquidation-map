@@ -368,7 +368,7 @@ export function setScatterChart(chart) {
 
 // Enable resizing for scatter chart after it's created
 export function initScatterChartResizing() {
-    enableChartScaleResizing('scatterChart', () => scatterChart, 'resetZoomBtn');
+    enableChartScaleResizing('scatterChart', () => scatterChart);
 }
 
 // Helper function

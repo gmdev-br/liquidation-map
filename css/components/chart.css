@@ -12,6 +12,25 @@
     display: none;
     min-height: 200px;
     z-index: 50;
+    backdrop-filter: var(--glass-blur-sm);
+    -webkit-backdrop-filter: var(--glass-blur-sm);
+}
+
+/* Mobile chart section */
+@media (max-width: 767px) {
+    #chart-section,
+    #liq-chart-section {
+        padding: 16px;
+        min-height: 300px;
+    }
+}
+
+@media (max-width: 479px) {
+    #chart-section,
+    #liq-chart-section {
+        padding: 12px;
+        min-height: 250px;
+    }
 }
 
 /* ── Chart Resizer Handle ── */
@@ -28,22 +47,36 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: none;
+}
+
+/* Mobile chart resizer */
+@media (max-width: 767px) {
+    .chart-resizer {
+        height: 30px;
+    }
+}
+
+.chart-resizer:active {
+    background: rgba(156, 163, 175, 0.15);
 }
 
 .chart-resizer:hover,
 .chart-resizer.active {
-    background: rgba(59, 130, 246, 0.1);
+    background: rgba(156, 163, 175, 0.1);
 }
 
 .chart-resizer-handle {
-    width: 40px;
-    height: 4px;
+    width: 50px;
+    height: 5px;
     background: rgba(255, 255, 255, 0.3);
-    border-radius: 2px;
-    transition: background 0.2s;
+    border-radius: 3px;
+    transition: background 0.2s, transform 0.2s;
 }
 
 .chart-resizer:hover .chart-resizer-handle,
 .chart-resizer.active .chart-resizer-handle {
-    background: rgba(59, 130, 246, 0.8);
+    background: rgba(156, 163, 175, 0.8);
+    transform: scaleY(1.2);
 }

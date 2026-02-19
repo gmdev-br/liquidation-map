@@ -1,0 +1,909 @@
+/* ═══════════════════════════════════════════════════════════
+   LIQUID GLASS — Mobile Adaptations
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── Mobile Breakpoints ── */
+:root {
+    --breakpoint-mobile: 480px;
+    --breakpoint-mobile-large: 768px;
+    --breakpoint-tablet: 1024px;
+}
+
+/* ── Base Mobile Styles ── */
+@media (max-width: 480px) {
+    /* Typography */
+    body {
+        font-size: 14px;
+        -webkit-text-size-adjust: 100%;
+    }
+
+    /* Touch targets minimum 44px */
+    button,
+    input[type="number"],
+    input[type="text"],
+    select,
+    .tab {
+        min-height: 44px;
+        min-width: 44px;
+    }
+
+    /* Range inputs on mobile */
+    .ctrl input[type="range"] {
+        height: 44px;
+        min-height: 44px;
+        padding: 10px 0;
+    }
+
+    /* Combobox inputs on mobile */
+    .combobox-input {
+        font-size: 14px;
+        padding: 10px 12px;
+        min-height: 44px;
+    }
+
+    /* Tabs on mobile */
+    .tabs {
+        gap: 2px;
+    }
+
+    .tab {
+        padding: 8px 12px;
+        font-size: 12px;
+        min-height: 44px;
+        min-width: 44px;
+    }
+
+    /* Touch feedback enhancement */
+    @media (hover: none) and (pointer: coarse) {
+        .btn:active,
+        .tab:active,
+        .ranking-card:active,
+        .quote-card:active,
+        .coin-pill:active {
+            transform: scale(0.95);
+            opacity: 0.8;
+        }
+
+        .stat:active {
+            transform: scale(0.98);
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .controls-accordion-header:active {
+            background: rgba(156, 163, 175, 0.15);
+            transform: scale(0.98);
+        }
+
+        .menu-toggle:active {
+            background: rgba(156, 163, 175, 0.3);
+            transform: scale(0.95);
+        }
+
+        .mobile-menu-close:active {
+            background: rgba(255, 255, 255, 0.15);
+            transform: scale(0.95);
+        }
+    }
+
+    /* Header Mobile */
+    .header {
+        padding: 8px 12px;
+        padding-top: calc(8px + var(--safe-top));
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        min-height: 56px;
+    }
+
+    .logo {
+        flex-shrink: 0;
+    }
+
+    .logo h1 {
+        font-size: 14px;
+    }
+
+    .logo p {
+        font-size: 9px;
+    }
+
+    .logo-icon {
+        font-size: 18px;
+    }
+
+    .header-center {
+        position: relative;
+        left: auto;
+        transform: none;
+        display: flex;
+        flex: 1;
+        justify-content: center;
+        gap: 8px;
+        padding: 0 8px;
+    }
+
+    .header-center .btn {
+        flex: 0 0 auto;
+        font-size: 12px;
+        padding: 10px 16px;
+        min-width: 80px;
+    }
+
+    .header-right {
+        flex-shrink: 0;
+    }
+
+    .status-badge {
+        padding: 6px 10px;
+        font-size: 10px;
+    }
+
+    /* Menu hamburger button - only show on mobile */
+    .menu-toggle {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 44px;
+        height: 44px;
+        background: rgba(156, 163, 175, 0.2);
+        border: 1px solid rgba(156, 163, 175, 0.3);
+        border-radius: 8px;
+        cursor: pointer;
+        color: #fff;
+        font-size: 20px;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    .menu-toggle:active {
+        background: rgba(156, 163, 175, 0.3);
+        transform: scale(0.95);
+    }
+
+    /* Mobile menu drawer */
+    .mobile-menu {
+        display: none;
+        position: fixed;
+        top: 0;
+        right: -100%;
+        width: 80%;
+        max-width: 320px;
+        height: 100vh;
+        background: rgba(7, 12, 26, 0.98);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        z-index: 1000;
+        padding: 20px;
+        border-left: 1px solid var(--glass-border);
+        transition: right 0.3s ease;
+        overflow-y: auto;
+    }
+
+    .mobile-menu.active {
+        display: block;
+        right: 0;
+    }
+
+    .mobile-menu-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 999;
+    }
+
+    .mobile-menu-overlay.active {
+        display: block;
+    }
+
+    .mobile-menu-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        padding-bottom: 15px;
+        border-bottom: 1px solid var(--glass-border);
+    }
+
+    .mobile-menu-header h2 {
+        font-size: 16px;
+        color: #fff;
+        margin: 0;
+    }
+
+    .mobile-menu-close {
+        width: 44px;
+        height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(255, 255, 255, 0.1);
+        border: none;
+        border-radius: 8px;
+        color: #fff;
+        font-size: 24px;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    .mobile-menu-close:active {
+        background: rgba(255, 255, 255, 0.15);
+        transform: scale(0.95);
+    }
+
+    /* Mobile menu content styling */
+    .mobile-menu-section {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        padding: 16px 0 24px 0;
+        border-bottom: 1px solid rgba(156, 163, 175, 0.15);
+    }
+
+    .mobile-menu-section:last-child {
+        border-bottom: none;
+    }
+
+    .mobile-menu-section-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: #9ca3af;
+        padding: 8px 0;
+        margin-bottom: 8px;
+        border-bottom: 1px solid rgba(156, 163, 175, 0.2);
+    }
+
+    .mobile-menu .ctrl {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .mobile-menu .ctrl label {
+        font-size: 13px;
+        color: #9ca3af;
+        font-weight: 500;
+    }
+
+    .mobile-menu .ctrl input[type="range"],
+    .mobile-menu .ctrl input[type="number"] {
+        width: 100%;
+        min-height: 44px;
+    }
+
+    .mobile-menu .tabs {
+        display: flex;
+        gap: 4px;
+    }
+
+    .mobile-menu .tab {
+        flex: 1;
+        padding: 10px 12px;
+        font-size: 12px;
+        min-height: 44px;
+        min-width: 44px;
+    }
+
+    .mobile-menu .combobox {
+        width: 100%;
+    }
+
+    /* Controls Bar Mobile - hidden on mobile since settings are in menu */
+    .controls {
+        display: none;
+    }
+
+    /* Stats Row Mobile */
+    .stats-row {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+    }
+
+    .stats-row::-webkit-scrollbar {
+        display: none;
+    }
+
+    .stat {
+        min-width: 140px;
+        padding: 12px 16px;
+    }
+
+    .stat-value {
+        font-size: 18px;
+    }
+
+    .stat-label {
+        font-size: 9px;
+    }
+
+    /* Table Mobile */
+    .table-wrap {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    table {
+        min-width: 700px;
+    }
+
+    th,
+    td {
+        padding: 12px 10px;
+        font-size: 12px;
+        min-width: 100px;
+        white-space: nowrap;
+    }
+
+    th {
+        font-size: 10px;
+        padding: 10px 8px;
+        white-space: nowrap;
+        text-align: left;
+    }
+
+    /* Filter row inputs on mobile */
+    .filter-row .col-filter {
+        font-size: 14px;
+        padding: 8px 8px;
+        min-height: 44px;
+        width: 100%;
+    }
+
+    /* Combobox inputs on mobile */
+    .combobox-input {
+        font-size: 14px;
+        padding: 8px 10px;
+        min-height: 44px;
+    }
+
+    /* Range inputs on mobile */
+    .ctrl input[type="range"] {
+        height: 44px;
+        min-height: 44px;
+    }
+
+    /* Hide less important columns on mobile */
+    th[data-column="valueCcy"],
+    th[data-column="entryCcy"],
+    th[data-column="funding"],
+    th[data-column="distToLiq"],
+    td[data-column="valueCcy"],
+    td[data-column="entryCcy"],
+    td[data-column="funding"],
+    td[data-column="distToLiq"] {
+        display: none;
+    }
+
+    /* Table container styling */
+    .table-wrap {
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        transform: translateZ(0);
+        -webkit-transform: translateZ(0);
+    }
+
+    .table-wrap::-webkit-scrollbar {
+        display: none;
+    }
+
+    /* Optimize scroll performance */
+    .stats-row,
+    .controls,
+    .table-wrap,
+    .ranking-panel,
+    #quotes-panel {
+        transform: translateZ(0);
+        -webkit-transform: translateZ(0);
+        will-change: transform;
+    }
+
+    /* Reduce repaints and reflows */
+    * {
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+    }
+
+    /* Optimize animations */
+    .progress-fill,
+    .stat-value,
+    .btn,
+    .tab {
+        will-change: transform;
+    }
+
+    /* Filter row inputs on mobile */
+    .filter-row .col-filter {
+        font-size: 14px;
+        padding: 8px 8px;
+        min-height: 44px;
+        width: 100%;
+    }
+
+    /* Combobox inputs on mobile */
+    .combobox-input {
+        font-size: 14px;
+        padding: 8px 10px;
+        min-height: 44px;
+    }
+
+    /* Combobox dropdown on mobile */
+    .combobox-dropdown {
+        min-height: 44px;
+        max-height: 300px;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .combobox-dropdown::-webkit-scrollbar {
+        width: 4px;
+    }
+
+    .combobox-dropdown::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 2px;
+    }
+
+    .combobox-dropdown-item {
+        padding: 12px 16px;
+        min-height: 44px;
+        font-size: 14px;
+    }
+
+    .combobox-dropdown-item:active {
+        background: rgba(156, 163, 175, 0.2);
+    }
+
+    /* Panels Mobile */
+    #ranking-panel,
+    #quotes-panel {
+        padding: 8px 16px;
+        padding-bottom: calc(8px + var(--safe-bottom));
+    }
+
+    .ranking-card,
+    .quote-card {
+        min-width: 120px;
+        padding: 6px 10px;
+    }
+
+    .ranking-coin,
+    .quote-coin {
+        font-size: 11px;
+    }
+
+    .ranking-mcap,
+    .quote-price {
+        font-size: 13px;
+    }
+
+    /* Chart Section Mobile */
+    #chart-section,
+    #liq-chart-section {
+        padding: 16px;
+        min-height: 300px;
+        position: relative;
+    }
+
+    .chart-resizer {
+        height: 40px;
+    }
+
+    /* Hide keyboard instructions on mobile */
+    .chart-instructions {
+        display: none;
+    }
+
+    /* Optimize chart animations for mobile */
+    @media (max-width: 480px) {
+        canvas {
+            will-change: transform;
+        }
+
+        /* Reduce animation complexity on mobile */
+        .stat,
+        .btn,
+        .tab {
+            transition: transform 0.15s ease, background 0.15s ease, opacity 0.15s ease;
+        }
+
+        /* Disable complex animations on mobile */
+        .glow-effect,
+        .pulse-effect {
+            animation: none;
+        }
+    }
+
+    /* Hardware acceleration for smooth scrolling */
+    .stats-row,
+    .controls,
+    .table-wrap {
+        transform: translateZ(0);
+        -webkit-transform: translateZ(0);
+    }
+
+    /* Buttons Mobile */
+    .btn {
+        padding: 8px 14px;
+        font-size: 12px;
+    }
+
+    /* Tabs Mobile */
+    .tabs {
+        gap: 2px;
+    }
+
+    .tab {
+        padding: 3px 10px;
+        font-size: 10px;
+    }
+
+    /* Inputs Mobile */
+    input[type="number"],
+    input[type="text"],
+    select {
+        font-size: 14px;
+        padding: 8px 12px;
+    }
+
+    /* Badges Mobile */
+    .status-badge {
+        padding: 4px 12px;
+        font-size: 10px;
+    }
+
+    .coin-badge {
+        padding: 2px 8px;
+        font-size: 10px;
+    }
+}
+
+/* ── Desktop Styles ── */
+@media (min-width: 481px) {
+    /* Hide mobile menu toggle on desktop */
+    .menu-toggle {
+        display: none;
+    }
+
+    /* Hide mobile menu and overlay on desktop */
+    .mobile-menu,
+    .mobile-menu-overlay {
+        display: none !important;
+    }
+}
+
+/* ── Very Small Mobile (< 480px) ── */
+@media (max-width: 479px) {
+    /* Header */
+    .header {
+        padding: 8px 12px;
+        padding-top: calc(8px + var(--safe-top));
+    }
+
+    .logo h1 {
+        font-size: 12px;
+    }
+
+    .logo p {
+        font-size: 9px;
+    }
+
+    /* Controls */
+    .controls {
+        padding: 6px 12px;
+    }
+
+    /* Hide labels in controls bar, but keep them in mobile menu */
+    .controls .ctrl label {
+        display: none;
+    }
+
+    .ctrl input[type="range"] {
+        width: 60px;
+    }
+
+    /* Stats */
+    .stat {
+        min-width: 100px;
+        padding: 10px 12px;
+    }
+
+    .stat-value {
+        font-size: 16px;
+    }
+
+    /* Table */
+    table {
+        min-width: 700px;
+    }
+
+    th, td {
+        width: var(--column-width-mobile, 100px);
+    }
+
+    /* Column resizer on mobile */
+    .resizer {
+        width: 10px;
+    }
+
+    .resizer:hover,
+    .resizing .resizer {
+        background: rgba(156, 163, 175, 0.4);
+    }
+
+    .resizer.active {
+        background: rgba(156, 163, 175, 0.6);
+    }
+
+    th,
+    td {
+        padding: 10px 8px;
+        font-size: 11px;
+        min-width: 90px;
+        white-space: nowrap;
+    }
+
+    th {
+        font-size: 9px;
+        padding: 8px 6px;
+        text-align: left;
+    }
+
+    /* Filter inputs on very small mobile */
+    .filter-row .col-filter {
+        font-size: 13px;
+        padding: 6px 6px;
+        min-height: 40px;
+        width: 100%;
+    }
+
+    /* Combobox inputs on very small mobile */
+    .combobox-input {
+        font-size: 13px;
+        padding: 6px 8px;
+        min-height: 40px;
+    }
+
+    /* Panels */
+    .ranking-card,
+    .quote-card {
+        min-width: 100px;
+        padding: 5px 8px;
+    }
+
+    /* Chart */
+    #chart-section,
+    #liq-chart-section {
+        padding: 12px;
+        min-height: 250px;
+    }
+}
+
+/* ── Mobile Large (480px - 767px) ── */
+@media (min-width: 480px) and (max-width: 767px) {
+    /* This section is now for legacy support only */
+    .stat {
+        min-width: 120px;
+    }
+
+    .ranking-card,
+    .quote-card {
+        min-width: 130px;
+    }
+
+    th,
+    td {
+        padding: 10px 10px;
+        font-size: 11px;
+        min-width: 100px;
+        white-space: nowrap;
+    }
+
+    th {
+        padding: 10px 8px;
+        text-align: left;
+    }
+}
+
+/* ── Tablet (768px - 1023px) ── */
+@media (min-width: 768px) and (max-width: 1023px) {
+    .header {
+        padding: 12px 20px;
+    }
+
+    .controls {
+        padding: 8px 20px;
+    }
+
+    .stat {
+        min-width: 150px;
+    }
+
+    .ranking-card,
+    .quote-card {
+        min-width: 140px;
+    }
+
+    table {
+        min-width: 800px;
+    }
+}
+
+/* ── Landscape Mobile ── */
+@media (max-height: 500px) and (orientation: landscape) {
+    .header {
+        padding: 6px 16px;
+        padding-top: calc(6px + var(--safe-top));
+    }
+
+    .logo p {
+        display: none;
+    }
+
+    .controls {
+        padding: 6px 16px;
+    }
+
+    .stat {
+        padding: 8px 12px;
+    }
+
+    .stat-value {
+        font-size: 16px;
+    }
+
+    .stat-label {
+        font-size: 8px;
+    }
+
+    #chart-section,
+    #liq-chart-section {
+        padding: 12px;
+        min-height: 200px;
+    }
+}
+
+/* ── Touch Feedback Enhancement ── */
+@media (hover: none) and (pointer: coarse) {
+    .btn:active,
+    .tab:active,
+    .ranking-card:active,
+    .quote-card:active,
+    .coin-pill:active {
+        transform: scale(0.95);
+        opacity: 0.8;
+    }
+
+    .stat:active {
+        transform: scale(0.98);
+        background: rgba(255, 255, 255, 0.08);
+    }
+}
+
+/* ── Pull-to-Refresh ── */
+.pull-to-refresh {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(7, 12, 26, 0.95);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    z-index: 10000;
+    transform: translateY(-100%);
+    transition: transform 0.3s ease;
+}
+
+.pull-to-refresh.active {
+    transform: translateY(0);
+}
+
+.pull-to-refresh-content {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    color: #9ca3af;
+}
+
+.pull-to-refresh-spinner {
+    width: 20px;
+    height: 20px;
+    border: 2px solid rgba(156, 163, 175, 0.3);
+    border-top-color: #9ca3af;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* ── Splash Screen ── */
+.splash-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #0a0a0a;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 99999;
+    transition: opacity 0.3s ease;
+}
+
+.splash-screen.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.splash-screen-content {
+    text-align: center;
+    animation: fadeIn 0.5s ease;
+}
+
+.splash-screen-logo {
+    font-size: 64px;
+    margin-bottom: 20px;
+}
+
+.splash-screen-title {
+    font-size: 24px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 8px;
+}
+
+.splash-screen-subtitle {
+    font-size: 14px;
+    color: var(--muted);
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ── Safe Area Adjustments ── */
+@supports (padding: max(0px)) {
+    @media (max-width: 480px) {
+        .header {
+            padding-left: max(16px, env(safe-area-inset-left));
+            padding-right: max(16px, env(safe-area-inset-right));
+        }
+
+        .controls {
+            padding-left: max(16px, env(safe-area-inset-left));
+            padding-right: max(16px, env(safe-area-inset-right));
+        }
+
+        #ranking-panel,
+        #quotes-panel {
+            padding-left: max(16px, env(safe-area-inset-left));
+            padding-right: max(16px, env(safe-area-inset-right));
+        }
+
+        .stats-row {
+            padding-left: max(0, env(safe-area-inset-left));
+            padding-right: max(0, env(safe-area-inset-right));
+        }
+    }
+}

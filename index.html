@@ -3,7 +3,13 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#0a0a0a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Whale Watcher">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="format-detection" content="telephone=no">
     <title>Hyperliquid Whale Watcher</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link
@@ -18,6 +24,23 @@
 
 <body>
 
+    <!-- Splash Screen -->
+    <div class="splash-screen" id="splashScreen">
+        <div class="splash-screen-content">
+            <div class="splash-screen-logo">🐋</div>
+            <div class="splash-screen-title">Whale Watcher</div>
+            <div class="splash-screen-subtitle">Hyperliquid · Position Explorer</div>
+        </div>
+    </div>
+
+    <!-- Pull-to-Refresh -->
+    <div class="pull-to-refresh" id="pullToRefresh">
+        <div class="pull-to-refresh-content">
+            <div class="pull-to-refresh-spinner"></div>
+            <span>Refreshing...</span>
+        </div>
+    </div>
+
     <div class="header">
         <div class="logo">
             <div class="logo-icon">🐋</div>
@@ -27,11 +50,12 @@
             </div>
         </div>
         <div class="header-center">
-            <button class="btn" id="scanBtn">🔍 Scan Whales</button>
+            <button class="btn" id="scanBtn">🔍 Scan</button>
             <button class="btn-pause" id="pauseBtn" style="display:none">⏸ Pause</button>
             <button class="btn-stop" id="stopBtn">⏹ Stop</button>
         </div>
         <div class="header-right">
+            <button class="menu-toggle" id="menuToggle" aria-label="Menu">☰</button>
             <div class="status-badge">
                 <div class="dot" id="dot"></div>
                 <span id="statusText">Ready</span>
@@ -39,115 +63,278 @@
         </div>
     </div>
 
+    <!-- Mobile Menu Overlay -->
+    <div class="mobile-menu-overlay" id="mobileMenuOverlay"></div>
+
+    <!-- Mobile Menu Drawer -->
+    <div class="mobile-menu" id="mobileMenu">
+        <div class="mobile-menu-header">
+            <h2>⚙️ Configurações</h2>
+            <button class="mobile-menu-close" id="mobileMenuClose" aria-label="Close">✕</button>
+        </div>
+        <div class="mobile-menu-content">
+            <!-- Scan & Data Section -->
+            <div class="mobile-menu-section">
+                <div class="mobile-menu-section-title">📊 Scan & Dados</div>
+                <div class="ctrl">
+                    <label title="Velocidade de scan de whales (requisições por segundo)">Velocidade de Scan: <span id="speedVal">8</span> req/s</label>
+                    <input type="number" id="speedRange" min="1" max="20" value="8" style="width: 80px">
+                </div>
+                <div class="ctrl">
+                    <label title="Intervalo de atualização de preços em segundos">Atualização de Preços: <span id="priceIntervalVal">3</span>s</label>
+                    <input type="number" id="priceIntervalRange" min="1" max="30" value="3" style="width: 80px">
+                </div>
+                <div class="ctrl">
+                    <label title="Período de tempo para cálculo de PnL acumulado">Janela de PnL</label>
+                    <div class="tabs">
+                        <button class="tab active" data-window="allTime" title="Todo o histórico">Todo</button>
+                        <button class="tab" data-window="month" title="Últimos 30 dias">30d</button>
+                        <button class="tab" data-window="week" title="Últimos 7 dias">7d</button>
+                        <button class="tab" data-window="day" title="Últimas 24 horas">24h</button>
+                    </div>
+                </div>
+                <div class="ctrl">
+                    <label title="Modo de cálculo de preços">Modo de Preço</label>
+                    <div class="tabs" id="priceModeToggle">
+                        <button class="tab active" data-mode="realtime" title="Preço em tempo real">Tempo Real</button>
+                        <button class="tab" data-mode="dailyclose" title="Preço de fechamento diário">Fechamento</button>
+                    </div>
+                </div>
+                <div class="ctrl">
+                    <label title="Mostrar símbolos das moedas nos gráficos">Mostrar Símbolos</label>
+                    <div class="tabs">
+                        <button class="tab active" id="btnShowSym" title="Mostrar">Sim</button>
+                    </div>
+                </div>
+                <div class="ctrl">
+                    <label title="Número máximo de moedas a mostrar no ranking">Top N Moedas</label>
+                    <input type="number" id="rankingLimit" value="10" min="1" max="100" class="col-filter" style="width:100%">
+                </div>
+                <div class="ctrl">
+                    <label title="Casas decimais para exibição de preços e valores">Casas Decimais: <span id="decimalPlacesVal">2</span></label>
+                    <input type="number" id="decimalPlacesRange" min="0" max="8" value="2" style="width: 80px">
+                </div>
+            </div>
+
+            <!-- Chart Section -->
+            <div class="mobile-menu-section">
+                <div class="mobile-menu-section-title">📈 Gráfico</div>
+                <div class="ctrl">
+                    <label title="Tipo de gráfico para visualização">Tipo de Gráfico</label>
+                    <div class="tabs">
+                        <button class="tab active" data-chart="scatter" title="Gráfico de dispersão">Dispersão</button>
+                        <button class="tab" data-chart="column" title="Gráfico de colunas">Colunas</button>
+                    </div>
+                </div>
+                <div class="ctrl" id="bubbleSizeCtrl">
+                    <label title="Tamanho dos pontos no gráfico">Tamanho dos Pontos: <span id="bubbleSizeVal">1.0</span>x</label>
+                    <input type="number" id="bubbleSizeRange" min="0.1" max="3.0" step="0.1" value="1.0" style="width: 100%">
+                </div>
+                <div class="ctrl" id="bubbleOpacityCtrl">
+                    <label title="Transparência dos pontos no gráfico">Transparência: <span id="bubbleOpacityVal">0.6</span></label>
+                    <input type="number" id="bubbleOpacityRange" min="0.1" max="1.0" step="0.05" value="0.6" style="width: 100%">
+                </div>
+                <div class="ctrl" id="aggregationCtrl" style="display:none">
+                    <label title="Número de bins para gráfico de colunas">Bins: <span id="aggregationVal">50</span></label>
+                    <input type="number" id="aggregationRange" min="10" max="1000" step="10" value="50" style="width: 100%">
+                </div>
+                <div class="ctrl">
+                    <label title="Espaçamento entre linhas de grade">Grade: <span id="gridSpacingVal">500</span></label>
+                    <input type="number" id="gridSpacingRange" min="100" max="5000" step="100" value="500" style="width: 100%">
+                </div>
+            </div>
+
+            <!-- Display Section -->
+            <div class="mobile-menu-section">
+                <div class="mobile-menu-section-title">🎨 Visualização</div>
+                <div class="ctrl">
+                    <label title="Colunas visíveis na tabela">Colunas Visíveis</label>
+                    <div class="combobox" id="columnCombobox" style="width:100%">
+                        <div class="combobox-input-wrap">
+                            <input type="text" id="columnSelectDisplay" class="combobox-input" placeholder="Select" readonly>
+                            <span class="combobox-arrow">▾</span>
+                        </div>
+                        <div class="combobox-dropdown" id="columnDropdown"></div>
+                    </div>
+                </div>
+                <div class="ctrl">
+                    <label title="Largura das colunas na tabela">Largura da Coluna: <span id="columnWidthVal">100</span>px</label>
+                    <input type="number" id="columnWidthInput" min="60" max="500" step="5" value="100" style="width: 100%">
+                </div>
+                <div class="ctrl">
+                    <label title="Cores para alavancagem Long e Short">Cores de Alavancagem</label>
+                    <div style="display:flex; flex-direction:column; gap:4px; margin-top:2px">
+                        <div style="display:flex; align-items:center; gap:8px">
+                            <span style="font-size:11px; color:#22c55e">Long Baixa:</span>
+                            <input type="color" id="colorLongLow" value="#22c55e">
+                            <span style="font-size:11px; color:#16a34a">Long Alta:</span>
+                            <input type="color" id="colorLongHigh" value="#16a34a">
+                        </div>
+                        <div style="display:flex; align-items:center; gap:8px">
+                            <span style="font-size:11px; color:#ef4444">Short Baixa:</span>
+                            <input type="color" id="colorShortLow" value="#ef4444">
+                            <span style="font-size:11px; color:#dc2626">Short Alta:</span>
+                            <input type="color" id="colorShortHigh" value="#dc2626">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Advanced Filters Section -->
+            <div class="mobile-menu-section">
+                <div class="mobile-menu-section-title">⚙️ Filtros Avançados</div>
+                <div class="ctrl">
+                    <label title="Filtros avançados para gráfico">Filtros do Gráfico</label>
+                    <div style="display:flex; flex-direction:column">
+                        <div style="display:flex; align-items:center; gap:4px; margin-top:2px; padding-top:2px">
+                            <span style="font-size:11px; color:#9ca3af" title="Alavancagem mínima para filtragem">Alavancagem Mín ></span>
+                            <input type="number" id="chartHighLevSplit" value="50" min="1" max="100" style="width:40px; padding:2px" title="Limiar de alavancagem">
+                            <span style="font-size:11px; color:#9ca3af; margin-left:6px" title="Alavancagem máxima para cores">Alavancagem Máx</span>
+                            <input type="number" id="colorMaxLev" value="50" min="1" max="100" style="width:35px; padding:2px" title="Alavancagem máxima">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
     <div class="controls">
-        <div class="ctrl">
-            <label title="Recommended limit: 8-10 requests/s">Speed: <span id="speedVal">8</span></label>
-            <input type="range" id="speedRange" min="1" max="20" value="8" style="width: 80px">
-        </div>
-        <div class="filter-sep"></div>
-        <div class="ctrl">
-            <label title="Price update interval">Price Update: <span id="priceIntervalVal">3s</span></label>
-            <input type="range" id="priceIntervalRange" min="1" max="30" value="3" style="width: 80px">
-        </div>
-        <div class="filter-sep"></div>
-        <div class="ctrl">
-            <label>Sort PnL window</label>
-            <div class="tabs">
-                <button class="tab active" data-window="allTime">All Time</button>
-                <button class="tab" data-window="month">30d</button>
-                <button class="tab" data-window="week">7d</button>
-                <button class="tab" data-window="day">24h</button>
+        <!-- Scan & Data Section -->
+        <div class="controls-section">
+            <div class="controls-section-title">📊 Scan & Dados</div>
+            <div class="ctrl">
+                <label title="Recommended limit: 8-10 requests/s">Speed: <span id="speedVal">8</span> req/s</label>
+                <input type="number" id="speedRange" min="1" max="20" value="8" style="width: 80px">
+            </div>
+            <div class="filter-sep"></div>
+            <div class="ctrl">
+                <label title="Price update interval">Price Update: <span id="priceIntervalVal">3</span>s</label>
+                <input type="number" id="priceIntervalRange" min="1" max="30" value="3" style="width: 80px">
+            </div>
+            <div class="filter-sep"></div>
+            <div class="ctrl">
+                <label>Sort PnL window</label>
+                <div class="tabs">
+                    <button class="tab active" data-window="allTime" title="Todo o histórico">All Time</button>
+                    <button class="tab" data-window="month" title="Últimos 30 dias">30d</button>
+                    <button class="tab" data-window="week" title="Últimos 7 dias">7d</button>
+                    <button class="tab" data-window="day" title="Últimas 24 horas">24h</button>
+                </div>
+            </div>
+            <div class="filter-sep"></div>
+            <div class="ctrl">
+                <label>Price Mode</label>
+                <div class="tabs" id="priceModeToggle">
+                    <button class="tab active" data-mode="realtime" title="Preço em tempo real">Real-time</button>
+                    <button class="tab" data-mode="dailyclose" title="Preço de fechamento diário">Daily Close</button>
+                </div>
+            </div>
+            <div class="filter-sep"></div>
+            <div class="ctrl">
+                <label>Show Symbols</label>
+                <div class="tabs">
+                    <button class="tab active" id="btnShowSymDesktop" title="Mostrar">On</button>
+                </div>
+            </div>
+            <div class="filter-sep"></div>
+            <div class="ctrl">
+                <label>Top N by Market Cap</label>
+                <input type="number" id="rankingLimit" value="10" min="1" max="100" class="col-filter" style="width:70px">
+            </div>
+            <div class="filter-sep"></div>
+            <div class="ctrl">
+                <label title="Decimal places for prices and values">Decimals: <span id="decimalPlacesVal">2</span></label>
+                <input type="number" id="decimalPlacesRange" min="0" max="8" value="2" style="width: 80px">
             </div>
         </div>
-        <div class="filter-sep"></div>
-        <div class="ctrl">
-            <label>Price Mode</label>
-            <div class="tabs" id="priceModeToggle">
-                <button class="tab active" data-mode="realtime">Real-time</button>
-                <button class="tab" data-mode="dailyclose">Daily Close</button>
+
+        <div class="filter-sep" style="width: 100%; height: 2px; background: rgba(156, 163, 175, 0.2); margin: 16px 0;"></div>
+
+        <!-- Chart Section -->
+        <div class="controls-section">
+            <div class="controls-section-title">📈 Gráfico</div>
+            <div class="ctrl">
+                <label>Chart Mode</label>
+                <div class="tabs">
+                    <button class="tab active" data-chart="scatter" title="Gráfico de dispersão">Scatter</button>
+                    <button class="tab" data-chart="column" title="Gráfico de colunas">Column</button>
+                </div>
+            </div>
+            <div class="filter-sep"></div>
+            <div class="ctrl" id="bubbleSizeCtrl">
+                <label>Radius: <span id="bubbleSizeVal">1.0</span>x</label>
+                <input type="number" id="bubbleSizeRange" min="0.1" max="3.0" step="0.1" value="1.0" style="width: 80px">
+            </div>
+            <div class="ctrl" id="bubbleOpacityCtrl">
+                <label>Opacity: <span id="bubbleOpacityVal">0.6</span></label>
+                <input type="number" id="bubbleOpacityRange" min="0.1" max="1.0" step="0.05" value="0.6" style="width: 80px">
+            </div>
+            <div class="ctrl" id="aggregationCtrl" style="display:none">
+                <label>Bins: <span id="aggregationVal">50</span></label>
+                <input type="number" id="aggregationRange" min="10" max="1000" step="10" value="50" style="width: 120px">
+            </div>
+            <div class="filter-sep"></div>
+            <div class="ctrl">
+                <label>Grid: <span id="gridSpacingVal">500</span></label>
+                <input type="number" id="gridSpacingRange" min="100" max="5000" step="100" value="500" style="width: 80px">
             </div>
         </div>
-        <div class="filter-sep"></div>
-        <div class="ctrl">
-            <label>Show Symbols</label>
-            <div class="tabs">
-                <button class="tab active" id="btnShowSym">On</button>
+
+        <div class="filter-sep" style="width: 100%; height: 2px; background: rgba(156, 163, 175, 0.2); margin: 16px 0;"></div>
+
+        <!-- Display Section -->
+        <div class="controls-section">
+            <div class="controls-section-title">🎨 Visualização</div>
+            <div class="ctrl">
+                <label>Columns</label>
+                <div class="combobox" id="columnCombobox" style="width:110px">
+                    <div class="combobox-input-wrap">
+                        <input type="text" id="columnSelectDisplay" class="combobox-input" placeholder="Select" readonly>
+                        <span class="combobox-arrow">▾</span>
+                    </div>
+                    <div class="combobox-dropdown" id="columnDropdown"></div>
+                </div>
             </div>
-        </div>
-        <div class="filter-sep"></div>
-        <div class="ctrl">
-            <label>Top N by Market Cap</label>
-            <input type="number" id="rankingLimit" value="10" min="1" max="100" class="col-filter" style="width:70px">
-        </div>
-        <div class="filter-sep"></div>
-        <div class="ctrl">
-            <label title="Chart Filters">Chart Filters</label>
-            <div style="display:flex; flex-direction:column">
-                <div style="display:flex; align-items:center; gap:4px; margin-top:2px; padding-top:2px">
-                    <span style="font-size:11px; color:#9ca3af">High Lev ></span>
-                    <input type="number" id="chartHighLevSplit" value="50" min="1" max="100" style="width:40px; padding:2px" title="Leverage Split Threshold">
-                    <span style="font-size:11px; color:#9ca3af; margin-left:6px">Color Max</span>
-                    <input type="number" id="colorMaxLev" value="50" min="1" max="100" style="width:35px; padding:2px" title="High Color Leverage">
+            <div class="filter-sep"></div>
+            <div class="ctrl">
+                <label title="Column width">Col Width: <span id="columnWidthVal">100</span>px</label>
+                <input type="number" id="columnWidthInput" min="60" max="500" step="5" value="100" style="width: 80px">
+            </div>
+            <div class="filter-sep"></div>
+            <div class="ctrl">
+                <label title="Leverage Colors">Colors</label>
+                <div style="display:flex; flex-direction:column; gap:4px; margin-top:2px">
+                    <div style="display:flex; align-items:center; gap:8px">
+                        <span style="font-size:11px; color:#22c55e">Long Low:</span>
+                        <input type="color" id="colorLongLow" value="#22c55e">
+                        <span style="font-size:11px; color:#16a34a">Long High:</span>
+                        <input type="color" id="colorLongHigh" value="#16a34a">
+                    </div>
+                    <div style="display:flex; align-items:center; gap:8px">
+                        <span style="font-size:11px; color:#ef4444">Short Low:</span>
+                        <input type="color" id="colorShortLow" value="#ef4444">
+                        <span style="font-size:11px; color:#dc2626">Short High:</span>
+                        <input type="color" id="colorShortHigh" value="#dc2626">
+                    </div>
                 </div>
             </div>
         </div>
-        <div class="filter-sep"></div>
-        <div class="ctrl">
-            <label title="Decimal places for prices and values">Decimals: <span id="decimalPlacesVal">2</span></label>
-            <input type="range" id="decimalPlacesRange" min="0" max="8" value="2" style="width: 80px">
-        </div>
-        <div class="filter-sep"></div>
-        <div class="ctrl">
-            <label>Columns</label>
-            <div class="combobox" id="columnCombobox" style="width:110px">
-                <div class="combobox-input-wrap">
-                    <input type="text" id="columnSelectDisplay" class="combobox-input" placeholder="Select" readonly>
-                    <span class="combobox-arrow">▾</span>
-                </div>
-                <div class="combobox-dropdown" id="columnDropdown"></div>
-            </div>
-        </div>
-        <div class="filter-sep"></div>
-        <div class="ctrl">
-            <label>Chart Mode</label>
-            <div class="tabs">
-                <button class="tab active" data-chart="scatter">Scatter</button>
-                <button class="tab" data-chart="column">Column</button>
-            </div>
-        </div>
-        <div class="filter-sep"></div>
-        <div class="ctrl" id="bubbleSizeCtrl">
-            <label title="Adjust bubble size">Radius: <span id="bubbleSizeVal">1.0</span>x</label>
-            <input type="range" id="bubbleSizeRange" min="0.1" max="3.0" step="0.1" value="1.0" style="width: 80px">
-        </div>
-        <div class="ctrl" id="bubbleOpacityCtrl">
-            <label title="Adjust bubble transparency">Opacity: <span id="bubbleOpacityVal">0.6</span></label>
-            <input type="range" id="bubbleOpacityRange" min="0.1" max="1.0" step="0.05" value="0.6" style="width: 80px">
-        </div>
-        <div class="ctrl" id="aggregationCtrl" style="display:none">
-            <label title="Adjust bin count for columns">Bins: <span id="aggregationVal">50</span></label>
-            <input type="range" id="aggregationRange" min="10" max="1000" step="10" value="50" style="width: 120px">
-        </div>
-        <div class="filter-sep"></div>
-        <div class="ctrl">
-            <label title="Grid line spacing">Grid: <span id="gridSpacingVal">500</span></label>
-            <input type="number" id="gridSpacingRange" min="100" max="5000" step="100" value="500" style="width: 80px">
-        </div>
-        <div class="filter-sep"></div>
-        <div class="ctrl">
-            <label title="Leverage Colors">Colors</label>
-            <div style="display:flex; flex-direction:column; gap:4px; margin-top:2px">
-                <div style="display:flex; align-items:center; gap:8px">
-                    <span style="font-size:11px; color:#22c55e">Long Low:</span>
-                    <input type="color" id="colorLongLow" value="#22c55e" style="width:30px; height:20px; padding:0; border:none; cursor:pointer">
-                    <span style="font-size:11px; color:#16a34a">Long High:</span>
-                    <input type="color" id="colorLongHigh" value="#16a34a" style="width:30px; height:20px; padding:0; border:none; cursor:pointer">
-                </div>
-                <div style="display:flex; align-items:center; gap:8px">
-                    <span style="font-size:11px; color:#ef4444">Short Low:</span>
-                    <input type="color" id="colorShortLow" value="#ef4444" style="width:30px; height:20px; padding:0; border:none; cursor:pointer">
-                    <span style="font-size:11px; color:#dc2626">Short High:</span>
-                    <input type="color" id="colorShortHigh" value="#dc2626" style="width:30px; height:20px; padding:0; border:none; cursor:pointer">
+
+        <div class="filter-sep" style="width: 100%; height: 2px; background: rgba(156, 163, 175, 0.2); margin: 16px 0;"></div>
+
+        <!-- Advanced Filters Section -->
+        <div class="controls-section">
+            <div class="controls-section-title">⚙️ Filtros Avançados</div>
+            <div class="ctrl">
+                <label title="Chart Filters">Chart Filters</label>
+                <div style="display:flex; flex-direction:column">
+                    <div style="display:flex; align-items:center; gap:4px; margin-top:2px; padding-top:2px">
+                        <span style="font-size:11px; color:#9ca3af">High Lev ></span>
+                        <input type="number" id="chartHighLevSplit" value="50" min="1" max="100" style="width:40px; padding:2px" title="Leverage Split Threshold">
+                        <span style="font-size:11px; color:#9ca3af; margin-left:6px">Color Max</span>
+                        <input type="number" id="colorMaxLev" value="50" min="1" max="100" style="width:35px; padding:2px" title="High Color Leverage">
+                    </div>
                 </div>
             </div>
         </div>
@@ -188,10 +375,6 @@
 
     <div id="chart-section">
         <canvas id="scatterChart" style="width: 100%; height: 100%;"></canvas>
-        <button id="resetZoomBtn" class="btn" style="position:absolute; top:10px; right:10px; z-index:20; padding: 4px 8px; font-size: 11px; background: rgba(59, 130, 246, 0.2); border: 1px solid rgba(59, 130, 246, 0.4);">Reset Zoom</button>
-        <div style="position:absolute; bottom:20px; right:10px; z-index:20; font-size: 11px; color: rgba(255,255,255,0.3); pointer-events: none; user-select: none;">
-            Pan: Drag &nbsp;|&nbsp; Zoom: Ctrl+Scroll &nbsp;|&nbsp; Area Zoom: Shift+Drag
-        </div>
         <div class="chart-resizer">
             <div class="chart-resizer-handle"></div>
         </div>
@@ -199,10 +382,6 @@
 
     <div id="liq-chart-section">
         <canvas id="liqChart" style="width: 100%; height: 100%;"></canvas>
-        <button id="resetLiqZoomBtn" class="btn" style="position:absolute; top:10px; right:10px; z-index:20; padding: 4px 8px; font-size: 11px; background: rgba(59, 130, 246, 0.2); border: 1px solid rgba(59, 130, 246, 0.4); display: none;">Reset Zoom</button>
-        <div style="position:absolute; bottom:20px; right:10px; z-index:20; font-size: 11px; color: rgba(255,255,255,0.3); pointer-events: none; user-select: none;">
-            Pan: Drag &nbsp;|&nbsp; Zoom: Ctrl+Scroll &nbsp;|&nbsp; Area Zoom: Shift+Drag
-        </div>
         <div class="chart-resizer">
             <div class="chart-resizer-handle"></div>
         </div>
@@ -385,6 +564,21 @@
     </div>
 
     <script type="module" src="js/main.js"></script>
+    
+    <!-- Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then((registration) => {
+                        console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                    })
+                    .catch((error) => {
+                        console.log('ServiceWorker registration failed: ', error);
+                    });
+            });
+        }
+    </script>
 
 </body>
 
