@@ -20,7 +20,7 @@ import { setLastSaveTime, setRenderPending } from '../state.js';
 import { fetchAllMids } from '../api/exchangeRates.js';
 import {
     updateSpeed, updateRankingLimit, updateColorSettings, updateChartFilters,
-    updateBubbleSize, updateAggregation, setChartModeHandler, updateChartHeight,
+    updateBubbleSize, updateBubbleOpacity, updateAggregation, setChartModeHandler, updateChartHeight,
     updateLiqChartHeight, onCurrencyChange, openColumnCombobox, closeColumnComboboxDelayed,
     renderColumnDropdown as renderColumnDropdownFn, toggleColumn as toggleColumnFn, showAllColumns as showAllColumnsFn, hideAllColumns as hideAllColumnsFn, updateColumnSelectDisplay, applyColumnOrder,
     applyColumnWidths, applyColumnVisibility, toggleShowSymbols, updatePriceInterval, updateDecimalPlaces, updateLeverageColors
@@ -148,6 +148,14 @@ function setupEventListeners() {
     if (bubbleSizeRange) {
         bubbleSizeRange.addEventListener('change', (e) => {
             updateBubbleSize(e.target.value);
+        });
+    }
+
+    // Bubble opacity
+    const bubbleOpacityRange = document.getElementById('bubbleOpacityRange');
+    if (bubbleOpacityRange) {
+        bubbleOpacityRange.addEventListener('change', (e) => {
+            updateBubbleOpacity(e.target.value);
         });
     }
 

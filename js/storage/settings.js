@@ -3,13 +3,13 @@
 // ═══════════════════════════════════════════════════════════
 
 import {
-    getSortKey, getSortDir, getShowSymbols, getChartMode, getBubbleScale,
+    getSortKey, getSortDir, getShowSymbols, getChartMode, getBubbleScale, getBubbleOpacity,
     getAggregationFactor, getSelectedCoins, getPriceMode, getPriceUpdateInterval, getActiveWindow,
     getVisibleColumns, getColumnOrder, getRankingLimit, getColorMaxLev,
     getChartHighLevSplit, getChartHeight, getLiqChartHeight, getSavedScatterState,
     getSavedLiqState, getColumnWidths, getActiveCurrency, getActiveEntryCurrency, getDecimalPlaces, getLeverageColors,
     setSortKey, setSortDir, setSavedScatterState, setSavedLiqState,
-    setColumnOrder, setVisibleColumns, setSelectedCoins, setRankingLimit, setColorMaxLev, setChartHighLevSplit, setChartMode, setBubbleScale, setAggregationFactor, setPriceMode, setShowSymbols, setPriceUpdateInterval, setDecimalPlaces, setLeverageColors
+    setColumnOrder, setVisibleColumns, setSelectedCoins, setRankingLimit, setColorMaxLev, setChartHighLevSplit, setChartMode, setBubbleScale, setBubbleOpacity, setAggregationFactor, setPriceMode, setShowSymbols, setPriceUpdateInterval, setDecimalPlaces, setLeverageColors
 } from '../state.js';
 import { COLUMN_DEFS } from '../config.js';
 import { cbSetValue, updateCoinSearchLabel } from '../ui/combobox.js';
@@ -74,6 +74,7 @@ export function saveSettings(getChartState = null, savedScatterState = null, sav
         chartHeight: getChartHeight(),
         chartMode: getChartMode(),
         bubbleScale: getBubbleScale(),
+        bubbleOpacity: getBubbleOpacity(),
         aggregationFactor: getAggregationFactor(),
         decimalPlaces: getDecimalPlaces(),
         visibleColumns: getVisibleColumns(),
@@ -204,6 +205,11 @@ export function loadSettings() {
         setBubbleScale(s.bubbleScale);
         document.getElementById('bubbleSizeVal').textContent = s.bubbleScale.toFixed(1);
         document.getElementById('bubbleSizeRange').value = s.bubbleScale;
+    }
+    if (s.bubbleOpacity) {
+        setBubbleOpacity(s.bubbleOpacity);
+        document.getElementById('bubbleOpacityVal').textContent = s.bubbleOpacity.toFixed(2);
+        document.getElementById('bubbleOpacityRange').value = s.bubbleOpacity;
     }
     if (s.aggregationFactor) {
         setAggregationFactor(s.aggregationFactor);

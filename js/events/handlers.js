@@ -3,7 +3,7 @@
 // ═══════════════════════════════════════════════════════════
 
 import {
-    setShowSymbols, setChartMode, setBubbleScale, setAggregationFactor,
+    setShowSymbols, setChartMode, setBubbleScale, setBubbleOpacity, setAggregationFactor,
     setRankingLimit, setColorMaxLev, setChartHighLevSplit, setChartHeight,
     setLiqChartHeight, setSortKey, setSortDir, setActiveWindow, getSortKey,
     getSortDir, getShowSymbols, getChartMode, getBubbleScale, getAggregationFactor,
@@ -77,6 +77,14 @@ export function updateChartFilters() {
 export function updateBubbleSize(val) {
     setBubbleScale(parseFloat(val));
     document.getElementById('bubbleSizeVal').textContent = val;
+    saveSettings();
+    // Trigger chart update by re-rendering table
+    renderTable();
+}
+
+export function updateBubbleOpacity(val) {
+    setBubbleOpacity(parseFloat(val));
+    document.getElementById('bubbleOpacityVal').textContent = val;
     saveSettings();
     // Trigger chart update by re-rendering table
     renderTable();

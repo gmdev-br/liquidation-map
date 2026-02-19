@@ -226,7 +226,7 @@ export function renderLiqScatterPlot() {
             type: 'line',
             xMin: refPrice,
             xMax: refPrice,
-            borderColor: 'rgba(255, 255, 255, 0.5)',
+            borderColor: '#f59e0b',
             borderWidth: 1,
             borderDash: [5, 5],
             clip: false
@@ -392,6 +392,8 @@ export function renderLiqScatterPlot() {
                 },
                 tooltip: {
                     ...liqChartOptions.plugins.tooltip,
+                    titleColor: undefined,
+                    bodyColor: undefined,
                     callbacks: {
                         title: function(context) {
                             if (chartType === 'bar') {
@@ -400,11 +402,14 @@ export function renderLiqScatterPlot() {
                             const r = context[0].raw._raw;
                             return `${r.coin} ${r.side === 'long' ? '▲' : '▼'}`;
                         },
+                        titleColor: function(context) {
+                            return context[0].dataset.borderColor;
+                        },
                         labelColor: function(context) {
-                            return {
-                                borderColor: context.dataset.backgroundColor,
-                                backgroundColor: context.dataset.backgroundColor
-                            };
+                            return context.dataset.backgroundColor;
+                        },
+                        labelTextColor: function(context) {
+                            return context.dataset.backgroundColor;
                         },
                         label: function(context) {
                             if (chartType === 'bar') {

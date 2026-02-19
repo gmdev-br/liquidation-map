@@ -13,7 +13,7 @@ function hexToRgba(hex, alpha) {
 import {
     getDisplayedRows, getCurrentPrices, getActiveCurrency, getActiveEntryCurrency,
     getShowSymbols, getChartHeight, getChartHighLevSplit,
-    getBubbleScale, getChartMode, getAggregationFactor, getSavedScatterState,
+    getBubbleScale, getBubbleOpacity, getChartMode, getAggregationFactor, getSavedScatterState,
     getFxRates, getDecimalPlaces, getLeverageColors
 } from '../state.js';
 import { CURRENCY_META } from '../config.js';
@@ -226,7 +226,7 @@ export function renderScatterPlot() {
             type: 'line',
             xMin: refPrice,
             xMax: refPrice,
-            borderColor: 'rgba(255, 255, 255, 0.5)',
+            borderColor: '#f59e0b',
             borderWidth: 1,
             borderDash: [5, 5],
             clip: false
@@ -357,7 +357,8 @@ export function renderScatterPlot() {
     } else {
         // Scatter mode - create 4 series based on leverage split
         const highLevSplit = getChartHighLevSplit();
-        
+        const opacity = getBubbleOpacity();
+
         const longLowData = data.filter(d => d._raw.side === 'long' && Math.abs(d._raw.leverageValue) < highLevSplit);
         const longHighData = data.filter(d => d._raw.side === 'long' && Math.abs(d._raw.leverageValue) >= highLevSplit);
         const shortLowData = data.filter(d => d._raw.side === 'short' && Math.abs(d._raw.leverageValue) < highLevSplit);
@@ -367,7 +368,7 @@ export function renderScatterPlot() {
             datasets.push({
                 label: `Longs (≤${highLevSplit}x)`,
                 data: longLowData,
-                backgroundColor: hexToRgba(customColors.longLow, 0.6),
+                backgroundColor: hexToRgba(customColors.longLow, opacity),
                 borderColor: customColors.longLow,
                 borderWidth: 1
             });
@@ -377,7 +378,7 @@ export function renderScatterPlot() {
             datasets.push({
                 label: `Longs (>${highLevSplit}x)`,
                 data: longHighData,
-                backgroundColor: hexToRgba(customColors.longHigh, 0.9),
+                backgroundColor: hexToRgba(customColors.longHigh, opacity),
                 borderColor: customColors.longHigh,
                 borderWidth: 2
             });
@@ -387,7 +388,7 @@ export function renderScatterPlot() {
             datasets.push({
                 label: `Shorts (≤${highLevSplit}x)`,
                 data: shortLowData,
-                backgroundColor: hexToRgba(customColors.shortLow, 0.6),
+                backgroundColor: hexToRgba(customColors.shortLow, opacity),
                 borderColor: customColors.shortLow,
                 borderWidth: 1
             });
@@ -397,7 +398,7 @@ export function renderScatterPlot() {
             datasets.push({
                 label: `Shorts (>${highLevSplit}x)`,
                 data: shortHighData,
-                backgroundColor: hexToRgba(customColors.shortHigh, 0.9),
+                backgroundColor: hexToRgba(customColors.shortHigh, opacity),
                 borderColor: customColors.shortHigh,
                 borderWidth: 2
             });
@@ -452,7 +453,25 @@ export function renderScatterPlot() {
                 },
                 tooltip: {
                     ...chartOptions.plugins.tooltip,
+                    titleColor: undefined,
+                    bodyColor: undefined,
                     callbacks: {
+                        title: function(context) {
+                            if (chartType === 'bar') {
+                                return 'Position Count';
+                            }
+                            const r = context[0].raw._raw;
+                            return `${r.coin} ${r.side === 'long' ? '▲' : '▼'}`;
+                        },
+                        titleColor: function(context) {
+                            return context[0].dataset.borderColor;
+                        },
+                        labelColor: function(context) {
+                            return context.dataset.borderColor;
+                        },
+                        labelTextColor: function(context) {
+                            return context.dataset.borderColor;
+                        },
                         label: function(context) {
                             if (chartType === 'bar') {
                                 return `Count: ${context.parsed.y}`;
