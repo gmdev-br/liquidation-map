@@ -23,13 +23,16 @@ const CB_OPTIONS = {}; // id -> [{value, label}]
 const CB_TIMERS = {};  // id -> timeout
 
 export function cbInit(id, options, _onChangeFn) {
+    console.log('cbInit called with:', { id, options, _onChangeFn: typeof _onChangeFn });
     CB_OPTIONS[id] = options; // [{value, label}]
     cbRender(id);
     // Set display to match current hidden value
     const hidden = document.getElementById(id);
+    console.log('Hidden input found:', !!hidden, 'Current value:', hidden?.value);
     if (hidden && hidden.value) {
         const opt = options.find(o => o.value === hidden.value);
         const search = document.getElementById(`cb-${id}-search`);
+        console.log('Setting initial display value:', opt?.label);
         if (search && opt) search.value = opt.label;
     }
 }
@@ -95,13 +98,24 @@ export function cbSelect(id, value, _label, _onChangeFn, renderTable) {
 }
 
 export function cbSetValue(id, value) {
+    console.log('cbSetValue called with:', { id, value });
     const options = CB_OPTIONS[id] || [];
     const opt = options.find(o => o.value === value);
-    if (!opt) return;
+    console.log('Found option:', opt);
+    if (!opt) {
+        console.log('Option not found for value:', value, 'Available options:', options);
+        return;
+    }
     const hidden = document.getElementById(id);
-    if (hidden) hidden.value = value;
+    if (hidden) {
+        hidden.value = value;
+        console.log('Set hidden input value to:', value);
+    }
     const search = document.getElementById(`cb-${id}-search`);
-    if (search) search.value = opt.label;
+    if (search) {
+        search.value = opt.label;
+        console.log('Set search input value to:', opt.label);
+    }
 }
 
 // Coin Combobox (searchable)
@@ -172,19 +186,25 @@ export function selectCoin(value, _label) {
 
 export function updateCoinSearchLabel() {
     const search = document.getElementById('coinSearch');
-    if (getSelectedCoins().length === 0) {
+    const selectedCoins = getSelectedCoins();
+    console.log('updateCoinSearchLabel called, selectedCoins:', selectedCoins);
+    if (selectedCoins.length === 0) {
         search.value = '';
-    } else if (getSelectedCoins().length === 1) {
-        search.value = getSelectedCoins()[0];
+    } else if (selectedCoins.length === 1) {
+        search.value = selectedCoins[0];
     } else {
-        search.value = `${getSelectedCoins().length} coins`;
+        search.value = `${selectedCoins.length} coins`;
     }
 }
 
 export function updateCoinFilter(allRows) {
+    console.log('updateCoinFilter called, selectedCoins:', getSelectedCoins());
     const coins = [...new Set(allRows.map(r => r.coin))].sort();
     _coinOptions = coins;
-    updateCoinSearchLabel();
+    // Only update label if no coins are selected (preserve user selection)
+    if (getSelectedCoins().length === 0) {
+        updateCoinSearchLabel();
+    }
 }
 
 // ── Click outside handling ──

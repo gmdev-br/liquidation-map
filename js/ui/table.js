@@ -80,12 +80,15 @@ export function updateStats(showSymbols, allRows) {
 }
 
 export function renderTable() {
+    console.log('renderTable: Starting...');
     function renderCharts() {
         renderScatterPlot();
         renderLiqScatterPlot();
     }
     const allRows = getAllRows();
+    console.log('renderTable: allRows count:', allRows.length);
     const selectedCoins = getSelectedCoins();
+    console.log('renderTable: selectedCoins:', selectedCoins);
     const activeCurrency = getActiveCurrency();
     const activeEntryCurrency = getActiveEntryCurrency();
     const showSymbols = getShowSymbols();

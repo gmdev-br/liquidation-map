@@ -110,6 +110,13 @@ function setupEventListeners() {
                 saveSettings();
                 renderTable();
             });
+            
+            // Also add input event listener for number inputs to save as user types
+            if (el.type === 'number') {
+                el.addEventListener('input', () => {
+                    saveSettings();
+                });
+            }
         }
     });
 
@@ -397,7 +404,20 @@ function initializePanels() {
 }
 
 function loadInitialState() {
+    console.log('loadInitialState: Starting...');
     loadTableData(setAllRows);
+    
+    // Initialize currency comboboxes FIRST before loading settings
+    const currencyOptions = Object.keys(CURRENCY_META).map(ccy => ({
+        value: ccy,
+        label: ccy
+    }));
+    
+    console.log('Initializing currency comboboxes with options:', currencyOptions);
+    cbInit('currencySelect', currencyOptions, onCurrencyChange);
+    cbInit('entryCurrencySelect', currencyOptions, onCurrencyChange);
+    
+    console.log('loadInitialState: Loading settings...');
     loadSettings();
     
     // Carregar preços atuais antes de renderizar a tabela
@@ -419,6 +439,7 @@ function loadInitialState() {
         aggCtrl.style.display = (chartMode === 'column') ? 'block' : 'none';
     }
     
+    console.log('loadInitialState: Rendering table...');
     renderTable();
 
     // Initialize generic comboboxes with options
@@ -434,13 +455,7 @@ function loadInitialState() {
         { value: 'cross', label: 'Cross' }
     ], renderTable);
 
-    const currencyOptions = Object.keys(CURRENCY_META).map(ccy => ({
-        value: ccy,
-        label: ccy
-    }));
-
-    cbInit('currencySelect', currencyOptions, onCurrencyChange);
-    cbInit('entryCurrencySelect', currencyOptions, onCurrencyChange);
+    // Currency comboboxes already initialized above in loadInitialState()
 
     // Set initial values from state
     const btnShowSym = document.getElementById('btnShowSym');

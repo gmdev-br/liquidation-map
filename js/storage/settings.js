@@ -34,27 +34,31 @@ export function saveSettings(getChartState = null, savedScatterState = null, sav
         return null; // Return null if not zoomed (user wants default view)
     }
 
+    const currencySelectEl = document.getElementById('currencySelect');
+    const entryCurrencySelectEl = document.getElementById('entryCurrencySelect');
+    const minValueCcyEl = document.getElementById('minValueCcy');
+    const maxValueCcyEl = document.getElementById('maxValueCcy');
+    
     const settings = {
         scatterChartState: getChartStateHelper(scatterChart) || savedScatterState,
         liqChartState: getChartStateHelper(liqChartInstance) || savedLiqState,
         minValue: document.getElementById('minValue').value,
-        coinFilter: document.getElementById('coinFilter').value,
         sideFilter: document.getElementById('sideFilter').value,
         minLev: document.getElementById('minLev').value,
         maxLev: document.getElementById('maxLev').value,
         minSize: document.getElementById('minSize').value,
         minSzi: document.getElementById('minSzi').value,
         maxSzi: document.getElementById('maxSzi').value,
-        minValueCcy: document.getElementById('minValueCcy').value,
-        maxValueCcy: document.getElementById('maxValueCcy').value,
+        minValueCcy: minValueCcyEl ? minValueCcyEl.value : '',
+        maxValueCcy: maxValueCcyEl ? maxValueCcyEl.value : '',
         minEntryCcy: document.getElementById('minEntryCcy').value,
         maxEntryCcy: document.getElementById('maxEntryCcy').value,
         minUpnl: document.getElementById('minUpnl').value,
         maxUpnl: document.getElementById('maxUpnl').value,
         minFunding: document.getElementById('minFunding').value,
         levTypeFilter: document.getElementById('levTypeFilter').value,
-        currencySelect: document.getElementById('currencySelect').value,
-        entryCurrencySelect: document.getElementById('entryCurrencySelect').value,
+        currencySelect: currencySelectEl ? currencySelectEl.value : '',
+        entryCurrencySelect: entryCurrencySelectEl ? entryCurrencySelectEl.value : '',
         addressFilter: document.getElementById('addressFilter').value,
         selectedCoins: getSelectedCoins(),
         priceMode: getPriceMode(),
@@ -75,6 +79,17 @@ export function saveSettings(getChartState = null, savedScatterState = null, sav
         visibleColumns: getVisibleColumns(),
         columnOrder: getColumnOrder()
     };
+    
+    console.log('Saving currency settings:', {
+        currencySelect: settings.currencySelect,
+        entryCurrencySelect: settings.entryCurrencySelect
+    });
+    
+    console.log('Saving VALUE column data:', {
+        minValueCcy: settings.minValueCcy,
+        maxValueCcy: settings.maxValueCcy
+    });
+    
     localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
 }
 
@@ -114,6 +129,8 @@ export function loadSettings() {
         const defaultOrder = COLUMN_DEFS.map(c => c.key);
         console.log('Setting default columnOrder:', defaultOrder);
         setColumnOrder(defaultOrder);
+        s = s || {};
+        s.columnOrder = defaultOrder;
     }
     
     // Initialize visible columns
@@ -135,6 +152,26 @@ export function loadSettings() {
         const defaultVisible = COLUMN_DEFS.map(c => c.key);
         console.log('Setting default visibleColumns:', defaultVisible);
         setVisibleColumns(defaultVisible);
+        s = s || {};
+        s.visibleColumns = defaultVisible;
+    }
+    
+    // ENSURE SYNCHRONIZATION: Make sure columnOrder and visibleColumns are identical
+    // This prevents persistence issues where columns get out of sync
+    const finalColumnOrder = getColumnOrder();
+    const finalVisibleColumns = getVisibleColumns();
+    
+    if (JSON.stringify(finalColumnOrder) !== JSON.stringify(finalVisibleColumns)) {
+        console.warn('Column order mismatch detected, synchronizing...');
+        console.warn('columnOrder:', finalColumnOrder);
+        console.warn('visibleColumns:', finalVisibleColumns);
+        
+        // Use columnOrder as the source of truth and update visibleColumns to match
+        setVisibleColumns([...finalColumnOrder]);
+        applyColumnVisibility();
+        updateColumnSelectDisplay();
+        
+        console.log('Synchronized columnOrder and visibleColumns:', finalColumnOrder);
     }
     
     // Load other settings if they exist
@@ -190,6 +227,11 @@ export function loadSettings() {
     if (s.maxSzi) document.getElementById('maxSzi').value = s.maxSzi;
     if (s.minValueCcy) document.getElementById('minValueCcy').value = s.minValueCcy;
     if (s.maxValueCcy) document.getElementById('maxValueCcy').value = s.maxValueCcy;
+    
+    console.log('Loading VALUE column data:', {
+        minValueCcy: s.minValueCcy,
+        maxValueCcy: s.maxValueCcy
+    });
     if (s.minEntryCcy) document.getElementById('minEntryCcy').value = s.minEntryCcy;
     if (s.maxEntryCcy) document.getElementById('maxEntryCcy').value = s.maxEntryCcy;
     if (s.minUpnl) document.getElementById('minUpnl').value = s.minUpnl;
@@ -198,11 +240,32 @@ export function loadSettings() {
     if (s.levTypeFilter) cbSetValue('levTypeFilter', s.levTypeFilter);
     if (s.currencySelect) cbSetValue('currencySelect', s.currencySelect);
     if (s.entryCurrencySelect) cbSetValue('entryCurrencySelect', s.entryCurrencySelect);
-    if (s.addressFilter) document.getElementById('addressFilter').value = s.addressFilter;
+    
+    console.log('Loading currency settings:', {
+        currencySelect: s.currencySelect,
+        entryCurrencySelect: s.entryCurrencySelect
+    });
+    
+    // Trigger currency change handler to update state and headers
+    if (s.currencySelect || s.entryCurrencySelect) {
+        console.log('Triggering onCurrencyChange after loading settings');
+        // Import and call onCurrencyChange
+        import('../events/handlers.js').then(({ onCurrencyChange }) => {
+            onCurrencyChange();
+        });
+    }
+    if (s.coinFilter) {
+        document.getElementById('coinFilter').value = s.coinFilter;
+    }
     if (s.selectedCoins) {
+        console.log('Loading selectedCoins from settings:', s.selectedCoins);
         setSelectedCoins(s.selectedCoins);
         updateCoinSearchLabel();
         renderQuotesPanel();
+    } else if (s.coinFilter) {
+        // Fallback for old coinFilter format
+        console.log('Using fallback coinFilter:', s.coinFilter);
+        document.getElementById('coinSearch').value = s.coinFilter;
     }
     if (s.priceMode) {
         setPriceMode(s.priceMode);

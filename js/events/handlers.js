@@ -154,6 +154,11 @@ export function onCurrencyChange() {
     setActiveCurrency(activeCurrency);
     setActiveEntryCurrency(activeEntryCurrency);
     
+    console.log('Updated global state:', {
+        activeCurrency: activeCurrency,
+        activeEntryCurrency: activeEntryCurrency
+    });
+    
     // Update column headers
     const thVal = document.getElementById('th-valueCcy');
     if (thVal) thVal.textContent = `Value (${activeCurrency}) ↕`;

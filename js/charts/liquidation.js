@@ -408,11 +408,15 @@ export function renderLiqScatterPlot() {
                 annotation: {
                     annotations
                 },
+                btcPriceLabel: chartType === 'bubble' ? {
+                    price: refPrice,
+                    text: `BTC: ${sym}${refPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                } : undefined,
                 zoom: liqChartOptions.plugins.zoom
             },
             scales
         },
-        plugins: [chartPlugins.crosshair, chartPlugins.btcGrid]
+        plugins: [chartPlugins.crosshair, chartPlugins.btcGrid, chartPlugins.btcPriceLabel]
     };
 
     if (liqChartInstance) {
