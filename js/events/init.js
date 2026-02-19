@@ -110,7 +110,6 @@ function setupEventListeners() {
                 saveSettings();
                 renderTable();
             });
-            el.addEventListener('input', renderTable);
         }
     });
 
@@ -123,13 +122,13 @@ function setupEventListeners() {
     // Ranking limit
     const rankingLimit = document.getElementById('rankingLimit');
     if (rankingLimit) {
-        rankingLimit.addEventListener('input', updateRankingLimit);
+        rankingLimit.addEventListener('change', updateRankingLimit);
     }
 
     // Color settings
     const colorMaxLev = document.getElementById('colorMaxLev');
     if (colorMaxLev) {
-        colorMaxLev.addEventListener('input', updateColorSettings);
+        colorMaxLev.addEventListener('change', updateColorSettings);
     }
 
     const chartHighLevSplit = document.getElementById('chartHighLevSplit');
@@ -140,7 +139,7 @@ function setupEventListeners() {
     // Bubble size
     const bubbleSizeRange = document.getElementById('bubbleSizeRange');
     if (bubbleSizeRange) {
-        bubbleSizeRange.addEventListener('input', (e) => {
+        bubbleSizeRange.addEventListener('change', (e) => {
             updateBubbleSize(e.target.value);
         });
     }
@@ -148,7 +147,7 @@ function setupEventListeners() {
     // Aggregation
     const aggregationRange = document.getElementById('aggregationRange');
     if (aggregationRange) {
-        aggregationRange.addEventListener('input', (e) => {
+        aggregationRange.addEventListener('change', (e) => {
             updateAggregation(e.target.value);
         });
     }

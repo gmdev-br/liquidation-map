@@ -405,6 +405,65 @@ export function setupColumnResizing() {
         window.addEventListener('mousemove', onMouseMove);
         window.addEventListener('mouseup', onMouseUp);
     });
+
+    // Double-click to auto-fit column width
+    document.addEventListener('dblclick', (e) => {
+        const th = e.target.closest('th');
+        if (!th || !th.id || !th.id.startsWith('th-')) return;
+        
+        const resizer = th.querySelector('.resizer');
+        if (!resizer || e.target !== resizer) return;
+
+        console.log('Column resizer double-clicked:', th.id);
+        e.stopPropagation();
+        e.preventDefault();
+
+        // Calculate optimal width based on content
+        const columnKey = th.id.replace('th-', '');
+        const table = th.closest('table');
+        if (!table) return;
+
+        // Get all cells in this column
+        const headerCell = th;
+        const bodyCells = Array.from(table.querySelectorAll(`tbody td.${columnKey}`));
+        
+        // Create a temporary element to measure text width
+        const tempDiv = document.createElement('div');
+        tempDiv.style.position = 'absolute';
+        tempDiv.style.visibility = 'hidden';
+        tempDiv.style.whiteSpace = 'nowrap';
+        tempDiv.style.padding = '0';
+        tempDiv.style.margin = '0';
+        tempDiv.style.font = window.getComputedStyle(headerCell).font;
+        document.body.appendChild(tempDiv);
+
+        let maxWidth = 0;
+
+        // Measure header text
+        tempDiv.textContent = headerCell.textContent.trim();
+        const headerWidth = tempDiv.offsetWidth;
+        maxWidth = Math.max(maxWidth, headerWidth);
+
+        // Measure all body cells
+        bodyCells.forEach(cell => {
+            tempDiv.textContent = cell.textContent.trim();
+            const cellWidth = tempDiv.offsetWidth;
+            maxWidth = Math.max(maxWidth, cellWidth);
+        });
+
+        document.body.removeChild(tempDiv);
+
+        // Add padding (approximately 20px for cell padding + borders)
+        const optimalWidth = maxWidth + 40;
+        
+        // Apply the optimal width with a minimum of 60px
+        const finalWidth = Math.max(60, optimalWidth);
+        
+        console.log(`Auto-fitting column ${columnKey} to ${finalWidth}px`);
+        th.style.width = finalWidth + 'px';
+        
+        saveSettings();
+    });
 }
 
 // ── BTC Grid Plugin (Vertical lines every 500 BTC points) ──
