@@ -55,6 +55,9 @@ let activeCurrency = 'USD';
 let activeEntryCurrency = 'USD';
 let showSymbols = true;
 
+// Formatting state
+let decimalPlaces = 2; // Default 2 decimal places for prices and values
+
 // Concurrency state
 let maxConcurrency = 8;
 
@@ -96,6 +99,7 @@ export const getState = () => ({
     activeCurrency,
     activeEntryCurrency,
     showSymbols,
+    decimalPlaces,
     maxConcurrency,
     renderPending,
     lastSaveTime,
@@ -136,6 +140,7 @@ export const setState = (updates) => {
         activeCurrency,
         activeEntryCurrency,
         showSymbols,
+        decimalPlaces,
         maxConcurrency,
         renderPending,
         lastSaveTime,
@@ -156,6 +161,7 @@ export const setFxReady = (value) => { fxReady = value; };
 export const setActiveCurrency = (value) => { activeCurrency = value; };
 export const setActiveEntryCurrency = (value) => { activeEntryCurrency = value; };
 export const setShowSymbols = (value) => { showSymbols = value; };
+export const setDecimalPlaces = (value) => { decimalPlaces = value; };
 export const setSelectedCoins = (value) => { selectedCoins = value; };
 export const setMaxConcurrency = (value) => { maxConcurrency = value; };
 export const setSortKey = (value) => { sortKey = value; };
@@ -185,6 +191,7 @@ export const getPriceUpdateInterval = () => priceUpdateInterval;
 export const getActiveCurrency = () => activeCurrency;
 export const getActiveEntryCurrency = () => activeEntryCurrency;
 export const getShowSymbols = () => showSymbols;
+export const getDecimalPlaces = () => decimalPlaces;
 export const getSortKey = () => sortKey;
 export const getSortDir = () => sortDir;
 export const getActiveWindow = () => activeWindow;

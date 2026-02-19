@@ -6,7 +6,7 @@ import {
     getDisplayedRows, getCurrentPrices, getActiveCurrency, getActiveEntryCurrency,
     getShowSymbols, getChartHeight, getColorMaxLev, getChartHighLevSplit,
     getBubbleScale, getChartMode, getAggregationFactor, getSavedScatterState,
-    getFxRates
+    getFxRates, getDecimalPlaces
 } from '../state.js';
 import { CURRENCY_META } from '../config.js';
 import { chartPlugins, chartOptions } from './config.js';
@@ -468,12 +468,13 @@ export function renderScatterPlot() {
                             }
                             const r = context.raw._raw;
                             const lev = Math.abs(r.leverageValue);
+                            const decimalPlaces = getDecimalPlaces();
                             return [
                                 `${r.coin} ${r.side === 'long' ? '▲' : '▼'}`,
-                                `Entry: ${sym}${context.parsed.x.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-                                `Size: ${Math.abs(r.szi).toFixed(4)}`,
+                                `Entry: ${sym}${context.parsed.x.toLocaleString(undefined, { minimumFractionDigits: decimalPlaces, maximumFractionDigits: decimalPlaces })}`,
+                                `Size: ${Math.abs(r.szi).toFixed(decimalPlaces)}`,
                                 `Leverage: ${lev}x`,
-                                `Value: $${r.positionValue.toLocaleString()}`
+                                `Value: $${r.positionValue.toLocaleString(undefined, { minimumFractionDigits: decimalPlaces, maximumFractionDigits: decimalPlaces })}`
                             ];
                         }
                     }

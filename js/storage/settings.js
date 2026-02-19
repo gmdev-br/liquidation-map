@@ -7,9 +7,9 @@ import {
     getAggregationFactor, getSelectedCoins, getPriceMode, getPriceUpdateInterval, getActiveWindow,
     getVisibleColumns, getColumnOrder, getRankingLimit, getColorMaxLev,
     getChartHighLevSplit, getChartHeight, getLiqChartHeight, getSavedScatterState,
-    getSavedLiqState, getColumnWidths, getActiveCurrency, getActiveEntryCurrency,
+    getSavedLiqState, getColumnWidths, getActiveCurrency, getActiveEntryCurrency, getDecimalPlaces,
     setSortKey, setSortDir, setSavedScatterState, setSavedLiqState,
-    setColumnOrder, setVisibleColumns, setSelectedCoins, setRankingLimit, setColorMaxLev, setChartHighLevSplit, setChartMode, setBubbleScale, setAggregationFactor, setPriceMode, setShowSymbols, setPriceUpdateInterval
+    setColumnOrder, setVisibleColumns, setSelectedCoins, setRankingLimit, setColorMaxLev, setChartHighLevSplit, setChartMode, setBubbleScale, setAggregationFactor, setPriceMode, setShowSymbols, setPriceUpdateInterval, setDecimalPlaces
 } from '../state.js';
 import { COLUMN_DEFS } from '../config.js';
 import { cbSetValue, updateCoinSearchLabel } from '../ui/combobox.js';
@@ -71,6 +71,7 @@ export function saveSettings(getChartState = null, savedScatterState = null, sav
         chartMode: getChartMode(),
         bubbleScale: getBubbleScale(),
         aggregationFactor: getAggregationFactor(),
+        decimalPlaces: getDecimalPlaces(),
         visibleColumns: getVisibleColumns(),
         columnOrder: getColumnOrder()
     };
@@ -170,6 +171,11 @@ export function loadSettings() {
         setAggregationFactor(s.aggregationFactor);
         document.getElementById('aggregationVal').textContent = s.aggregationFactor;
         document.getElementById('aggregationRange').value = s.aggregationFactor;
+    }
+    if (s.decimalPlaces !== undefined) {
+        setDecimalPlaces(s.decimalPlaces);
+        document.getElementById('decimalPlacesVal').textContent = s.decimalPlaces;
+        document.getElementById('decimalPlacesRange').value = s.decimalPlaces;
     }
     if (s.minValue) document.getElementById('minValue').value = s.minValue;
     if (s.coinFilter) {

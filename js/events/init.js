@@ -4,7 +4,7 @@
 
 import {
     getShowSymbols, getRankingLimit, getColorMaxLev, getChartHighLevSplit,
-    getBubbleScale, getAggregationFactor, setAllRows, setActiveWindow, getActiveWindow, getChartMode
+    getBubbleScale, getAggregationFactor, getDecimalPlaces, setAllRows, setActiveWindow, getActiveWindow, getChartMode
 } from '../state.js';
 import { loadTableData } from '../storage/data.js';
 import { chartPlugins, chartOptions, chartMechanics } from '../charts/config.js';
@@ -23,7 +23,7 @@ import {
     updateBubbleSize, updateAggregation, setChartModeHandler, updateChartHeight,
     updateLiqChartHeight, onCurrencyChange, openColumnCombobox, closeColumnComboboxDelayed,
     renderColumnDropdown as renderColumnDropdownFn, toggleColumn as toggleColumnFn, showAllColumns as showAllColumnsFn, hideAllColumns as hideAllColumnsFn, updateColumnSelectDisplay, applyColumnOrder,
-    applyColumnWidths, applyColumnVisibility, toggleShowSymbols, updatePriceInterval
+    applyColumnWidths, applyColumnVisibility, toggleShowSymbols, updatePriceInterval, updateDecimalPlaces
 } from './handlers.js';
 import { setWindow, setStatus, setProgress } from '../ui/status.js';
 import { sortBy } from '../ui/filters.js';
@@ -149,6 +149,14 @@ function setupEventListeners() {
     if (aggregationRange) {
         aggregationRange.addEventListener('change', (e) => {
             updateAggregation(e.target.value);
+        });
+    }
+
+    // Decimal places control
+    const decimalPlacesRange = document.getElementById('decimalPlacesRange');
+    if (decimalPlacesRange) {
+        decimalPlacesRange.addEventListener('input', (e) => {
+            updateDecimalPlaces(e.target.value);
         });
     }
 
@@ -476,6 +484,12 @@ function loadInitialState() {
     if (aggregationRange) {
         aggregationRange.value = getAggregationFactor();
         document.getElementById('aggregationVal').textContent = getAggregationFactor();
+    }
+
+    const decimalPlacesRange = document.getElementById('decimalPlacesRange');
+    if (decimalPlacesRange) {
+        decimalPlacesRange.value = getDecimalPlaces();
+        document.getElementById('decimalPlacesVal').textContent = getDecimalPlaces();
     }
 }
 

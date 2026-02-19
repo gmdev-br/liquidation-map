@@ -9,7 +9,8 @@ import {
     getSortDir, getShowSymbols, getChartMode, getBubbleScale, getAggregationFactor,
     getRankingLimit, getColorMaxLev, getChartHighLevSplit, getChartHeight,
     getLiqChartHeight, getActiveWindow, setColumnOrder, setVisibleColumns,
-    getColumnOrder, getVisibleColumns, setPriceUpdateInterval, setActiveCurrency, setActiveEntryCurrency
+    getColumnOrder, getVisibleColumns, setPriceUpdateInterval, setActiveCurrency,
+    setActiveEntryCurrency, setDecimalPlaces
 } from '../state.js';
 import { renderTable, updateStats } from '../ui/table.js';
 import { renderQuotesPanel, updateRankingPanel } from '../ui/panels.js';
@@ -77,7 +78,7 @@ export function updateBubbleSize(val) {
     setBubbleScale(parseFloat(val));
     document.getElementById('bubbleSizeVal').textContent = val;
     saveSettings();
-    // Trigger chart update by re-rendering the table
+    // Trigger chart update by re-rendering table
     renderTable();
 }
 
@@ -85,8 +86,19 @@ export function updateAggregation(val) {
     setAggregationFactor(parseInt(val, 10));
     document.getElementById('aggregationVal').textContent = val;
     saveSettings();
-    // Trigger chart update by re-rendering the table
+    // Trigger chart update by re-rendering table
     renderTable();
+}
+
+export function updateDecimalPlaces(val) {
+    const v = parseInt(val, 10);
+    if (v >= 0 && v <= 8) {
+        setDecimalPlaces(v);
+        document.getElementById('decimalPlacesVal').textContent = v;
+        saveSettings();
+        // Trigger table re-render to apply new formatting
+        renderTable();
+    }
 }
 
 export function setChartModeHandler(mode) {

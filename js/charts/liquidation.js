@@ -5,7 +5,7 @@
 import {
     getDisplayedRows, getCurrentPrices, getActiveEntryCurrency, getShowSymbols,
     getLiqChartHeight, getChartMode, getAggregationFactor, getSavedLiqState,
-    getFxRates, getChartHighLevSplit, getColorMaxLev
+    getFxRates, getChartHighLevSplit, getColorMaxLev, getDecimalPlaces
 } from '../state.js';
 import { CURRENCY_META } from '../config.js';
 import { chartPlugins, chartOptions } from './config.js';
@@ -395,11 +395,12 @@ export function renderLiqScatterPlot() {
                                 return `Count: ${context.parsed.y}`;
                             }
                             const r = context.raw._raw;
+                            const decimalPlaces = getDecimalPlaces();
                             return [
                                 `${r.coin} ${r.side === 'long' ? '▲' : '▼'}`,
-                                `Liq Price: ${sym}${context.parsed.x.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-                                `Size: ${Math.abs(r.szi).toFixed(4)}`,
-                                `Value: $${r.positionValue.toLocaleString()}`
+                                `Liq Price: ${sym}${context.parsed.x.toLocaleString(undefined, { minimumFractionDigits: decimalPlaces, maximumFractionDigits: decimalPlaces })}`,
+                                `Size: ${Math.abs(r.szi).toFixed(decimalPlaces)}`,
+                                `Value: $${r.positionValue.toLocaleString(undefined, { minimumFractionDigits: decimalPlaces, maximumFractionDigits: decimalPlaces })}`
                             ];
                         }
                     }
