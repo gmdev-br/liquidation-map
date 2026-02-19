@@ -104,6 +104,7 @@ export function renderTable() {
 
     const sideFilter = document.getElementById('sideFilter').value;
     const addressFilter = document.getElementById('addressFilter').value.trim().toLowerCase();
+    const addressFilterRegex = addressFilter ? new RegExp(addressFilter, 'i') : null;
     const minLev = parseFloat(document.getElementById('minLev').value);
     const maxLev = parseFloat(document.getElementById('maxLev').value);
     const minSize = parseFloat(document.getElementById('minSize').value);
@@ -123,10 +124,10 @@ export function renderTable() {
 
     let rows = allRows.filter(r => {
         if (selectedCoins.length > 0 && !selectedCoins.includes(r.coin)) return false;
-        if (addressFilter) {
-            const addr = r.address.toLowerCase();
-            const disp = (r.displayName || '').toLowerCase();
-            if (!addr.includes(addressFilter) && !disp.includes(addressFilter)) return false;
+        if (addressFilterRegex) {
+            const addr = r.address;
+            const disp = r.displayName || '';
+            if (!addressFilterRegex.test(addr) && !addressFilterRegex.test(disp)) return false;
         }
         if (sideFilter && r.side !== sideFilter) return false;
         if (!isNaN(minLev) && r.leverageValue < minLev) return false;

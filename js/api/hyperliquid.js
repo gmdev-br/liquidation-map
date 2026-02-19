@@ -115,6 +115,10 @@ export async function streamPositions(whaleList, minVal, maxConcurrency, callbac
     function scheduleRender() {
         if (getRenderPending()) return;
         setRenderPending(true);
+
+        // Use longer debounce during scanning to reduce render frequency
+        const renderDelay = getScanning() ? 1000 : 400;
+
         setTimeout(() => {
             setRenderPending(false);
             updateStats(false, allRows);
@@ -127,7 +131,7 @@ export async function streamPositions(whaleList, minVal, maxConcurrency, callbac
                 saveTableData();
                 setLastSaveTime(now);
             }
-        }, 400);
+        }, renderDelay);
     }
 
     await new Promise(resolve => {

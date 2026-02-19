@@ -2,9 +2,8 @@
 // LIQUID GLASS — UI Panels
 // ═══════════════════════════════════════════════════════════
 
-import { getAllRows, getCurrentPrices, getSelectedCoins, getPriceMode, getPriceUpdateInterval, getRankingLimit, setSelectedCoins, setPriceMode } from '../state.js';
-import { saveSettings, loadSettings } from '../storage/settings.js';
-import { CURRENCY_META } from '../config.js';
+import { getAllRows, getCurrentPrices, getSelectedCoins, getPriceMode, getPriceUpdateInterval, getRankingLimit, setSelectedCoins, setPriceMode, getScanning } from '../state.js';
+import { saveSettings } from '../storage/settings.js';
 import { fmtCcy } from '../utils/formatters.js';
 import { updateCoinSearchLabel } from './combobox.js';
 import { renderTable } from './table.js';
@@ -13,6 +12,10 @@ import { renderTable } from './table.js';
 let marketCapCache = null;
 let marketCapCacheTime = 0;
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+// Debounce for updateRankingPanel to avoid excessive calls
+let rankingPanelDebounceTimer = null;
+const RANKING_PANEL_DEBOUNCE_MS = 1000; // 1 second debounce
 
 // Fetch real market cap data
 export async function fetchMarketCapRanking() {
@@ -59,99 +62,112 @@ export async function fetchMarketCapRanking() {
 }
 
 export async function updateRankingPanel() {
-    const panel = document.getElementById('ranking-panel');
-    if (!panel) {
-        console.warn('Ranking panel element not found');
+    // Skip update during scanning to avoid performance issues
+    if (getScanning()) {
         return;
     }
 
-    const rankingLimit = getRankingLimit();
-    const selectedCoins = getSelectedCoins();
-    
-    // Get market cap data
-    const marketCapData = await fetchMarketCapRanking();
-    
-    // If market cap data failed, show fallback message
-    if (marketCapData.length === 0) {
-        panel.innerHTML = `
-            <div style="display: flex; align-items: center; gap: 8px; padding: 10px; color: var(--muted); font-size: 12px;">
-                <span>⚠️</span>
-                <span>Market cap data unavailable - showing whale positions instead</span>
-            </div>
-        `;
-        
-        // Fallback to whale position ranking
-        return updateWhalePositionRanking();
+    // Debounce to avoid excessive calls
+    if (rankingPanelDebounceTimer) {
+        clearTimeout(rankingPanelDebounceTimer);
     }
-    
-    // Get whale position data for additional info
-    const allRows = getAllRows();
-    const whaleStats = {};
-    allRows.forEach(row => {
-        if (!whaleStats[row.coin]) {
-            whaleStats[row.coin] = {
-                totalPositionValue: 0,
-                count: 0,
-                whales: new Set()
-            };
-        }
-        whaleStats[row.coin].totalPositionValue += row.positionValue;
-        whaleStats[row.coin].count++;
-        whaleStats[row.coin].whales.add(row.address);
-    });
-    
-    // Combine market cap with whale position data
-    const combinedData = marketCapData
-        .slice(0, rankingLimit)
-        .map(coin => {
-            const whaleData = whaleStats[coin.symbol] || { totalPositionValue: 0, count: 0, whales: new Set() };
-            return {
-                ...coin,
-                whalePositionValue: whaleData.totalPositionValue,
-                whaleCount: whaleData.count,
-                whaleWhales: whaleData.whales.size
-            };
-        });
-    
-    console.log('Market cap ranking updated:', combinedData.length, 'coins');
 
-    panel.innerHTML = `
-        <div style="display: flex; align-items: center; gap: 8px; margin-right: 10px; color: var(--muted); font-size: 11px;">
-            <span>🌍</span>
-            <span>Global Market Cap Ranking</span>
-        </div>
-        ${combinedData.map((coin, i) => {
-            const rank = i + 1;
-            const marketCapStr = fmtCcy(coin.marketCap, null, 'USD', true);
-            const change = coin.priceChange24h ? `${coin.priceChange24h.toFixed(2)}%` : '0%';
-            const changeClass = coin.priceChange24h >= 0 ? 'green' : 'red';
-            const isSelected = selectedCoins.includes(coin.symbol);
-            
-            // Whale position data (secondary information)
-            const whalePositionValue = coin.whalePositionValue || 0;
-            const whaleCount = coin.whaleCount || 0;
-            const whaleMarketCapStr = whalePositionValue > 0 ? fmtCcy(whalePositionValue, null, 'USD', true) : '—';
-            const whaleInfo = whaleCount > 0 ? 
-                `Whale Market Cap: ${whaleMarketCapStr}\n${whaleCount} whales • $${(whalePositionValue / 1000000).toFixed(1)}M positions` : 
-                'No whale positions';
-            
-            return `
-                <div class="ranking-card ${isSelected ? 'selected' : ''}" 
-                     onclick="selectCoin('${coin.symbol}')" 
-                     title="${coin.name} (${coin.symbol})\nGlobal Market Cap: ${marketCapStr}\n24h Change: ${change}\n${whaleInfo}">
-                    <div class="ranking-rank">#${rank}</div>
-                    <div class="ranking-coin">${coin.symbol}</div>
-                    <div class="ranking-mcap">${marketCapStr}</div>
-                    <div class="ranking-change ${changeClass}">${change}</div>
-                    <div class="whale-market-cap" title="${whaleInfo}">${whaleMarketCapStr}</div>
-                    ${whaleCount > 0 ? `<div class="whale-indicator" title="${whaleInfo}">🐋</div>` : ''}
-                    ${isSelected ? '<div class="ranking-selected-indicator">✓</div>' : ''}
+    rankingPanelDebounceTimer = setTimeout(async () => {
+        const panel = document.getElementById('ranking-panel');
+        if (!panel) {
+            console.warn('Ranking panel element not found');
+            return;
+        }
+
+        const rankingLimit = getRankingLimit();
+        const selectedCoins = getSelectedCoins();
+
+        // Get market cap data
+        const marketCapData = await fetchMarketCapRanking();
+
+        // If market cap data failed, show fallback message
+        if (marketCapData.length === 0) {
+            panel.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 8px; padding: 10px; color: var(--muted); font-size: 12px;">
+                    <span>⚠️</span>
+                    <span>Market cap data unavailable - showing whale positions instead</span>
                 </div>
             `;
-        }).join('')}
-    `;
-    
-    console.log('Market cap ranking panel updated with', combinedData.length, 'coins');
+
+            // Fallback to whale position ranking
+            updateWhalePositionRanking();
+            return;
+        }
+
+        // Get whale position data for additional info
+        const allRows = getAllRows();
+        const whaleStats = {};
+        allRows.forEach(row => {
+            if (!whaleStats[row.coin]) {
+                whaleStats[row.coin] = {
+                    totalPositionValue: 0,
+                    count: 0,
+                    whales: new Set()
+                };
+            }
+            whaleStats[row.coin].totalPositionValue += row.positionValue;
+            whaleStats[row.coin].count++;
+            whaleStats[row.coin].whales.add(row.address);
+        });
+
+        // Combine market cap with whale position data
+        const combinedData = marketCapData
+            .slice(0, rankingLimit)
+            .map(coin => {
+                const whaleData = whaleStats[coin.symbol] || { totalPositionValue: 0, count: 0, whales: new Set() };
+                return {
+                    ...coin,
+                    whalePositionValue: whaleData.totalPositionValue,
+                    whaleCount: whaleData.count,
+                    whaleWhales: whaleData.whales.size
+                };
+            });
+
+        console.log('Market cap ranking updated:', combinedData.length, 'coins');
+
+        panel.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 8px; margin-right: 10px; color: var(--muted); font-size: 11px;">
+                <span>🌍</span>
+                <span>Global Market Cap Ranking</span>
+            </div>
+            ${combinedData.map((coin, i) => {
+                const rank = i + 1;
+                const marketCapStr = fmtCcy(coin.marketCap, null, 'USD', true);
+                const change = coin.priceChange24h ? `${coin.priceChange24h.toFixed(2)}%` : '0%';
+                const changeClass = coin.priceChange24h >= 0 ? 'green' : 'red';
+                const isSelected = selectedCoins.includes(coin.symbol);
+
+                // Whale position data (secondary information)
+                const whalePositionValue = coin.whalePositionValue || 0;
+                const whaleCount = coin.whaleCount || 0;
+                const whaleMarketCapStr = whalePositionValue > 0 ? fmtCcy(whalePositionValue, null, 'USD', true) : '—';
+                const whaleInfo = whaleCount > 0 ?
+                    `Whale Market Cap: ${whaleMarketCapStr}\n${whaleCount} whales • $${(whalePositionValue / 1000000).toFixed(1)}M positions` :
+                    'No whale positions';
+
+                return `
+                    <div class="ranking-card ${isSelected ? 'selected' : ''}"
+                         onclick="selectCoin('${coin.symbol}')"
+                         title="${coin.name} (${coin.symbol})\nGlobal Market Cap: ${marketCapStr}\n24h Change: ${change}\n${whaleInfo}">
+                        <div class="ranking-rank">#${rank}</div>
+                        <div class="ranking-coin">${coin.symbol}</div>
+                        <div class="ranking-mcap">${marketCapStr}</div>
+                        <div class="ranking-change ${changeClass}">${change}</div>
+                        <div class="whale-market-cap" title="${whaleInfo}">${whaleMarketCapStr}</div>
+                        ${whaleCount > 0 ? `<div class="whale-indicator" title="${whaleInfo}">🐋</div>` : ''}
+                        ${isSelected ? '<div class="ranking-selected-indicator">✓</div>' : ''}
+                    </div>
+                `;
+            }).join('')}
+        `;
+
+        console.log('Market cap ranking panel updated with', combinedData.length, 'coins');
+    }, RANKING_PANEL_DEBOUNCE_MS);
 }
 
 // Fallback function for whale position ranking
