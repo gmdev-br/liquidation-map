@@ -407,10 +407,94 @@ export function setupColumnResizing() {
     });
 }
 
+// ── BTC Grid Plugin (Vertical lines every 500 BTC points) ──
+export const btcGridPlugin = {
+    id: 'btcGrid',
+    defaults: {
+        minorInterval: 500, // Minor vertical lines every 500 BTC points
+        majorInterval: 2500, // Major vertical lines every 2500 BTC points (5x minor)
+        minorColor: 'rgba(255, 255, 255, 0.05)',
+        minorWidth: 1,
+        majorColor: 'rgba(255, 255, 255, 0.12)',
+        majorWidth: 1.5,
+        horizontalColor: 'rgba(255, 255, 255, 0.05)',
+        horizontalWidth: 1
+    },
+    afterDraw: (chart, _args, options) => {
+        const { ctx, chartArea: { top, bottom, left, right }, scales: { x: xScale, y: yScale } } = chart;
+        
+        if (!xScale || !yScale) return;
+        
+        ctx.save();
+        
+        // Get filter values from inputs
+        const minEntryInput = document.getElementById('minEntryCcy');
+        const maxEntryInput = document.getElementById('maxEntryCcy');
+        const minPrice = minEntryInput && minEntryInput.value ? parseFloat(minEntryInput.value) : (xScale.min || 0);
+        const maxPrice = maxEntryInput && maxEntryInput.value ? parseFloat(maxEntryInput.value) : (xScale.max || 100000);
+        
+        // Draw minor vertical lines every 500 BTC points
+        const startMinor = Math.ceil(minPrice / options.minorInterval) * options.minorInterval;
+        
+        ctx.strokeStyle = options.minorColor;
+        ctx.lineWidth = options.minorWidth;
+        
+        for (let price = startMinor; price <= maxPrice; price += options.minorInterval) {
+            const xPixel = xScale.getPixelForValue(price);
+            if (xPixel >= left && xPixel <= right) {
+                ctx.beginPath();
+                ctx.moveTo(xPixel, top);
+                ctx.lineTo(xPixel, bottom);
+                ctx.stroke();
+            }
+        }
+        
+        // Draw major vertical lines every 2500 BTC points with labels
+        const startMajor = Math.ceil(minPrice / options.majorInterval) * options.majorInterval;
+        
+        ctx.strokeStyle = options.majorColor;
+        ctx.lineWidth = options.majorWidth;
+        
+        for (let price = startMajor; price <= maxPrice; price += options.majorInterval) {
+            const xPixel = xScale.getPixelForValue(price);
+            if (xPixel >= left && xPixel <= right) {
+                ctx.beginPath();
+                ctx.moveTo(xPixel, top);
+                ctx.lineTo(xPixel, bottom);
+                ctx.stroke();
+                
+                // Add price labels for major grid lines
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+                ctx.font = '10px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(price.toLocaleString(), xPixel, top - 5);
+            }
+        }
+        
+        // Draw horizontal lines
+        ctx.strokeStyle = options.horizontalColor;
+        ctx.lineWidth = options.horizontalWidth;
+        
+        const yTicks = yScale.getTicks();
+        yTicks.forEach(tick => {
+            const yPixel = yScale.getPixelForValue(tick.value);
+            if (yPixel >= top && yPixel <= bottom) {
+                ctx.beginPath();
+                ctx.moveTo(left, yPixel);
+                ctx.lineTo(right, yPixel);
+                ctx.stroke();
+            }
+        });
+        
+        ctx.restore();
+    }
+};
+
 // ── Export All Mechanics (Adapted) ──
 export const chartMechanics = {
     crosshairPlugin,
     btcPriceLabelPlugin,
+    btcGridPlugin,
     originalZoomConfig,
     liqZoomConfig,
     originalScaleResizing,

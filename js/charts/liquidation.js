@@ -403,7 +403,7 @@ export function renderLiqScatterPlot() {
             },
             scales
         },
-        plugins: [chartPlugins.crosshair]
+        plugins: [chartPlugins.crosshair, chartPlugins.btcGrid]
     };
 
     if (liqChartInstance) {

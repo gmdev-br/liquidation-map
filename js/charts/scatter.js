@@ -480,7 +480,7 @@ export function renderScatterPlot() {
             },
             scales
         },
-        plugins: [chartPlugins.crosshair],
+        plugins: [chartPlugins.crosshair, chartPlugins.btcGrid],
         zoom: originalZoomConfig
     };
 

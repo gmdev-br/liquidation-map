@@ -5,7 +5,8 @@
 // Import chart mechanics from adapted implementation
 import { 
     crosshairPlugin, 
-    btcPriceLabelPlugin, 
+    btcPriceLabelPlugin,
+    btcGridPlugin,
     originalZoomConfig,
     liqZoomConfig,
     originalScaleResizing,
@@ -18,7 +19,8 @@ import {
 // Chart.js plugins and configurations (Adapted)
 export const chartPlugins = {
     crosshair: crosshairPlugin,
-    btcPriceLabel: btcPriceLabelPlugin
+    btcPriceLabel: btcPriceLabelPlugin,
+    btcGrid: btcGridPlugin
 };
 
 export const chartMechanics = {
