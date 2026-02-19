@@ -5,7 +5,7 @@
 import {
     getAllRows, getDisplayedRows, getSelectedCoins, getActiveCurrency,
     getActiveEntryCurrency, getShowSymbols, getSortKey, getSortDir,
-    getVisibleColumns, getColumnOrder, setDisplayedRows, getCurrentPrices, getFxRates
+    getVisibleColumns, getColumnOrder, setDisplayedRows, getCurrentPrices, getFxRates, getChartHighLevSplit
 } from '../state.js';
 import { convertToActiveCcy } from '../utils/currency.js';
 import { fmt, fmtUSD, fmtAddr, fmtCcy } from '../utils/formatters.js';
@@ -177,6 +177,10 @@ export function renderTable() {
 
     setDisplayedRows(rows);
     renderCharts(); // Update chart with filtered rows
+
+    // Update statistics with filtered rows
+    updateStats(showSymbols, rows);
+
     const tbody = document.getElementById('tableBody');
 
     if (rows.length === 0) {
@@ -192,6 +196,11 @@ export function renderTable() {
         // Leverage label
         const levType = r.leverageType === 'isolated' ? 'Isolated' : 'Cross';
         const levLabel = `${r.leverageValue}x ${levType}`;
+
+        // Determine leverage badge color class
+        const highLevSplit = getChartHighLevSplit();
+        const isHighLev = Math.abs(r.leverageValue) >= highLevSplit;
+        const levClass = `${side}-${isHighLev ? 'high' : 'low'}`;
 
         // Liquidation Price (Correlated)
         const liqPrice = r.liquidationPx > 0 ? getCorrelatedPrice(r, r.liquidationPx, activeEntryCurrency, currentPrices, fxRates) : 0;
@@ -237,7 +246,7 @@ export function renderTable() {
         // Cell Renderers Map
         const cells = {
             'col-num': `<td class="muted col-num" style="font-size:11px">${i + 1}</td>`,
-            'col-address': `<td class="col-address">
+            'col-address': `<td class="col-address ${levClass}">
                 <div class="addr-cell">
                     <div class="addr-avatar">${(r.displayName || r.address).slice(0, 2).toUpperCase()}</div>
                     <div>
@@ -249,19 +258,19 @@ export function renderTable() {
                 </div>
             </td>`,
             'col-coin': `<td class="col-coin">
-                <span class="coin-badge ${side}">${r.coin} ${side === 'long' ? '▲' : '▼'}</span>
+                <span class="coin-badge ${levClass}">${r.coin} ${side === 'long' ? '▲' : '▼'}</span>
             </td>`,
-            'col-szi': `<td class="mono col-szi">${sziStr}</td>`,
-            'col-leverage': `<td class="col-leverage"><span class="lev-badge">${levLabel}</span></td>`,
-            'col-positionValue': `<td class="mono col-positionValue">${usdSym}${fmt(r.positionValue)}</td>`,
-            'col-valueCcy': `<td class="mono col-valueCcy" style="color:var(--gold);font-weight:600">${ccyStr}</td>`,
-            'col-entryPx': `<td class="mono col-entryPx">${r.entryPx.toLocaleString('en-US', { maximumFractionDigits: 2 })}</td>`,
-            'col-entryCcy': `<td class="mono col-entryCcy" style="color:var(--gold);font-weight:600">${entStr}</td>`,
+            'col-szi': `<td class="mono col-szi ${levClass}">${sziStr}</td>`,
+            'col-leverage': `<td class="col-leverage"><span class="lev-badge ${levClass}">${levLabel}</span></td>`,
+            'col-positionValue': `<td class="mono col-positionValue ${levClass}">${usdSym}${fmt(r.positionValue)}</td>`,
+            'col-valueCcy': `<td class="mono col-valueCcy ${levClass}" style="font-weight:600">${ccyStr}</td>`,
+            'col-entryPx': `<td class="mono col-entryPx ${levClass}">${r.entryPx.toLocaleString('en-US', { maximumFractionDigits: 2 })}</td>`,
+            'col-entryCcy': `<td class="mono col-entryCcy ${levClass}" style="font-weight:600">${entStr}</td>`,
             'col-unrealizedPnl': `<td class="mono col-unrealizedPnl ${pnlClass}" style="font-weight:600">${fmtUSD(r.unrealizedPnl)}</td>`,
             'col-funding': `<td class="mono col-funding ${fundClass}">${fmtUSD(r.funding)}</td>`,
-            'col-liqPx': `<td class="mono col-liqPx" style="color:var(--orange);font-weight:600">${liqPriceFormatted}</td>`,
-            'col-distToLiq': `<td class="col-distToLiq">${distHtml}</td>`,
-            'col-accountValue': `<td class="mono col-accountValue">${usdSym}${fmt(r.accountValue)}</td>`
+            'col-liqPx': `<td class="mono col-liqPx ${levClass}" style="font-weight:600">${liqPriceFormatted}</td>`,
+            'col-distToLiq': `<td class="col-distToLiq ${levClass}">${distHtml}</td>`,
+            'col-accountValue': `<td class="mono col-accountValue ${levClass}">${usdSym}${fmt(r.accountValue)}</td>`
         };
 
         // Filter cells based on visible columns

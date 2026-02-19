@@ -23,7 +23,7 @@ import {
     updateBubbleSize, updateAggregation, setChartModeHandler, updateChartHeight,
     updateLiqChartHeight, onCurrencyChange, openColumnCombobox, closeColumnComboboxDelayed,
     renderColumnDropdown as renderColumnDropdownFn, toggleColumn as toggleColumnFn, showAllColumns as showAllColumnsFn, hideAllColumns as hideAllColumnsFn, updateColumnSelectDisplay, applyColumnOrder,
-    applyColumnWidths, applyColumnVisibility, toggleShowSymbols, updatePriceInterval, updateDecimalPlaces
+    applyColumnWidths, applyColumnVisibility, toggleShowSymbols, updatePriceInterval, updateDecimalPlaces, updateLeverageColors
 } from './handlers.js';
 import { setWindow, setStatus, setProgress } from '../ui/status.js';
 import { sortBy } from '../ui/filters.js';
@@ -166,6 +166,15 @@ function setupEventListeners() {
             updateDecimalPlaces(e.target.value);
         });
     }
+
+    // Leverage color inputs
+    const colorInputs = ['colorLongLow', 'colorLongHigh', 'colorShortLow', 'colorShortHigh'];
+    colorInputs.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.addEventListener('change', updateLeverageColors);
+        }
+    });
 
     // Chart mode tabs
     document.querySelectorAll('.tab[data-chart]').forEach(tab => {
@@ -403,7 +412,7 @@ function initializePanels() {
     updatePriceModeUI();
 }
 
-function loadInitialState() {
+async function loadInitialState() {
     console.log('loadInitialState: Starting...');
     loadTableData(setAllRows);
     
@@ -420,8 +429,16 @@ function loadInitialState() {
     console.log('loadInitialState: Loading settings...');
     loadSettings();
     
-    // Carregar preços atuais antes de renderizar a tabela
-    fetchAllMids();
+    // Carregar preços atuais e taxas de câmbio antes de renderizar a tabela
+    try {
+        await Promise.all([
+            fetchAllMids(),
+            // Import fetchExchangeRates dynamically since it's not imported at the top
+            import('../api/exchangeRates.js').then(m => m.fetchExchangeRates())
+        ]);
+    } catch (e) {
+        console.error('Error fetching initial data:', e);
+    }
     
     // Apply column visibility first
     applyColumnVisibility();

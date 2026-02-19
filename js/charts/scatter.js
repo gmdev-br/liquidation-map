@@ -2,11 +2,19 @@
 // LIQUID GLASS — Charts Scatter Plot
 // ═══════════════════════════════════════════════════════════
 
+// Helper function to convert hex color to rgba
+function hexToRgba(hex, alpha) {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
 import {
     getDisplayedRows, getCurrentPrices, getActiveCurrency, getActiveEntryCurrency,
-    getShowSymbols, getChartHeight, getColorMaxLev, getChartHighLevSplit,
+    getShowSymbols, getChartHeight, getChartHighLevSplit,
     getBubbleScale, getChartMode, getAggregationFactor, getSavedScatterState,
-    getFxRates, getDecimalPlaces
+    getFxRates, getDecimalPlaces, getLeverageColors
 } from '../state.js';
 import { CURRENCY_META } from '../config.js';
 import { chartPlugins, chartOptions } from './config.js';
@@ -230,6 +238,9 @@ export function renderScatterPlot() {
     let chartType = 'bubble';
     let scales = {};
 
+    // Get custom colors
+    const customColors = getLeverageColors();
+
     if (getChartMode() === 'column') {
         // Histogram mode with stacked columns by side and leverage
         chartType = 'bar';
@@ -280,41 +291,41 @@ export function renderScatterPlot() {
             datasets.push({
                 label: `Shorts (≤${highLevSplit}x)`,
                 data: shortLowBins,
-                backgroundColor: 'rgba(239, 68, 68, 0.6)',
-                borderColor: 'rgba(239, 68, 68, 0.8)',
+                backgroundColor: customColors.shortLow,
+                borderColor: customColors.shortLow,
                 borderWidth: 1,
                 stack: 'positions'
             });
         }
-        
+
         if (shortHighBins.some(b => b > 0)) {
             datasets.push({
                 label: `Shorts (>${highLevSplit}x)`,
                 data: shortHighBins,
-                backgroundColor: 'rgba(239, 68, 68, 0.8)',
-                borderColor: 'rgba(239, 68, 68, 1)',
+                backgroundColor: customColors.shortHigh,
+                borderColor: customColors.shortHigh,
                 borderWidth: 1,
                 stack: 'positions'
             });
         }
-        
+
         if (longLowBins.some(b => b > 0)) {
             datasets.push({
                 label: `Longs (≤${highLevSplit}x)`,
                 data: longLowBins,
-                backgroundColor: 'rgba(34, 197, 94, 0.6)',
-                borderColor: 'rgba(34, 197, 94, 0.8)',
+                backgroundColor: customColors.longLow,
+                borderColor: customColors.longLow,
                 borderWidth: 1,
                 stack: 'positions'
             });
         }
-        
+
         if (longHighBins.some(b => b > 0)) {
             datasets.push({
                 label: `Longs (>${highLevSplit}x)`,
                 data: longHighBins,
-                backgroundColor: 'rgba(34, 197, 94, 0.8)',
-                borderColor: 'rgba(34, 197, 94, 1)',
+                backgroundColor: customColors.longHigh,
+                borderColor: customColors.longHigh,
                 borderWidth: 1,
                 stack: 'positions'
             });
@@ -356,58 +367,38 @@ export function renderScatterPlot() {
             datasets.push({
                 label: `Longs (≤${highLevSplit}x)`,
                 data: longLowData,
-                backgroundColor: (context) => {
-                    const lev = Math.abs(context.raw._raw.leverageValue);
-                    const maxLev = getColorMaxLev();
-                    const hue = 120 - Math.min(lev / maxLev, 1) * 120; // Green to yellow
-                    return `hsla(${hue}, 70%, 50%, 0.6)`;
-                },
-                borderColor: 'rgba(34, 197, 94, 0.8)',
+                backgroundColor: hexToRgba(customColors.longLow, 0.6),
+                borderColor: customColors.longLow,
                 borderWidth: 1
             });
         }
-        
+
         if (longHighData.length > 0) {
             datasets.push({
                 label: `Longs (>${highLevSplit}x)`,
                 data: longHighData,
-                backgroundColor: (context) => {
-                    const lev = Math.abs(context.raw._raw.leverageValue);
-                    const maxLev = getColorMaxLev();
-                    const hue = 120 - Math.min(lev / maxLev, 1) * 120; // Green to yellow
-                    return `hsla(${hue}, 70%, 50%, 0.9)`;
-                },
-                borderColor: 'rgba(34, 197, 94, 1)',
+                backgroundColor: hexToRgba(customColors.longHigh, 0.9),
+                borderColor: customColors.longHigh,
                 borderWidth: 2
             });
         }
-        
+
         if (shortLowData.length > 0) {
             datasets.push({
                 label: `Shorts (≤${highLevSplit}x)`,
                 data: shortLowData,
-                backgroundColor: (context) => {
-                    const lev = Math.abs(context.raw._raw.leverageValue);
-                    const maxLev = getColorMaxLev();
-                    const hue = 0 + Math.min(lev / maxLev, 1) * 60; // Red to yellow
-                    return `hsla(${hue}, 70%, 50%, 0.6)`;
-                },
-                borderColor: 'rgba(239, 68, 68, 0.8)',
+                backgroundColor: hexToRgba(customColors.shortLow, 0.6),
+                borderColor: customColors.shortLow,
                 borderWidth: 1
             });
         }
-        
+
         if (shortHighData.length > 0) {
             datasets.push({
                 label: `Shorts (>${highLevSplit}x)`,
                 data: shortHighData,
-                backgroundColor: (context) => {
-                    const lev = Math.abs(context.raw._raw.leverageValue);
-                    const maxLev = getColorMaxLev();
-                    const hue = 0 + Math.min(lev / maxLev, 1) * 60; // Red to yellow
-                    return `hsla(${hue}, 70%, 50%, 0.9)`;
-                },
-                borderColor: 'rgba(239, 68, 68, 1)',
+                backgroundColor: hexToRgba(customColors.shortHigh, 0.9),
+                borderColor: customColors.shortHigh,
                 borderWidth: 2
             });
         }

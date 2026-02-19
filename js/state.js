@@ -48,6 +48,14 @@ let aggregationFactor = 50;
 let savedScatterState = null;
 let savedLiqState = null;
 
+// Custom colors for leverage categories
+let leverageColors = {
+    longLow: '#22c55e',    // Long pouco alavancado (verde)
+    longHigh: '#16a34a',   // Long muito alavancado (verde escuro)
+    shortLow: '#ef4444',   // Short pouco alavancado (vermelho)
+    shortHigh: '#dc2626'   // Short muito alavancado (vermelho escuro)
+};
+
 // Currency state
 let fxRates = { USD: 1 };   // USD-based rates, fetched once
 let fxReady = false;
@@ -103,6 +111,7 @@ export const getState = () => ({
     maxConcurrency,
     renderPending,
     lastSaveTime,
+    leverageColors
 });
 
 // Setters
@@ -144,6 +153,7 @@ export const setState = (updates) => {
         maxConcurrency,
         renderPending,
         lastSaveTime,
+        leverageColors
     }, updates);
 };
 
@@ -182,6 +192,7 @@ export const setColumnOrder = (value) => { columnOrder = value; };
 export const setColumnWidths = (value) => { columnWidths = value; };
 export const setRenderPending = (value) => { renderPending = value; };
 export const setLastSaveTime = (value) => { lastSaveTime = value; };
+export const setLeverageColors = (value) => { leverageColors = value; };
 
 // Getters for common state access
 export const getAllRows = () => allRows;
@@ -217,6 +228,7 @@ export const getRenderPending = () => renderPending;
 export const getLastSaveTime = () => lastSaveTime;
 export const getPriceMode = () => priceMode;
 export const getSelectedCoins = () => selectedCoins;
+export const getLeverageColors = () => leverageColors;
 export const setPriceMode = (mode) => {
     priceMode = mode;
 };

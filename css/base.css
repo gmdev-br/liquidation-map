@@ -2,6 +2,31 @@
    LIQUID GLASS — Base Styles
    ═══════════════════════════════════════════════════════════ */
 
+:root {
+    /* Leverage color variables */
+    --long-low-color: #f6ff00;
+    --long-high-color: #44ff00;
+    --short-low-color: #d900ff;
+    --short-high-color: #dc2626;
+}
+
+/* ── Leverage-based cell coloring ── */
+.long-low {
+    color: var(--long-low-color);
+}
+
+.long-high {
+    color: var(--long-high-color);
+}
+
+.short-low {
+    color: var(--short-low-color);
+}
+
+.short-high {
+    color: var(--short-high-color);
+}
+
 /* ── Reset ── */
 *,
 *::before,

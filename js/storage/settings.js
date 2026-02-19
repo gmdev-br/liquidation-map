@@ -7,9 +7,9 @@ import {
     getAggregationFactor, getSelectedCoins, getPriceMode, getPriceUpdateInterval, getActiveWindow,
     getVisibleColumns, getColumnOrder, getRankingLimit, getColorMaxLev,
     getChartHighLevSplit, getChartHeight, getLiqChartHeight, getSavedScatterState,
-    getSavedLiqState, getColumnWidths, getActiveCurrency, getActiveEntryCurrency, getDecimalPlaces,
+    getSavedLiqState, getColumnWidths, getActiveCurrency, getActiveEntryCurrency, getDecimalPlaces, getLeverageColors,
     setSortKey, setSortDir, setSavedScatterState, setSavedLiqState,
-    setColumnOrder, setVisibleColumns, setSelectedCoins, setRankingLimit, setColorMaxLev, setChartHighLevSplit, setChartMode, setBubbleScale, setAggregationFactor, setPriceMode, setShowSymbols, setPriceUpdateInterval, setDecimalPlaces
+    setColumnOrder, setVisibleColumns, setSelectedCoins, setRankingLimit, setColorMaxLev, setChartHighLevSplit, setChartMode, setBubbleScale, setAggregationFactor, setPriceMode, setShowSymbols, setPriceUpdateInterval, setDecimalPlaces, setLeverageColors
 } from '../state.js';
 import { COLUMN_DEFS } from '../config.js';
 import { cbSetValue, updateCoinSearchLabel } from '../ui/combobox.js';
@@ -77,7 +77,8 @@ export function saveSettings(getChartState = null, savedScatterState = null, sav
         aggregationFactor: getAggregationFactor(),
         decimalPlaces: getDecimalPlaces(),
         visibleColumns: getVisibleColumns(),
-        columnOrder: getColumnOrder()
+        columnOrder: getColumnOrder(),
+        leverageColors: getLeverageColors()
     };
     
     console.log('Saving currency settings:', {
@@ -322,4 +323,27 @@ export function loadSettings() {
     }
     if (s.scatterChartState) setSavedScatterState(s.scatterChartState);
     if (s.liqChartState) setSavedLiqState(s.liqChartState);
+    if (s.leverageColors) {
+        setLeverageColors(s.leverageColors);
+        const colorLongLow = document.getElementById('colorLongLow');
+        const colorLongHigh = document.getElementById('colorLongHigh');
+        const colorShortLow = document.getElementById('colorShortLow');
+        const colorShortHigh = document.getElementById('colorShortHigh');
+        if (colorLongLow) colorLongLow.value = s.leverageColors.longLow || '#22c55e';
+        if (colorLongHigh) colorLongHigh.value = s.leverageColors.longHigh || '#16a34a';
+        if (colorShortLow) colorShortLow.value = s.leverageColors.shortLow || '#ef4444';
+        if (colorShortHigh) colorShortHigh.value = s.leverageColors.shortHigh || '#dc2626';
+        
+        // Update CSS variables with loaded colors
+        document.documentElement.style.setProperty('--long-low-color', s.leverageColors.longLow || '#22c55e');
+        document.documentElement.style.setProperty('--long-high-color', s.leverageColors.longHigh || '#16a34a');
+        document.documentElement.style.setProperty('--short-low-color', s.leverageColors.shortLow || '#ef4444');
+        document.documentElement.style.setProperty('--short-high-color', s.leverageColors.shortHigh || '#dc2626');
+    } else {
+        // Initialize CSS variables with default colors
+        document.documentElement.style.setProperty('--long-low-color', '#22c55e');
+        document.documentElement.style.setProperty('--long-high-color', '#16a34a');
+        document.documentElement.style.setProperty('--short-low-color', '#ef4444');
+        document.documentElement.style.setProperty('--short-high-color', '#dc2626');
+    }
 }

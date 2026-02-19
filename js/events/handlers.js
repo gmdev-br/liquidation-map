@@ -10,7 +10,7 @@ import {
     getRankingLimit, getColorMaxLev, getChartHighLevSplit, getChartHeight,
     getLiqChartHeight, getActiveWindow, setColumnOrder, setVisibleColumns,
     getColumnOrder, getVisibleColumns, setPriceUpdateInterval, setActiveCurrency,
-    setActiveEntryCurrency, setDecimalPlaces
+    setActiveEntryCurrency, setDecimalPlaces, setLeverageColors
 } from '../state.js';
 import { renderTable, updateStats } from '../ui/table.js';
 import { renderQuotesPanel, updateRankingPanel } from '../ui/panels.js';
@@ -99,6 +99,30 @@ export function updateDecimalPlaces(val) {
         // Trigger table re-render to apply new formatting
         renderTable();
     }
+}
+
+export function updateLeverageColors() {
+    const longLow = document.getElementById('colorLongLow').value;
+    const longHigh = document.getElementById('colorLongHigh').value;
+    const shortLow = document.getElementById('colorShortLow').value;
+    const shortHigh = document.getElementById('colorShortHigh').value;
+    
+    setLeverageColors({
+        longLow,
+        longHigh,
+        shortLow,
+        shortHigh
+    });
+
+    // Update CSS variables
+    document.documentElement.style.setProperty('--long-low-color', longLow);
+    document.documentElement.style.setProperty('--long-high-color', longHigh);
+    document.documentElement.style.setProperty('--short-low-color', shortLow);
+    document.documentElement.style.setProperty('--short-high-color', shortHigh);
+
+    saveSettings();
+    // Trigger chart update by re-rendering table
+    renderTable();
 }
 
 export function setChartModeHandler(mode) {

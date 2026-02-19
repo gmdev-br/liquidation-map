@@ -5,7 +5,7 @@
 import {
     getDisplayedRows, getCurrentPrices, getActiveEntryCurrency, getShowSymbols,
     getLiqChartHeight, getChartMode, getAggregationFactor, getSavedLiqState,
-    getFxRates, getChartHighLevSplit, getColorMaxLev, getDecimalPlaces
+    getFxRates, getChartHighLevSplit, getColorMaxLev, getDecimalPlaces, getLeverageColors
 } from '../state.js';
 import { CURRENCY_META } from '../config.js';
 import { chartPlugins, chartOptions } from './config.js';
@@ -235,8 +235,11 @@ export function renderLiqScatterPlot() {
 
     // Configure chart based on mode
     let datasets = [];
-    let chartType = 'bubble';
+    let chartType = 'bar';
     let scales = {};
+
+    // Get custom colors
+    const customColors = getLeverageColors();
 
     if (getChartMode() === 'column') {
         // Histogram mode
@@ -305,38 +308,38 @@ export function renderLiqScatterPlot() {
             datasets.push({
                 label: `Longs (≤${highLevSplit}x)`,
                 data: longLowData,
-                backgroundColor: 'rgba(34, 197, 94, 0.6)',
-                borderColor: 'rgba(34, 197, 94, 0.8)',
+                backgroundColor: customColors.longLow,
+                borderColor: customColors.longLow,
                 borderWidth: 1
             });
         }
-        
+
         if (longHighData.length > 0) {
             datasets.push({
                 label: `Longs (>${highLevSplit}x)`,
                 data: longHighData,
-                backgroundColor: 'rgba(34, 197, 94, 0.9)',
-                borderColor: 'rgba(34, 197, 94, 1)',
+                backgroundColor: customColors.longHigh,
+                borderColor: customColors.longHigh,
                 borderWidth: 2
             });
         }
-        
+
         if (shortLowData.length > 0) {
             datasets.push({
                 label: `Shorts (≤${highLevSplit}x)`,
                 data: shortLowData,
-                backgroundColor: 'rgba(239, 68, 68, 0.6)',
-                borderColor: 'rgba(239, 68, 68, 0.8)',
+                backgroundColor: customColors.shortLow,
+                borderColor: customColors.shortLow,
                 borderWidth: 1
             });
         }
-        
+
         if (shortHighData.length > 0) {
             datasets.push({
                 label: `Shorts (>${highLevSplit}x)`,
                 data: shortHighData,
-                backgroundColor: 'rgba(239, 68, 68, 0.9)',
-                borderColor: 'rgba(239, 68, 68, 1)',
+                backgroundColor: customColors.shortHigh,
+                borderColor: customColors.shortHigh,
                 borderWidth: 2
             });
         }
@@ -390,6 +393,19 @@ export function renderLiqScatterPlot() {
                 tooltip: {
                     ...liqChartOptions.plugins.tooltip,
                     callbacks: {
+                        title: function(context) {
+                            if (chartType === 'bar') {
+                                return 'Liquidation Count';
+                            }
+                            const r = context[0].raw._raw;
+                            return `${r.coin} ${r.side === 'long' ? '▲' : '▼'}`;
+                        },
+                        labelColor: function(context) {
+                            return {
+                                borderColor: context.dataset.backgroundColor,
+                                backgroundColor: context.dataset.backgroundColor
+                            };
+                        },
                         label: function(context) {
                             if (chartType === 'bar') {
                                 return `Count: ${context.parsed.y}`;
@@ -397,7 +413,6 @@ export function renderLiqScatterPlot() {
                             const r = context.raw._raw;
                             const decimalPlaces = getDecimalPlaces();
                             return [
-                                `${r.coin} ${r.side === 'long' ? '▲' : '▼'}`,
                                 `Liq Price: ${sym}${context.parsed.x.toLocaleString(undefined, { minimumFractionDigits: decimalPlaces, maximumFractionDigits: decimalPlaces })}`,
                                 `Size: ${Math.abs(r.szi).toFixed(decimalPlaces)}`,
                                 `Value: $${r.positionValue.toLocaleString(undefined, { minimumFractionDigits: decimalPlaces, maximumFractionDigits: decimalPlaces })}`

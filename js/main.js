@@ -8,14 +8,13 @@ import { loadInitialState, setupEventListeners, initializeCharts, initializePane
 async function init() {
     console.log('Initializing Liquid Glass...');
 
-    // Load state and settings
+    // Load state and settings first
     loadInitialState();
 
     // Setup event listeners
     setupEventListeners();
 
-    // Initialize charts and panels
-    initializeCharts();
+    // Initialize panels (charts are rendered within loadInitialState via renderTable)
     initializePanels();
 
     console.log('Liquid Glass initialized');
