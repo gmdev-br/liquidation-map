@@ -1,0 +1,256 @@
+// ═══════════════════════════════════════════════════════════
+// LIQUID GLASS — Storage Settings
+// ═══════════════════════════════════════════════════════════
+
+import {
+    getSortKey, getSortDir, getShowSymbols, getChartMode, getBubbleScale,
+    getAggregationFactor, getSelectedCoins, getPriceMode, getPriceUpdateInterval, getActiveWindow,
+    getVisibleColumns, getColumnOrder, getRankingLimit, getColorMaxLev,
+    getChartHighLevSplit, getChartHeight, getLiqChartHeight, getSavedScatterState,
+    getSavedLiqState, getColumnWidths, getActiveCurrency, getActiveEntryCurrency,
+    setSortKey, setSortDir, setSavedScatterState, setSavedLiqState,
+    setColumnOrder, setVisibleColumns, setSelectedCoins, setRankingLimit, setColorMaxLev, setChartHighLevSplit, setChartMode, setBubbleScale, setAggregationFactor, setPriceMode, setShowSymbols, setPriceUpdateInterval
+} from '../state.js';
+import { COLUMN_DEFS } from '../config.js';
+import { cbSetValue, updateCoinSearchLabel } from '../ui/combobox.js';
+import { 
+    applyColumnVisibility, 
+    updateColumnSelectDisplay 
+} from '../events/handlers.js';
+import { renderQuotesPanel, updatePriceModeUI } from '../ui/panels.js';
+
+const STORAGE_KEY = 'whaleWatcherSettings';
+
+export function saveSettings(getChartState = null, savedScatterState = null, savedLiqState = null, scatterChart = null, liqChartInstance = null) {
+    // Helper to get chart state
+    function getChartStateHelper(chart) {
+        if (!chart) return null;
+        if (chart.isZoomed) {
+            return {
+                x: { min: chart.scales.x.min, max: chart.scales.x.max },
+                y: { min: chart.scales.y.min, max: chart.scales.y.max }
+            };
+        }
+        return null; // Return null if not zoomed (user wants default view)
+    }
+
+    const settings = {
+        scatterChartState: getChartStateHelper(scatterChart) || savedScatterState,
+        liqChartState: getChartStateHelper(liqChartInstance) || savedLiqState,
+        minValue: document.getElementById('minValue').value,
+        coinFilter: document.getElementById('coinFilter').value,
+        sideFilter: document.getElementById('sideFilter').value,
+        minLev: document.getElementById('minLev').value,
+        maxLev: document.getElementById('maxLev').value,
+        minSize: document.getElementById('minSize').value,
+        minSzi: document.getElementById('minSzi').value,
+        maxSzi: document.getElementById('maxSzi').value,
+        minValueCcy: document.getElementById('minValueCcy').value,
+        maxValueCcy: document.getElementById('maxValueCcy').value,
+        minEntryCcy: document.getElementById('minEntryCcy').value,
+        maxEntryCcy: document.getElementById('maxEntryCcy').value,
+        minUpnl: document.getElementById('minUpnl').value,
+        maxUpnl: document.getElementById('maxUpnl').value,
+        minFunding: document.getElementById('minFunding').value,
+        levTypeFilter: document.getElementById('levTypeFilter').value,
+        currencySelect: document.getElementById('currencySelect').value,
+        entryCurrencySelect: document.getElementById('entryCurrencySelect').value,
+        addressFilter: document.getElementById('addressFilter').value,
+        selectedCoins: getSelectedCoins(),
+        priceMode: getPriceMode(),
+        priceUpdateInterval: getPriceUpdateInterval(),
+        activeWindow: getActiveWindow(),
+        columnWidths: getColumnWidths(),
+        rankingLimit: getRankingLimit(),
+        colorMaxLev: getColorMaxLev(),
+        chartHighLevSplit: getChartHighLevSplit(),
+        sortKey: getSortKey(),
+        sortDir: getSortDir(),
+        showSymbols: getShowSymbols(),
+        chartHeight: getChartHeight(),
+        chartMode: getChartMode(),
+        bubbleScale: getBubbleScale(),
+        aggregationFactor: getAggregationFactor(),
+        visibleColumns: getVisibleColumns(),
+        columnOrder: getColumnOrder()
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+}
+
+export function loadSettings() {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    let s = null;
+    
+    if (saved) {
+        try {
+            s = JSON.parse(saved);
+        } catch (e) { 
+            console.warn('Failed to parse saved settings', e); 
+        }
+    }
+    
+    // Initialize column order
+    if (s && s.columnOrder && s.columnOrder.length > 0) {
+        // Merge new columns from COLUMN_DEFS that are missing in saved order
+        const currentKeys = COLUMN_DEFS.map(c => c.key);
+        const savedKeys = new Set(s.columnOrder);
+        currentKeys.forEach(key => {
+            if (!savedKeys.has(key)) {
+                // Insert before col-distToLiq if possible, else append
+                if (key === 'col-liqPx') {
+                    const idx = s.columnOrder.indexOf('col-distToLiq');
+                    if (idx > -1) s.columnOrder.splice(idx, 0, key);
+                    else s.columnOrder.push(key);
+                } else {
+                    s.columnOrder.push(key);
+                }
+            }
+        });
+        console.log('Setting columnOrder from saved:', s.columnOrder);
+        setColumnOrder(s.columnOrder);
+    } else {
+        // Initialize with default column order
+        const defaultOrder = COLUMN_DEFS.map(c => c.key);
+        console.log('Setting default columnOrder:', defaultOrder);
+        setColumnOrder(defaultOrder);
+    }
+    
+    // Initialize visible columns
+    if (s && s.visibleColumns && s.visibleColumns.length > 0) {
+        // Merge new columns
+        const currentKeys = COLUMN_DEFS.map(c => c.key);
+        const savedKeys = new Set(s.visibleColumns);
+        currentKeys.forEach(key => {
+            if (!savedKeys.has(key)) {
+                s.visibleColumns.push(key);
+            }
+        });
+        console.log('Setting visibleColumns from saved:', s.visibleColumns);
+        setVisibleColumns(s.visibleColumns);
+        applyColumnVisibility();
+        updateColumnSelectDisplay();
+    } else {
+        // Initialize with all columns visible
+        const defaultVisible = COLUMN_DEFS.map(c => c.key);
+        console.log('Setting default visibleColumns:', defaultVisible);
+        setVisibleColumns(defaultVisible);
+    }
+    
+    // Load other settings if they exist
+    if (!s) return;
+    
+    if (s.showSymbols !== undefined) {
+        setShowSymbols(s.showSymbols);
+        const btn = document.getElementById('btnShowSym');
+        if (btn) {
+            btn.textContent = s.showSymbols ? 'On' : 'Off';
+            btn.classList.toggle('active', s.showSymbols);
+        }
+    }
+    if (s.chartMode) {
+        setChartMode(s.chartMode);
+        document.querySelectorAll('.tab[data-chart]').forEach(t => {
+            t.classList.toggle('active', t.dataset.chart === s.chartMode);
+        });
+        const bubbleCtrl = document.getElementById('bubbleSizeCtrl');
+        if (bubbleCtrl) {
+            bubbleCtrl.style.display = (s.chartMode === 'scatter') ? 'block' : 'none';
+        }
+        const aggCtrl = document.getElementById('aggregationCtrl');
+        if (aggCtrl) {
+            aggCtrl.style.display = (s.chartMode === 'column') ? 'block' : 'none';
+        }
+    }
+    if (s.bubbleScale) {
+        setBubbleScale(s.bubbleScale);
+        document.getElementById('bubbleSizeVal').textContent = s.bubbleScale.toFixed(1);
+        document.getElementById('bubbleSizeRange').value = s.bubbleScale;
+    }
+    if (s.aggregationFactor) {
+        setAggregationFactor(s.aggregationFactor);
+        document.getElementById('aggregationVal').textContent = s.aggregationFactor;
+        document.getElementById('aggregationRange').value = s.aggregationFactor;
+    }
+    if (s.minValue) document.getElementById('minValue').value = s.minValue;
+    if (s.coinFilter) {
+        document.getElementById('coinFilter').value = s.coinFilter;
+        document.getElementById('coinSearch').value = s.coinFilter;
+    }
+    if (s.sideFilter) cbSetValue('sideFilter', s.sideFilter);
+    if (s.minLev) document.getElementById('minLev').value = s.minLev;
+    if (s.maxLev) document.getElementById('maxLev').value = s.maxLev;
+    if (s.minSize) document.getElementById('minSize').value = s.minSize;
+    if (s.minSzi) document.getElementById('minSzi').value = s.minSzi;
+    if (s.maxSzi) document.getElementById('maxSzi').value = s.maxSzi;
+    if (s.minValueCcy) document.getElementById('minValueCcy').value = s.minValueCcy;
+    if (s.maxValueCcy) document.getElementById('maxValueCcy').value = s.maxValueCcy;
+    if (s.minEntryCcy) document.getElementById('minEntryCcy').value = s.minEntryCcy;
+    if (s.maxEntryCcy) document.getElementById('maxEntryCcy').value = s.maxEntryCcy;
+    if (s.minUpnl) document.getElementById('minUpnl').value = s.minUpnl;
+    if (s.maxUpnl) document.getElementById('maxUpnl').value = s.maxUpnl;
+    if (s.minFunding) document.getElementById('minFunding').value = s.minFunding;
+    if (s.levTypeFilter) cbSetValue('levTypeFilter', s.levTypeFilter);
+    if (s.currencySelect) cbSetValue('currencySelect', s.currencySelect);
+    if (s.entryCurrencySelect) cbSetValue('entryCurrencySelect', s.entryCurrencySelect);
+    if (s.addressFilter) document.getElementById('addressFilter').value = s.addressFilter;
+    if (s.selectedCoins) {
+        setSelectedCoins(s.selectedCoins);
+        updateCoinSearchLabel();
+        renderQuotesPanel();
+    }
+    if (s.priceMode) {
+        setPriceMode(s.priceMode);
+        updatePriceModeUI();
+    }
+    if (s.priceUpdateInterval) {
+        setPriceUpdateInterval(s.priceUpdateInterval);
+        const priceIntervalVal = document.getElementById('priceIntervalVal');
+        if (priceIntervalVal) {
+            priceIntervalVal.textContent = (s.priceUpdateInterval / 1000) + 's';
+        }
+        const priceIntervalRange = document.getElementById('priceIntervalRange');
+        if (priceIntervalRange) {
+            priceIntervalRange.value = s.priceUpdateInterval / 1000;
+        }
+    }
+    if (s.columnWidths) {
+        // columnWidths = s.columnWidths;
+        // applyColumnWidths();
+    }
+    if (s.rankingLimit) {
+        document.getElementById('rankingLimit').value = s.rankingLimit;
+        setRankingLimit(s.rankingLimit);
+    }
+    if (s.colorMaxLev) {
+        document.getElementById('colorMaxLev').value = s.colorMaxLev;
+        setColorMaxLev(s.colorMaxLev);
+    }
+    if (s.chartHighLevSplit !== undefined) {
+        const el = document.getElementById('chartHighLevSplit');
+        if(el) {
+            el.value = s.chartHighLevSplit;
+            setChartHighLevSplit(s.chartHighLevSplit);
+        }
+    }
+    if (s.activeWindow) {
+        document.querySelectorAll('.tab').forEach(t => {
+            t.classList.toggle('active', t.dataset.window === s.activeWindow);
+        });
+    }
+    if (s.sortKey) setSortKey(s.sortKey);
+    if (s.sortDir) setSortDir(s.sortDir);
+    if (s.chartHeight) {
+        const section = document.getElementById('chart-section');
+        if (section) {
+            section.style.height = s.chartHeight + 'px';
+        }
+    }
+    if (s.liqChartHeight) {
+        const section = document.getElementById('liq-chart-section');
+        if (section) {
+            section.style.height = s.liqChartHeight + 'px';
+        }
+    }
+    if (s.scatterChartState) setSavedScatterState(s.scatterChartState);
+    if (s.liqChartState) setSavedLiqState(s.liqChartState);
+}

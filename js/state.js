@@ -1,0 +1,215 @@
+// ═══════════════════════════════════════════════════════════
+// LIQUID GLASS — Global State Management
+// ═══════════════════════════════════════════════════════════
+
+// Data state
+let whaleList = [];       // from leaderboard
+let allRows = [];         // flat: one row per position
+let displayedRows = [];   // after filters
+
+// Column state
+let visibleColumns = [];   // Default all visible
+let columnOrder = [];     // Default order
+let columnWidths = {};    // { th-id: width_px }
+let _columnCloseTimer = null;
+
+// Sorting state
+let sortKey = 'accountValue';
+let sortDir = -1;
+let activeWindow = 'allTime';
+
+// Scanning state
+let loadedCount = 0;
+let scanning = false;
+let isPaused = false;
+
+// Filter state
+let selectedCoins = [];   // Array for multi-select
+
+// Price state
+let priceMode = 'realtime'; // 'realtime' or 'dailyclose'
+let priceTicker = null;
+let dailyCloseCache = {}; // { COIN: price }
+let currentPrices = {};   // coin -> mark price
+let priceUpdateInterval = 3000; // Default 3 seconds (configurable by user)
+
+// Ranking state
+let rankingLimit = 10;
+let rankingTicker = null;
+
+// Chart state
+let chartHeight = 400; // default height in px
+let liqChartHeight = 400; // default height for liquidation chart
+let colorMaxLev = 50;
+let chartHighLevSplit = 50; // Threshold for Low/High leverage split
+let chartMode = 'scatter'; // 'scatter' or 'column'
+let bubbleScale = 1.0;
+let aggregationFactor = 50;
+let savedScatterState = null;
+let savedLiqState = null;
+
+// Currency state
+let fxRates = { USD: 1 };   // USD-based rates, fetched once
+let fxReady = false;
+let activeCurrency = 'USD';
+let activeEntryCurrency = 'USD';
+let showSymbols = true;
+
+// Concurrency state
+let maxConcurrency = 8;
+
+// UI state
+let renderPending = false;
+let lastSaveTime = 0;
+
+// Getters
+export const getState = () => ({
+    whaleList,
+    allRows,
+    displayedRows,
+    visibleColumns,
+    columnOrder,
+    columnWidths,
+    sortKey,
+    sortDir,
+    activeWindow,
+    loadedCount,
+    scanning,
+    isPaused,
+    selectedCoins,
+    priceMode,
+    dailyCloseCache,
+    currentPrices,
+    priceUpdateInterval,
+    rankingLimit,
+    chartHeight,
+    liqChartHeight,
+    colorMaxLev,
+    chartHighLevSplit,
+    chartMode,
+    bubbleScale,
+    aggregationFactor,
+    savedScatterState,
+    savedLiqState,
+    fxRates,
+    fxReady,
+    activeCurrency,
+    activeEntryCurrency,
+    showSymbols,
+    maxConcurrency,
+    renderPending,
+    lastSaveTime,
+});
+
+// Setters
+export const setState = (updates) => {
+    Object.assign({
+        whaleList,
+        allRows,
+        displayedRows,
+        visibleColumns,
+        columnOrder,
+        columnWidths,
+        sortKey,
+        sortDir,
+        activeWindow,
+        loadedCount,
+        scanning,
+        isPaused,
+        selectedCoins,
+        priceMode,
+        dailyCloseCache,
+        currentPrices,
+        priceUpdateInterval,
+        rankingLimit,
+        chartHeight,
+        liqChartHeight,
+        colorMaxLev,
+        chartHighLevSplit,
+        chartMode,
+        bubbleScale,
+        aggregationFactor,
+        savedScatterState,
+        savedLiqState,
+        fxRates,
+        fxReady,
+        activeCurrency,
+        activeEntryCurrency,
+        showSymbols,
+        maxConcurrency,
+        renderPending,
+        lastSaveTime,
+    }, updates);
+};
+
+// Individual setters for common state updates
+export const setWhaleList = (value) => { whaleList = value; };
+export const setAllRows = (value) => { allRows = value; };
+export const setDisplayedRows = (value) => { displayedRows = value; };
+export const setScanning = (value) => { scanning = value; };
+export const setIsPaused = (value) => { isPaused = value; };
+export const setLoadedCount = (value) => { loadedCount = value; };
+export const setCurrentPrices = (value) => { currentPrices = value; };
+export const setPriceUpdateInterval = (value) => { priceUpdateInterval = value; };
+export const setFxRates = (value) => { fxRates = value; };
+export const setFxReady = (value) => { fxReady = value; };
+export const setActiveCurrency = (value) => { activeCurrency = value; };
+export const setActiveEntryCurrency = (value) => { activeEntryCurrency = value; };
+export const setShowSymbols = (value) => { showSymbols = value; };
+export const setSelectedCoins = (value) => { selectedCoins = value; };
+export const setMaxConcurrency = (value) => { maxConcurrency = value; };
+export const setSortKey = (value) => { sortKey = value; };
+export const setSortDir = (value) => { sortDir = value; };
+export const setActiveWindow = (value) => { activeWindow = value; };
+export const setRankingLimit = (value) => { rankingLimit = value; };
+export const setChartHeight = (value) => { chartHeight = value; };
+export const setLiqChartHeight = (value) => { liqChartHeight = value; };
+export const setColorMaxLev = (value) => { colorMaxLev = value; };
+export const setChartHighLevSplit = (value) => { chartHighLevSplit = value; };
+export const setChartMode = (value) => { chartMode = value; };
+export const setBubbleScale = (value) => { bubbleScale = value; };
+export const setAggregationFactor = (value) => { aggregationFactor = value; };
+export const setSavedScatterState = (value) => { savedScatterState = value; };
+export const setSavedLiqState = (value) => { savedLiqState = value; };
+export const setVisibleColumns = (value) => { visibleColumns = value; };
+export const setColumnOrder = (value) => { columnOrder = value; };
+export const setColumnWidths = (value) => { columnWidths = value; };
+export const setRenderPending = (value) => { renderPending = value; };
+export const setLastSaveTime = (value) => { lastSaveTime = value; };
+
+// Getters for common state access
+export const getAllRows = () => allRows;
+export const getDisplayedRows = () => displayedRows;
+export const getCurrentPrices = () => currentPrices;
+export const getPriceUpdateInterval = () => priceUpdateInterval;
+export const getActiveCurrency = () => activeCurrency;
+export const getActiveEntryCurrency = () => activeEntryCurrency;
+export const getShowSymbols = () => showSymbols;
+export const getSortKey = () => sortKey;
+export const getSortDir = () => sortDir;
+export const getActiveWindow = () => activeWindow;
+export const getVisibleColumns = () => visibleColumns;
+export const getColumnOrder = () => columnOrder;
+export const getColumnWidths = () => columnWidths;
+export const getScanning = () => scanning;
+export const getIsPaused = () => isPaused;
+export const getMaxConcurrency = () => maxConcurrency;
+export const getFxRates = () => fxRates;
+export const getFxReady = () => fxReady;
+export const getRankingLimit = () => rankingLimit;
+export const getChartHeight = () => chartHeight;
+export const getLiqChartHeight = () => liqChartHeight;
+export const getColorMaxLev = () => colorMaxLev;
+export const getChartHighLevSplit = () => chartHighLevSplit;
+export const getChartMode = () => chartMode;
+export const getBubbleScale = () => bubbleScale;
+export const getAggregationFactor = () => aggregationFactor;
+export const getSavedScatterState = () => savedScatterState;
+export const getSavedLiqState = () => savedLiqState;
+export const getRenderPending = () => renderPending;
+export const getLastSaveTime = () => lastSaveTime;
+export const getPriceMode = () => priceMode;
+export const getSelectedCoins = () => selectedCoins;
+export const setPriceMode = (mode) => {
+    priceMode = mode;
+};

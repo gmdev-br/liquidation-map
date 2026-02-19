@@ -9,7 +9,7 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
         rel="stylesheet">
-    <link rel="stylesheet" href="whale_dashboard.css">
+    <link rel="stylesheet" href="css/main.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
@@ -27,9 +27,9 @@
             </div>
         </div>
         <div class="header-center">
-            <button class="btn" id="scanBtn" onclick="startScan()">🔍 Scan Whales</button>
-            <button class="btn-pause" id="pauseBtn" onclick="togglePause()" style="display:none">⏸ Pause</button>
-            <button class="btn-stop" id="stopBtn" onclick="stopScan()">⏹ Stop</button>
+            <button class="btn" id="scanBtn">🔍 Scan Whales</button>
+            <button class="btn-pause" id="pauseBtn" style="display:none">⏸ Pause</button>
+            <button class="btn-stop" id="stopBtn">⏹ Stop</button>
         </div>
         <div class="header-right">
             <div class="status-badge">
@@ -42,38 +42,42 @@
     <div class="controls">
         <div class="ctrl">
             <label title="Recommended limit: 8-10 requests/s">Speed: <span id="speedVal">8</span></label>
-            <input type="range" id="speedRange" min="1" max="20" value="8" style="width: 80px" oninput="updateSpeed(this.value)">
+            <input type="range" id="speedRange" min="1" max="20" value="8" style="width: 80px">
+        </div>
+        <div class="filter-sep"></div>
+        <div class="ctrl">
+            <label title="Price update interval">Price Update: <span id="priceIntervalVal">3s</span></label>
+            <input type="range" id="priceIntervalRange" min="1" max="30" value="3" style="width: 80px">
         </div>
         <div class="filter-sep"></div>
         <div class="ctrl">
             <label>Sort PnL window</label>
             <div class="tabs">
-                <button class="tab active" data-window="allTime" onclick="setWindow(this)">All Time</button>
-                <button class="tab" data-window="month" onclick="setWindow(this)">30d</button>
-                <button class="tab" data-window="week" onclick="setWindow(this)">7d</button>
-                <button class="tab" data-window="day" onclick="setWindow(this)">24h</button>
+                <button class="tab active" data-window="allTime">All Time</button>
+                <button class="tab" data-window="month">30d</button>
+                <button class="tab" data-window="week">7d</button>
+                <button class="tab" data-window="day">24h</button>
             </div>
         </div>
         <div class="filter-sep"></div>
         <div class="ctrl">
             <label>Price Mode</label>
             <div class="tabs" id="priceModeToggle">
-                <button class="tab active" data-mode="realtime" onclick="setPriceMode(this)">Real-time</button>
-                <button class="tab" data-mode="dailyclose" onclick="setPriceMode(this)">Daily Close</button>
+                <button class="tab active" data-mode="realtime">Real-time</button>
+                <button class="tab" data-mode="dailyclose">Daily Close</button>
             </div>
         </div>
         <div class="filter-sep"></div>
         <div class="ctrl">
             <label>Show Symbols</label>
             <div class="tabs">
-                <button class="tab active" id="btnShowSym" onclick="toggleShowSymbols()">On</button>
+                <button class="tab active" id="btnShowSym">On</button>
             </div>
         </div>
         <div class="filter-sep"></div>
         <div class="ctrl">
-            <label>Top N Ranking</label>
-            <input type="number" id="rankingLimit" value="10" min="1" max="100" class="col-filter" style="width:70px"
-                oninput="updateRankingLimit()">
+            <label>Top N by Market Cap</label>
+            <input type="number" id="rankingLimit" value="10" min="1" max="100" class="col-filter" style="width:70px">
         </div>
         <div class="filter-sep"></div>
         <div class="ctrl">
@@ -81,9 +85,9 @@
             <div style="display:flex; flex-direction:column">
                 <div style="display:flex; align-items:center; gap:4px; margin-top:2px; padding-top:2px">
                     <span style="font-size:11px; color:#9ca3af">High Lev ></span>
-                    <input type="number" id="chartHighLevSplit" value="50" min="1" max="100" style="width:40px; padding:2px" title="Leverage Split Threshold" onchange="updateChartFilters()">
+                    <input type="number" id="chartHighLevSplit" value="50" min="1" max="100" style="width:40px; padding:2px" title="Leverage Split Threshold">
                     <span style="font-size:11px; color:#9ca3af; margin-left:6px">Color Max</span>
-                    <input type="number" id="colorMaxLev" value="50" min="1" max="100" style="width:35px; padding:2px" title="High Color Leverage" onchange="updateColorSettings()">
+                    <input type="number" id="colorMaxLev" value="50" min="1" max="100" style="width:35px; padding:2px" title="High Color Leverage">
                 </div>
             </div>
         </div>
@@ -92,8 +96,7 @@
             <label>Columns</label>
             <div class="combobox" id="columnCombobox" style="width:110px">
                 <div class="combobox-input-wrap">
-                    <input type="text" id="columnSelectDisplay" class="combobox-input" placeholder="Select" readonly 
-                        onfocus="openColumnCombobox()" onblur="closeColumnComboboxDelayed()">
+                    <input type="text" id="columnSelectDisplay" class="combobox-input" placeholder="Select" readonly>
                     <span class="combobox-arrow">▾</span>
                 </div>
                 <div class="combobox-dropdown" id="columnDropdown"></div>
@@ -103,25 +106,25 @@
         <div class="ctrl">
             <label>Chart Mode</label>
             <div class="tabs">
-                <button class="tab active" data-chart="scatter" onclick="setChartMode(this)">Scatter</button>
-                <button class="tab" data-chart="column" onclick="setChartMode(this)">Column</button>
+                <button class="tab active" data-chart="scatter">Scatter</button>
+                <button class="tab" data-chart="column">Column</button>
             </div>
         </div>
         <div class="filter-sep"></div>
         <div class="ctrl" id="bubbleSizeCtrl">
             <label title="Adjust bubble size">Radius: <span id="bubbleSizeVal">1.0</span>x</label>
-            <input type="range" id="bubbleSizeRange" min="0.1" max="3.0" step="0.1" value="1.0" style="width: 80px" oninput="updateBubbleSize(this.value)">
+            <input type="range" id="bubbleSizeRange" min="0.1" max="3.0" step="0.1" value="1.0" style="width: 80px">
         </div>
         <div class="ctrl" id="aggregationCtrl" style="display:none">
             <label title="Adjust bin count for columns">Bins: <span id="aggregationVal">50</span></label>
-            <input type="range" id="aggregationRange" min="10" max="1000" step="10" value="50" style="width: 120px" oninput="updateAggregation(this.value)">
+            <input type="range" id="aggregationRange" min="10" max="1000" step="10" value="50" style="width: 120px">
         </div>
     </div>
 
     <!-- Quotes panel: shown when coins are selected -->
     <div id="quotes-panel" style="display:none"></div>
 
-    <!-- Ranking panel: shown Top N cryptos -->
+    <!-- Ranking panel: shows top coins by whale position value -->
     <div id="ranking-panel"></div>
 
     <div class="progress-bar">
@@ -153,22 +156,22 @@
 
     <div id="chart-section">
         <canvas id="scatterChart" style="width: 100%; height: 100%;"></canvas>
-        <button id="resetZoomBtn" class="btn" style="position:absolute; top:10px; right:10px; z-index:20; padding: 4px 8px; font-size: 11px; background: rgba(59, 130, 246, 0.2); border: 1px solid rgba(59, 130, 246, 0.4);" onclick="resetChartZoom()">Reset Zoom</button>
+        <button id="resetZoomBtn" class="btn" style="position:absolute; top:10px; right:10px; z-index:20; padding: 4px 8px; font-size: 11px; background: rgba(59, 130, 246, 0.2); border: 1px solid rgba(59, 130, 246, 0.4);">Reset Zoom</button>
         <div style="position:absolute; bottom:20px; right:10px; z-index:20; font-size: 11px; color: rgba(255,255,255,0.3); pointer-events: none; user-select: none;">
             Pan: Drag &nbsp;|&nbsp; Zoom: Ctrl+Scroll &nbsp;|&nbsp; Area Zoom: Shift+Drag
         </div>
-        <div class="chart-resizer" onmousedown="startChartResize(event)">
+        <div class="chart-resizer">
             <div class="chart-resizer-handle"></div>
         </div>
     </div>
 
     <div id="liq-chart-section">
         <canvas id="liqChart" style="width: 100%; height: 100%;"></canvas>
-        <button id="resetLiqZoomBtn" class="btn" style="position:absolute; top:10px; right:10px; z-index:20; padding: 4px 8px; font-size: 11px; background: rgba(59, 130, 246, 0.2); border: 1px solid rgba(59, 130, 246, 0.4); display: none;" onclick="resetLiqChartZoom()">Reset Zoom</button>
+        <button id="resetLiqZoomBtn" class="btn" style="position:absolute; top:10px; right:10px; z-index:20; padding: 4px 8px; font-size: 11px; background: rgba(59, 130, 246, 0.2); border: 1px solid rgba(59, 130, 246, 0.4); display: none;">Reset Zoom</button>
         <div style="position:absolute; bottom:20px; right:10px; z-index:20; font-size: 11px; color: rgba(255,255,255,0.3); pointer-events: none; user-select: none;">
             Pan: Drag &nbsp;|&nbsp; Zoom: Ctrl+Scroll &nbsp;|&nbsp; Area Zoom: Shift+Drag
         </div>
-        <div class="chart-resizer" onmousedown="startLiqChartResize(event)">
+        <div class="chart-resizer">
             <div class="chart-resizer-handle"></div>
         </div>
     </div>
@@ -178,50 +181,50 @@
             <thead>
                 <tr>
                     <th id="th-num" class="col-num"><span class="th-label">#</span>
-                        <div class="resizer" onmousedown="startResizing(event, this)"></div>
+                        <div class="resizer"></div>
                     </th>
                     <th id="th-address" class="col-address"><span class="th-label">Address</span>
-                        <div class="resizer" onmousedown="startResizing(event, this)"></div>
+                        <div class="resizer"></div>
                     </th>
-                    <th id="th-coin" class="col-coin" onclick="sortBy('coin')"><span class="th-label">Coin ↕</span>
-                        <div class="resizer" onmousedown="startResizing(event, this)"></div>
+                    <th id="th-coin" class="col-coin"><span class="th-label">Coin ↕</span>
+                        <div class="resizer"></div>
                     </th>
-                    <th id="th-szi" class="col-szi" onclick="sortBy('szi')"><span class="th-label">Size ↕</span>
-                        <div class="resizer" onmousedown="startResizing(event, this)"></div>
+                    <th id="th-szi" class="col-szi"><span class="th-label">Size ↕</span>
+                        <div class="resizer"></div>
                     </th>
                     <th id="th-leverage" class="col-leverage"><span class="th-label">Leverage</span>
-                        <div class="resizer" onmousedown="startResizing(event, this)"></div>
+                        <div class="resizer"></div>
                     </th>
-                    <th id="th-positionValue" class="col-positionValue" onclick="sortBy('positionValue')"><span class="th-label">Value ↕</span>
-                        <div class="resizer" onmousedown="startResizing(event, this)"></div>
+                    <th id="th-positionValue" class="col-positionValue"><span class="th-label">Value ↕</span>
+                        <div class="resizer"></div>
                     </th>
-                    <th id="th-valueCcy" class="col-valueCcy" onclick="sortBy('valueCcy')" style="color:var(--gold)"><span
+                    <th id="th-valueCcy" class="col-valueCcy" style="color:var(--gold)"><span
                             class="th-label">Value (CCY) ↕</span>
-                        <div class="resizer" onmousedown="startResizing(event, this)"></div>
+                        <div class="resizer"></div>
                     </th>
-                    <th id="th-entryPx" class="col-entryPx" onclick="sortBy('entryPx')"><span class="th-label">Avg Entry ↕</span>
-                        <div class="resizer" onmousedown="startResizing(event, this)"></div>
+                    <th id="th-entryPx" class="col-entryPx"><span class="th-label">Avg Entry ↕</span>
+                        <div class="resizer"></div>
                     </th>
-                    <th id="th-entryCcy" class="col-entryCcy" onclick="sortBy('entryCcy')" style="color:var(--gold)"><span
+                    <th id="th-entryCcy" class="col-entryCcy" style="color:var(--gold)"><span
                             class="th-label">Avg Entry (Corr) ↕</span>
-                        <div class="resizer" onmousedown="startResizing(event, this)"></div>
+                        <div class="resizer"></div>
                     </th>
-                    <th id="th-unrealizedPnl" class="col-unrealizedPnl" onclick="sortBy('unrealizedPnl')"><span class="th-label">UPNL ↕</span>
-                        <div class="resizer" onmousedown="startResizing(event, this)"></div>
+                    <th id="th-unrealizedPnl" class="col-unrealizedPnl"><span class="th-label">UPNL ↕</span>
+                        <div class="resizer"></div>
                     </th>
-                    <th id="th-funding" class="col-funding" onclick="sortBy('funding')"><span class="th-label">Funding ↕</span>
-                        <div class="resizer" onmousedown="startResizing(event, this)"></div>
+                    <th id="th-funding" class="col-funding"><span class="th-label">Funding ↕</span>
+                        <div class="resizer"></div>
                     </th>
-                    <th id="th-liqPx" class="col-liqPx" onclick="sortBy('liqPx')" style="color:var(--orange)"><span class="th-label">Liq. Price Corr (USD) ↕</span>
-                        <div class="resizer" onmousedown="startResizing(event, this)"></div>
+                    <th id="th-liqPx" class="col-liqPx" style="color:var(--orange)"><span class="th-label">Liq. Price Corr (USD) ↕</span>
+                        <div class="resizer"></div>
                     </th>
                     <th id="th-distToLiq" class="col-distToLiq"><span class="th-label">Dist. to Liq.</span>
-                        <div class="resizer" onmousedown="startResizing(event, this)">
+                        <div class="resizer">
                         </div>
                     </th>
-                    <th id="th-accountValue" class="col-accountValue" onclick="sortBy('accountValue')"><span class="th-label">Acct. Value
+                    <th id="th-accountValue" class="col-accountValue"><span class="th-label">Acct. Value
                             ↕</span>
-                        <div class="resizer" onmousedown="startResizing(event, this)"></div>
+                        <div class="resizer"></div>
                     </th>
                 </tr>
                 <tr class="filter-row">
@@ -229,8 +232,7 @@
                     <th class="filter-cell col-num"></th>
                     <!-- Address -->
                     <th class="filter-cell col-address">
-                        <input type="text" id="addressFilter" placeholder="Filter address…" class="col-filter"
-                            oninput="renderTable()">
+                        <input type="text" id="addressFilter" placeholder="Filter address…" class="col-filter">
                     </th>
                     <!-- Coin -->
                     <th class="filter-cell col-coin">
@@ -238,8 +240,7 @@
                         <div class="combobox col-filter" id="coinCombobox">
                             <div class="combobox-input-wrap">
                                 <input type="text" id="coinSearch" class="col-filter combobox-input"
-                                    placeholder="Select coins…" autocomplete="off" oninput="onCoinSearch()"
-                                    onfocus="openCombobox()" onblur="closeComboboxDelayed()">
+                                    placeholder="Select coins…" autocomplete="off">
                                 <span class="combobox-arrow">▾</span>
                             </div>
                             <div class="combobox-dropdown" id="coinDropdown"></div>
@@ -249,8 +250,7 @@
                         <div class="combobox col-filter" id="cb-sideFilter" style="margin-top:4px; width:100%">
                             <div class="combobox-input-wrap">
                                 <input type="text" id="cb-sideFilter-search" class="combobox-input col-filter"
-                                    placeholder="L + S" autocomplete="off" readonly onfocus="cbOpen('sideFilter')"
-                                    onblur="cbCloseDelayed('sideFilter')">
+                                    placeholder="L + S" autocomplete="off" readonly>
                                 <span class="combobox-arrow">▾</span>
                             </div>
                             <div class="combobox-dropdown" id="cb-sideFilter-dropdown"></div>
@@ -259,21 +259,20 @@
                     </th>
                     <!-- Size -->
                     <th class="filter-cell col-szi">
-                        <input type="number" id="minSzi" placeholder="Min" class="col-filter" oninput="renderTable()">
-                        <input type="number" id="maxSzi" placeholder="Max" class="col-filter" style="margin-top:3px" oninput="renderTable()">
+                        <input type="number" id="minSzi" placeholder="Min" class="col-filter">
+                        <input type="number" id="maxSzi" placeholder="Max" class="col-filter" style="margin-top:3px">
                     </th>
                     <!-- Leverage -->
                     <th class="filter-cell col-leverage">
                         <input type="number" id="minLev" value="" step="1" min="1" placeholder="Min x"
-                            class="col-filter" oninput="renderTable()">
+                            class="col-filter">
                         <input type="number" id="maxLev" value="" step="1" min="1" placeholder="Max x"
-                            class="col-filter" style="margin-top:3px" oninput="renderTable()">
+                            class="col-filter" style="margin-top:3px">
                         <!-- lev type combobox -->
                         <div class="combobox col-filter" id="cb-levTypeFilter" style="margin-top:4px; width:100%">
                             <div class="combobox-input-wrap">
                                 <input type="text" id="cb-levTypeFilter-search" class="combobox-input col-filter"
-                                    placeholder="All types" autocomplete="off" readonly
-                                    onfocus="cbOpen('levTypeFilter')" onblur="cbCloseDelayed('levTypeFilter')">
+                                    placeholder="All types" autocomplete="off" readonly>
                                 <span class="combobox-arrow">▾</span>
                             </div>
                             <div class="combobox-dropdown" id="cb-levTypeFilter-dropdown"></div>
@@ -283,7 +282,7 @@
                     <!-- Value -->
                     <th class="filter-cell col-positionValue">
                         <input type="number" id="minSize" value="" step="100000" min="0" placeholder="Min"
-                            class="col-filter" oninput="renderTable()">
+                            class="col-filter">
                     </th>
                     <!-- Value (CCY) -->
                     <th class="filter-cell col-valueCcy">
@@ -291,15 +290,14 @@
                         <div class="combobox col-filter" id="cb-currencySelect" style="width:100%">
                             <div class="combobox-input-wrap">
                                 <input type="text" id="cb-currencySelect-search" class="combobox-input col-filter" placeholder="USD $"
-                                    autocomplete="off" readonly onfocus="cbOpen('currencySelect')"
-                                    onblur="cbCloseDelayed('currencySelect')">
+                                    autocomplete="off" readonly>
                                 <span class="combobox-arrow">▾</span>
                             </div>
                             <div class="combobox-dropdown" id="cb-currencySelect-dropdown"></div>
                         </div>
                         <input type="hidden" id="currencySelect" value="USD">
-                        <input type="number" id="minValueCcy" placeholder="Min" class="col-filter" style="margin-top:3px" oninput="renderTable()">
-                        <input type="number" id="maxValueCcy" placeholder="Max" class="col-filter" style="margin-top:3px" oninput="renderTable()">
+                        <input type="number" id="minValueCcy" placeholder="Min" class="col-filter" style="margin-top:3px">
+                        <input type="number" id="maxValueCcy" placeholder="Max" class="col-filter" style="margin-top:3px">
                     </th>
                     <!-- Avg Entry -->
                     <th class="filter-cell col-entryPx"></th>
@@ -309,25 +307,24 @@
                         <div class="combobox col-filter" id="cb-entryCurrencySelect" style="width:100%">
                             <div class="combobox-input-wrap">
                                 <input type="text" id="cb-entryCurrencySelect-search" class="combobox-input col-filter" placeholder="USD $"
-                                    autocomplete="off" readonly onfocus="cbOpen('entryCurrencySelect')"
-                                    onblur="cbCloseDelayed('entryCurrencySelect')">
+                                    autocomplete="off" readonly>
                                 <span class="combobox-arrow">▾</span>
                             </div>
                             <div class="combobox-dropdown" id="cb-entryCurrencySelect-dropdown"></div>
                         </div>
                         <input type="hidden" id="entryCurrencySelect" value="USD">
-                        <input type="number" id="minEntryCcy" placeholder="Min" class="col-filter" style="margin-top:3px" oninput="renderTable()">
-                        <input type="number" id="maxEntryCcy" placeholder="Max" class="col-filter" style="margin-top:3px" oninput="renderTable()">
+                        <input type="number" id="minEntryCcy" placeholder="Min" class="col-filter" style="margin-top:3px">
+                        <input type="number" id="maxEntryCcy" placeholder="Max" class="col-filter" style="margin-top:3px">
                     </th>
                     <!-- UPNL -->
                     <th class="filter-cell col-unrealizedPnl">
-                        <input type="number" id="minUpnl" placeholder="Min" class="col-filter" oninput="renderTable()">
-                        <input type="number" id="maxUpnl" placeholder="Max" class="col-filter" style="margin-top:3px" oninput="renderTable()">
+                        <input type="number" id="minUpnl" placeholder="Min" class="col-filter">
+                        <input type="number" id="maxUpnl" placeholder="Max" class="col-filter" style="margin-top:3px">
                     </th>
                     <!-- Funding -->
                     <th class="filter-cell col-funding">
                         <input type="number" id="minFunding" value="" step="1000" min="0" placeholder="Min |$|"
-                            class="col-filter" oninput="renderTable()">
+                            class="col-filter">
                     </th>
                     <!-- Liq. Price -->
                     <th class="filter-cell col-liqPx"></th>
@@ -336,7 +333,7 @@
                     <!-- Acct. Value -->
                     <th class="filter-cell col-accountValue">
                         <input type="number" id="minValue" value="2500000" step="500000" min="0" placeholder="Min Acct"
-                            class="col-filter" oninput="renderTable()">
+                            class="col-filter">
                     </th>
                 </tr>
             </thead>
@@ -355,7 +352,7 @@
         <span class="spinner"></span> Loading more whales in background…
     </div>
 
-    <script src="whale_dashboard.js"></script>
+    <script type="module" src="js/main.js"></script>
 
 </body>
 

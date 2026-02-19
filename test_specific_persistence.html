@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test de Persistência Específica</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; }
+        button { margin: 5px; padding: 8px 15px; }
+        .result { margin: 10px 0; padding: 10px; background: #f5f5f5; }
+        .pass { color: green; }
+        .fail { color: red; }
+        .settings-display { background: #f0f0f0; padding: 10px; margin: 10px 0; font-family: monospace; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <h1>Test de Persistência Específica</h1>
+    
+    <div class="test-section">
+        <h2>Configurações Atuais no localStorage</h2>
+        <button onclick="displayCurrentSettings()">Mostrar Configurações</button>
+        <button onclick="clearSettings()">Limpar Configurações</button>
+        <div id="currentSettings" class="settings-display"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Teste 1: Ranking Limit</h2>
+        <button onclick="testRankingLimit()">Testar Ranking Limit</button>
+        <div id="result1" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Teste 2: Color Max Leverage</h2>
+        <button onclick="testColorMaxLev()">Testar Color Max Lev</button>
+        <div id="result2" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Teste 3: Chart Mode</h2>
+        <button onclick="testChartMode()">Testar Chart Mode</button>
+        <div id="result3" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Teste 4: Simulação Completa</h2>
+        <button onclick="simulateFullScenario()">Simular Cenário Completo</button>
+        <div id="result4" class="result"></div>
+    </div>
+
+    <script>
+        const STORAGE_KEY = 'whaleWatcherSettings';
+        
+        function displayCurrentSettings() {
+            const result = document.getElementById('currentSettings');
+            
+            try {
+                const saved = localStorage.getItem(STORAGE_KEY);
+                if (!saved) {
+                    result.innerHTML = 'Nenhuma configuração salva';
+                    return;
+                }
+                
+                const parsed = JSON.parse(saved);
+                result.innerHTML = JSON.stringify(parsed, null, 2);
+                
+            } catch (e) {
+                result.innerHTML = `Erro ao ler configurações: ${e.message}`;
+            }
+        }
+        
+        function clearSettings() {
+            localStorage.removeItem(STORAGE_KEY);
+            displayCurrentSettings();
+        }
+        
+        function testRankingLimit() {
+            const result = document.getElementById('result1');
+            
+            try {
+                // Salvar ranking limit personalizado
+                const testValue = 25;
+                const currentSettings = getCurrentSettings();
+                currentSettings.rankingLimit = testValue;
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(currentSettings));
+                
+                // Simular carregamento
+                const loaded = getCurrentSettings();
+                
+                if (loaded.rankingLimit === testValue) {
+                    result.innerHTML = '<span class="pass">✓ PASSOU</span> - Ranking limit persistiu corretamente';
+                } else {
+                    result.innerHTML = `<span class="fail">✗ FALHOU</span> - Esperado: ${testValue}, Obtido: ${loaded.rankingLimit}`;
+                }
+                
+            } catch (e) {
+                result.innerHTML = `<span class="fail">✗ ERRO: ${e.message}</span>`;
+            }
+        }
+        
+        function testColorMaxLev() {
+            const result = document.getElementById('result2');
+            
+            try {
+                // Salvar color max lev personalizado
+                const testValue = 75;
+                const currentSettings = getCurrentSettings();
+                currentSettings.colorMaxLev = testValue;
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(currentSettings));
+                
+                // Simular carregamento
+                const loaded = getCurrentSettings();
+                
+                if (loaded.colorMaxLev === testValue) {
+                    result.innerHTML = '<span class="pass">✓ PASSOU</span> - Color Max Lev persistiu corretamente';
+                } else {
+                    result.innerHTML = `<span class="fail">✗ FALHOU</span> - Esperado: ${testValue}, Obtido: ${loaded.colorMaxLev}`;
+                }
+                
+            } catch (e) {
+                result.innerHTML = `<span class="fail">✗ ERRO: ${e.message}</span>`;
+            }
+        }
+        
+        function testChartMode() {
+            const result = document.getElementById('result3');
+            
+            try {
+                // Salvar chart mode personalizado
+                const testValue = 'column';
+                const currentSettings = getCurrentSettings();
+                currentSettings.chartMode = testValue;
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(currentSettings));
+                
+                // Simular carregamento
+                const loaded = getCurrentSettings();
+                
+                if (loaded.chartMode === testValue) {
+                    result.innerHTML = '<span class="pass">✓ PASSOU</span> - Chart mode persistiu corretamente';
+                } else {
+                    result.innerHTML = `<span class="fail">✗ FALHOU</span> - Esperado: ${testValue}, Obtido: ${loaded.chartMode}`;
+                }
+                
+            } catch (e) {
+                result.innerHTML = `<span class="fail">✗ ERRO: ${e.message}</span>`;
+            }
+        }
+        
+        function simulateFullScenario() {
+            const result = document.getElementById('result4');
+            
+            try {
+                // Criar configurações completas
+                const fullSettings = {
+                    rankingLimit: 30,
+                    colorMaxLev: 100,
+                    chartMode: 'column',
+                    bubbleScale: 2.5,
+                    aggregationFactor: 75,
+                    showSymbols: false,
+                    sortKey: 'leverage',
+                    sortDir: 1,
+                    minValue: '5000',
+                    coinFilter: 'BTC',
+                    sideFilter: 'long',
+                    minLev: '2',
+                    maxLev: '25',
+                    selectedCoins: ['BTC', 'ETH', 'SOL'],
+                    activeWindow: '24h'
+                };
+                
+                // Salvar
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(fullSettings));
+                
+                // Simular carregamento
+                const loaded = getCurrentSettings();
+                
+                // Verificar campos críticos
+                const criticalFields = ['rankingLimit', 'colorMaxLev', 'chartMode'];
+                let passed = true;
+                let details = [];
+                
+                for (const field of criticalFields) {
+                    if (loaded[field] !== fullSettings[field]) {
+                        passed = false;
+                        details.push(`${field}: esperado ${fullSettings[field]}, obtido ${loaded[field]}`);
+                    }
+                }
+                
+                if (passed) {
+                    result.innerHTML = `
+                        <span class="pass">✓ PASSOU</span> - Todas as configurações críticas persistiram<br>
+                        <strong>Configurações salvas:</strong><br>
+                        - Ranking Limit: ${loaded.rankingLimit}<br>
+                        - Color Max Lev: ${loaded.colorMaxLev}<br>
+                        - Chart Mode: ${loaded.chartMode}<br>
+                        - Bubble Scale: ${loaded.bubbleScale}<br>
+                        - Aggregation Factor: ${loaded.aggregationFactor}<br>
+                        - Show Symbols: ${loaded.showSymbols}<br>
+                        - Sort: ${loaded.sortKey} (${loaded.sortDir})<br>
+                        - Filters: ${loaded.minValue}, ${loaded.coinFilter}, ${loaded.sideFilter}
+                    `;
+                } else {
+                    result.innerHTML = `<span class="fail">✗ FALHOU</span><br>${details.join('<br>')}`;
+                }
+                
+            } catch (e) {
+                result.innerHTML = `<span class="fail">✗ ERRO: ${e.message}</span>`;
+            }
+        }
+        
+        function getCurrentSettings() {
+            try {
+                const saved = localStorage.getItem(STORAGE_KEY);
+                return saved ? JSON.parse(saved) : {};
+            } catch (e) {
+                return {};
+            }
+        }
+        
+        // Mostrar configurações atuais ao carregar
+        window.addEventListener('load', () => {
+            displayCurrentSettings();
+        });
+    </script>
+</body>
+</html>

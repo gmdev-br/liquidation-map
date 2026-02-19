@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Table Fix</title>
+</head>
+<body>
+    <h1>Testing Table Fix</h1>
+    <p>Clear localStorage and reload the main page to test the fix.</p>
+    <button onclick="clearStorage()">Clear localStorage</button>
+    <button onclick="reloadMain()">Reload Main Page</button>
+    
+    <script>
+        function clearStorage() {
+            localStorage.clear();
+            console.log('localStorage cleared');
+            alert('localStorage cleared! Now reload the main page.');
+        }
+        
+        function reloadMain() {
+            window.location.href = 'http://localhost:8000';
+        }
+    </script>
+</body>
+</html>

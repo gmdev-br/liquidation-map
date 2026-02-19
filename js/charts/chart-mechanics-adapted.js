@@ -1,0 +1,421 @@
+// ═════════════════════════════════════════════════════════
+// LIQUID GLASS — Chart Mechanics (Adapted for Current Project)
+// ═══════════════════════════════════════════════════════════
+
+// This file contains the chart mechanics adapted for the current project structure
+// Import saveSettings from the correct location
+import { saveSettings } from '../storage/settings.js';
+
+// ── Crosshair Plugin (Adapted) ──
+export const crosshairPlugin = {
+    id: 'crosshair',
+    defaults: {
+        width: 1,
+        color: 'rgba(255, 255, 255, 0.2)',
+        dash: [3, 3]
+    },
+    afterInit: (chart, _args, _options) => {
+        chart.crosshair = { x: 0, y: 0, visible: false };
+    },
+    afterEvent: (chart, args) => {
+        const { inChartArea } = args;
+        const { x, y } = args.event;
+        chart.crosshair = { x, y, visible: inChartArea };
+        args.changed = true;
+    },
+    afterDraw: (chart, _args, options) => {
+        if (chart.crosshair && chart.crosshair.visible) {
+            const { ctx, chartArea: { top, bottom, left, right }, scales: { x: xScale, y: yScale } } = chart;
+            const { x, y } = chart.crosshair;
+
+            ctx.save();
+            
+            ctx.beginPath();
+            ctx.lineWidth = options.width;
+            ctx.strokeStyle = options.color;
+            ctx.setLineDash(options.dash);
+            
+            ctx.moveTo(x, top);
+            ctx.lineTo(x, bottom);
+            ctx.moveTo(left, y);
+            ctx.lineTo(right, y);
+            ctx.stroke();
+
+            ctx.font = '11px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            
+            const xValue = xScale.getValueForPixel(x);
+            const xLabel = xValue.toLocaleString(undefined, { maximumFractionDigits: 2 });
+            const xLabelWidth = ctx.measureText(xLabel).width + 12;
+            const xLabelHeight = 20;
+            
+            ctx.fillStyle = 'rgba(7, 12, 26, 0.9)';
+            ctx.fillRect(x - xLabelWidth / 2, bottom, xLabelWidth, xLabelHeight);
+            
+            ctx.fillStyle = '#e2e8f4';
+            ctx.fillText(xLabel, x, bottom + 10);
+
+            const yValue = yScale.getValueForPixel(y);
+            const yLabel = yValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 });
+            const yLabelWidth = ctx.measureText(yLabel).width + 12;
+            const yLabelHeight = 20;
+            
+            ctx.fillStyle = 'rgba(7, 12, 26, 0.9)';
+            ctx.fillRect(left - yLabelWidth, y - yLabelHeight / 2, yLabelWidth, yLabelHeight);
+            
+            ctx.textAlign = 'right';
+            ctx.fillStyle = '#e2e8f4';
+            ctx.fillText(yLabel, left - 6, y);
+
+            ctx.restore();
+        }
+    }
+};
+
+// ── BTC Price Label Plugin (Adapted) ──
+export const btcPriceLabelPlugin = {
+    id: 'btcPriceLabel',
+    afterDraw: (chart) => {
+        const opts = chart.options.plugins.btcPriceLabel;
+        if (!opts || !opts.text) return;
+        
+        const { ctx, chartArea: { bottom, left, right }, scales: { x } } = chart;
+        const xVal = x.getPixelForValue(opts.price);
+        
+        if (xVal < left || xVal > right) return;
+        
+        const text = opts.text;
+        ctx.save();
+        ctx.font = 'bold 11px sans-serif';
+        const textWidth = ctx.measureText(text).width + 16;
+        const textHeight = 22;
+        const yPos = bottom + 25;
+        
+        ctx.fillStyle = 'rgba(255, 165, 0, 0.9)';
+        ctx.beginPath();
+        const r = 4;
+        ctx.roundRect(xVal - textWidth / 2, yPos, textWidth, textHeight, r);
+        ctx.fill();
+        
+        ctx.beginPath();
+        ctx.moveTo(xVal, yPos);
+        ctx.lineTo(xVal - 5, yPos + 6);
+        ctx.lineTo(xVal + 5, yPos + 6);
+        ctx.fillStyle = 'rgba(255, 165, 0, 0.9)';
+        ctx.fill();
+        
+        ctx.fillStyle = '#000';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(text, xVal, yPos + textHeight / 2);
+        
+        ctx.restore();
+    }
+};
+
+// ── Chart Zoom Configuration (Adapted for Current Project) ──
+export const originalZoomConfig = {
+    pan: {
+        enabled: true,
+        mode: 'xy',
+        modifierKey: null,
+        onPan: function({chart}) { 
+            chart.isZoomed = true; 
+            saveSettings(); 
+            const btn = document.getElementById('resetZoomBtn');
+            if(btn) btn.style.display = 'block';
+        }
+    },
+    zoom: {
+        wheel: { 
+            enabled: true,
+            speed: 0.05,
+            modifierKey: 'ctrl',
+        },
+        pinch: { enabled: true },
+        drag: {
+            enabled: true,
+            backgroundColor: 'rgba(59, 130, 246, 0.2)',
+            borderColor: 'rgba(59, 130, 246, 0.4)',
+            borderWidth: 1,
+            modifierKey: 'shift',
+        },
+        mode: 'xy',
+        onZoom: function({chart}) { 
+            chart.isZoomed = true; 
+            saveSettings(); 
+            const btn = document.getElementById('resetZoomBtn');
+            if(btn) btn.style.display = 'block';
+        }
+    }
+};
+
+// ── Liquidation Chart Zoom Configuration (Adapted) ──
+export const liqZoomConfig = {
+    zoom: {
+        wheel: { enabled: true, modifierKey: 'ctrl' },
+        drag: { enabled: true, modifierKey: 'shift' },
+        pinch: { enabled: true },
+        mode: 'xy',
+        onZoom: ({chart}) => {
+             chart.isZoomed = true;
+             saveSettings();
+             const btn = document.getElementById('resetLiqZoomBtn');
+             if(btn) btn.style.display = 'block';
+        }
+    }
+};
+
+// ── Chart Scale Resizing (Adapted for Current Project) ──
+export function originalScaleResizing(canvasId, getChartInstance, resetBtnId) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+
+    let isDragging = false;
+    let dragAxis = null;
+    let startPos = 0;
+    let initialMin = 0;
+    let initialMax = 0;
+
+    canvas.addEventListener('mousedown', (e) => {
+        const chart = getChartInstance();
+        if (!chart) return;
+
+        const rect = canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        
+        const { left, right, top, bottom } = chart.chartArea;
+        
+        // Y Axis (Left)
+        if (x < left && y >= top && y <= bottom) {
+            isDragging = true;
+            dragAxis = 'y';
+            startPos = y;
+            initialMin = chart.scales.y.min;
+            initialMax = chart.scales.y.max;
+            e.preventDefault();
+        }
+        // X Axis (Bottom)
+        else if (y > bottom && x >= left && x <= right) {
+            isDragging = true;
+            dragAxis = 'x';
+            startPos = x;
+            initialMin = chart.scales.x.min;
+            initialMax = chart.scales.x.max;
+            e.preventDefault();
+        }
+
+        if (isDragging) {
+            chart.isZoomed = true;
+            if (resetBtnId) {
+                const btn = document.getElementById(resetBtnId);
+                if (btn) btn.style.display = 'block';
+            }
+        }
+    });
+
+    window.addEventListener('mousemove', (e) => {
+        if (!isDragging || !dragAxis) return;
+        const chart = getChartInstance();
+        if (!chart) return;
+
+        const rect = canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
+        const scale = chart.scales[dragAxis];
+        const isLog = scale.type === 'logarithmic';
+        const sensitivity = 2.0;
+
+        if (dragAxis === 'y') {
+            const delta = y - startPos; // Drag down > 0
+            const height = chart.chartArea.bottom - chart.chartArea.top;
+            const factor = (delta / height) * sensitivity;
+
+            if (isLog) {
+                if (initialMin <= 0) initialMin = 0.0001;
+                const logMin = Math.log(initialMin);
+                const logMax = Math.log(initialMax);
+                const logRange = logMax - logMin;
+                
+                const newLogRange = logRange * (1 + factor);
+                const logCenter = (logMax + logMin) / 2;
+                
+                const newLogMin = logCenter - newLogRange / 2;
+                const newLogMax = logCenter + newLogRange / 2;
+                
+                chart.options.scales.y.min = Math.exp(newLogMin);
+                chart.options.scales.y.max = Math.exp(newLogMax);
+            } else {
+                const range = initialMax - initialMin;
+                const newRange = range * (1 + factor);
+                const center = (initialMax + initialMin) / 2;
+                
+                chart.options.scales.y.min = center - newRange / 2;
+                chart.options.scales.y.max = center + newRange / 2;
+            }
+        } else if (dragAxis === 'x') {
+            const delta = x - startPos; // Drag right > 0
+            const width = chart.chartArea.right - chart.chartArea.left;
+            // Drag Right -> Zoom In -> Negative factor
+            const factor = -(delta / width) * sensitivity;
+            
+            if (isLog) {
+                if (initialMin <= 0) initialMin = 0.0001;
+                const logMin = Math.log(initialMin);
+                const logMax = Math.log(initialMax);
+                const logRange = logMax - logMin;
+                
+                const newLogRange = logRange * (1 + factor);
+                const logCenter = (logMax + logMin) / 2;
+                
+                const newLogMin = logCenter - newLogRange / 2;
+                const newLogMax = logCenter + newLogRange / 2;
+                
+                chart.options.scales.x.min = Math.exp(newLogMin);
+                chart.options.scales.x.max = Math.exp(newLogMax);
+            } else {
+                const range = initialMax - initialMin;
+                const newRange = range * (1 + factor);
+                const center = (initialMax + initialMin) / 2;
+                
+                chart.options.scales.x.min = center - newRange / 2;
+                chart.options.scales.x.max = center + newRange / 2;
+            }
+        }
+
+        chart.update('none');
+    });
+
+    window.addEventListener('mouseup', () => {
+        if (isDragging) {
+            isDragging = false;
+            dragAxis = null;
+            const chart = getChartInstance();
+            if (chart) {
+                chart.isZoomed = true;
+                saveSettings();
+            }
+        }
+    });
+}
+
+// ── Chart Reset Functions (Adapted) ──
+export function resetScatterZoom(chart) {
+    if (chart) {
+        chart.resetZoom();
+        chart.isZoomed = false;
+        saveSettings();
+        const btn = document.getElementById('resetZoomBtn');
+        if (btn) btn.style.display = 'none';
+    }
+}
+
+export function resetLiqZoom(chart) {
+    if (chart) {
+        chart.resetZoom();
+        chart.isZoomed = false;
+        saveSettings();
+        const btn = document.getElementById('resetLiqZoomBtn');
+        if (btn) btn.style.display = 'none';
+    }
+}
+
+// ── Chart Height Resizing (Adapted) ──
+export function setupChartHeightResizing(sectionId, heightKey, updateCallback) {
+    const section = document.getElementById(sectionId);
+    if (!section) return;
+
+    let isResizing = false;
+    let startHeight = 0;
+
+    section.addEventListener('mousedown', (e) => {
+        if (e.target.classList.contains('chart-resizer-handle')) {
+            isResizing = true;
+            startHeight = section.offsetHeight;
+            
+            document.addEventListener('mousemove', chartResize);
+            document.addEventListener('mouseup', stopChartResize);
+            
+            // Add active class for visual feedback
+            const resizer = section.querySelector('.chart-resizer');
+            if (resizer) resizer.classList.add('active');
+            
+            document.body.style.cursor = 'ns-resize';
+            e.preventDefault(); // prevent text selection
+        }
+    });
+
+    function chartResize(e) {
+        if (!isResizing) return;
+        const deltaY = e.clientY - startHeight;
+        const newHeight = Math.max(200, startHeight + deltaY);
+        updateCallback(newHeight);
+    }
+
+    function stopChartResize() {
+        isResizing = false;
+        document.removeEventListener('mousemove', chartResize);
+        document.removeEventListener('mouseup', stopChartResize);
+        
+        const resizer = section.querySelector('.chart-resizer');
+        if (resizer) resizer.classList.remove('active');
+        
+        document.body.style.cursor = '';
+        saveSettings(); // Save new height
+    }
+}
+
+// ── Column Width Resizing (Adapted) ──
+export function setupColumnResizing() {
+    console.log('Setting up column resizing...');
+    document.addEventListener('mousedown', (e) => {
+        const th = e.target.closest('th');
+        if (!th || !th.id || !th.id.startsWith('th-')) return;
+        
+        const resizer = th.querySelector('.resizer');
+        if (!resizer || e.target !== resizer) return;
+
+        console.log('Column resizer clicked:', th.id);
+        const startX = e.pageX;
+        const startWidth = th.offsetWidth;
+        
+        // Prevent drag-and-drop during resize
+        e.stopPropagation();
+        e.preventDefault();
+        
+        document.body.classList.add('resizing');
+
+        const onMouseMove = (e) => {
+            const width = startWidth + (e.pageX - startX);
+            if (width > 30) {
+                th.style.width = width + 'px';
+            }
+        };
+
+        const onMouseUp = () => {
+            document.body.classList.remove('resizing');
+            window.removeEventListener('mousemove', onMouseMove);
+            window.removeEventListener('mouseup', onMouseUp);
+            saveSettings();
+        };
+
+        window.addEventListener('mousemove', onMouseMove);
+        window.addEventListener('mouseup', onMouseUp);
+    });
+}
+
+// ── Export All Mechanics (Adapted) ──
+export const chartMechanics = {
+    crosshairPlugin,
+    btcPriceLabelPlugin,
+    originalZoomConfig,
+    liqZoomConfig,
+    originalScaleResizing,
+    setupChartHeightResizing,
+    setupColumnResizing,
+    resetScatterZoom,
+    resetLiqZoom
+};

@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Persistence</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; }
+        button { margin: 5px; padding: 8px 15px; }
+        .result { margin: 10px 0; padding: 10px; background: #f5f5f5; }
+        .pass { color: green; }
+        .fail { color: red; }
+    </style>
+</head>
+<body>
+    <h1>Test de Persistência de Configurações</h1>
+    
+    <div class="test-section">
+        <h2>Teste 1: Salvar e Carregar Configurações</h2>
+        <button onclick="testSaveLoad()">Testar Save/Load</button>
+        <div id="result1" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Teste 2: Verificar Storage</h2>
+        <button onclick="checkStorage()">Verificar localStorage</button>
+        <div id="result2" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Teste 3: Simular Mudanças</h2>
+        <button onclick="simulateChanges()">Simular mudanças nos filtros</button>
+        <div id="result3" class="result"></div>
+    </div>
+
+    <script>
+        const STORAGE_KEY = 'whaleWatcherSettings';
+        
+        function testSaveLoad() {
+            const result = document.getElementById('result1');
+            
+            // Criar configurações de teste
+            const testSettings = {
+                minValue: '1000',
+                coinFilter: 'BTC',
+                sideFilter: 'long',
+                minLev: '1',
+                maxLev: '10',
+                selectedCoins: ['BTC', 'ETH'],
+                chartMode: 'scatter',
+                bubbleScale: 1.5,
+                showSymbols: true,
+                sortKey: 'accountValue',
+                sortDir: -1
+            };
+            
+            try {
+                // Salvar
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(testSettings));
+                
+                // Carregar
+                const loaded = JSON.parse(localStorage.getItem(STORAGE_KEY));
+                
+                // Verificar
+                let passed = true;
+                let details = [];
+                
+                for (const key in testSettings) {
+                    if (JSON.stringify(testSettings[key]) !== JSON.stringify(loaded[key])) {
+                        passed = false;
+                        details.push(`Falha em ${key}: esperado ${testSettings[key]}, obtido ${loaded[key]}`);
+                    }
+                }
+                
+                result.innerHTML = passed ? 
+                    '<span class="pass">✓ PASSOU</span> - Configurações salvas e carregadas com sucesso' :
+                    '<span class="fail">✗ FALHOU</span><br>' + details.join('<br>');
+                    
+            } catch (e) {
+                result.innerHTML = `<span class="fail">✗ ERRO: ${e.message}</span>`;
+            }
+        }
+        
+        function checkStorage() {
+            const result = document.getElementById('result2');
+            
+            try {
+                const saved = localStorage.getItem(STORAGE_KEY);
+                
+                if (!saved) {
+                    result.innerHTML = '<span class="fail">✗ Nenhuma configuração salva encontrada</span>';
+                    return;
+                }
+                
+                const parsed = JSON.parse(saved);
+                const keys = Object.keys(parsed);
+                
+                result.innerHTML = `
+                    <span class="pass">✓ Configurações encontradas</span><br>
+                    <strong>Chaves salvas (${keys.length}):</strong><br>
+                    ${keys.map(k => `- ${k}: ${parsed[k]}</strong><br>`).join('')}
+                    <br><strong>Tamanho total:</strong> ${saved.length} caracteres
+                `;
+                
+            } catch (e) {
+                result.innerHTML = `<span class="fail">✗ ERRO ao ler storage: ${e.message}</span>`;
+            }
+        }
+        
+        function simulateChanges() {
+            const result = document.getElementById('result3');
+            
+            try {
+                // Simular mudanças de filtro
+                const changes = [
+                    { minValue: '5000' },
+                    { coinFilter: 'ETH' },
+                    { sideFilter: 'short' },
+                    { minLev: '2' },
+                    { maxLev: '20' },
+                    { selectedCoins: ['SOL', 'AVAX'] },
+                    { chartMode: 'column' },
+                    { bubbleScale: 2.0 },
+                    { showSymbols: false },
+                    { sortKey: 'leverage' },
+                    { sortDir: 1 }
+                ];
+                
+                let currentSettings = {};
+                const saved = localStorage.getItem(STORAGE_KEY);
+                if (saved) {
+                    currentSettings = JSON.parse(saved);
+                }
+                
+                // Aplicar mudanças sequencialmente
+                for (const change of changes) {
+                    Object.assign(currentSettings, change);
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(currentSettings));
+                }
+                
+                // Verificar estado final
+                const final = JSON.parse(localStorage.getItem(STORAGE_KEY));
+                
+                result.innerHTML = `
+                    <span class="pass">✓ Mudanças simuladas com sucesso</span><br>
+                    <strong>Estado final:</strong><br>
+                    - minValue: ${final.minValue}<br>
+                    - coinFilter: ${final.coinFilter}<br>
+                    - sideFilter: ${final.sideFilter}<br>
+                    - minLev: ${final.minLev}<br>
+                    - maxLev: ${final.maxLev}<br>
+                    - selectedCoins: ${JSON.stringify(final.selectedCoins)}<br>
+                    - chartMode: ${final.chartMode}<br>
+                    - bubbleScale: ${final.bubbleScale}<br>
+                    - showSymbols: ${final.showSymbols}<br>
+                    - sortKey: ${final.sortKey}<br>
+                    - sortDir: ${final.sortDir}
+                `;
+                
+            } catch (e) {
+                result.innerHTML = `<span class="fail">✗ ERRO: ${e.message}</span>`;
+            }
+        }
+        
+        // Limpar storage ao carregar página para teste limpo
+        window.addEventListener('load', () => {
+            console.log('Página carregada - pronto para testes');
+        });
+    </script>
+</body>
+</html>
