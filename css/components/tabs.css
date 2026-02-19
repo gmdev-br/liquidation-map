@@ -1,0 +1,37 @@
+/* ═══════════════════════════════════════════════════════════
+   LIQUID GLASS — Tabs
+   ═══════════════════════════════════════════════════════════ */
+
+.tabs {
+    display: flex;
+    gap: 3px;
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--r-sm);
+    padding: 3px;
+}
+
+.tab {
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-size: 11px;
+    cursor: pointer;
+    border: 1px solid transparent;
+    color: var(--muted);
+    background: transparent;
+    font-family: inherit;
+    font-weight: 500;
+    transition: all 0.18s ease;
+}
+
+.tab.active {
+    background: rgba(59, 130, 246, 0.18);
+    border-color: rgba(59, 130, 246, 0.35);
+    color: #93c5fd;
+    box-shadow: 0 0 10px rgba(59, 130, 246, 0.15);
+}
+
+.tab:hover:not(.active) {
+    color: var(--text);
+    background: var(--glass-bg-hover);
+}

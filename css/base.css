@@ -1,0 +1,107 @@
+/* ═══════════════════════════════════════════════════════════
+   LIQUID GLASS — Base Styles
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── Reset ── */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+/* ── Body & Background ── */
+body {
+    background: var(--bg-deep);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    min-height: 100vh;
+    overflow-x: hidden;
+    position: relative;
+}
+
+/* Ambient background orbs */
+body::before,
+body::after {
+    content: '';
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(120px);
+    pointer-events: none;
+    z-index: 0;
+}
+
+body::before {
+    width: 700px;
+    height: 700px;
+    top: -200px;
+    left: -200px;
+    background: radial-gradient(circle, rgba(59, 130, 246, 0.12) 0%, transparent 70%);
+}
+
+body::after {
+    width: 600px;
+    height: 600px;
+    bottom: -150px;
+    right: -150px;
+    background: radial-gradient(circle, rgba(139, 92, 246, 0.10) 0%, transparent 70%);
+}
+
+/* ── Z-Index Hierarchy ── */
+.header {
+    z-index: 100;
+    position: sticky;
+    top: 0;
+}
+
+.controls {
+    z-index: 95;
+    position: relative;
+}
+
+.progress-bar {
+    z-index: 90;
+    position: relative;
+}
+
+.stats-row {
+    z-index: 85;
+    position: relative;
+}
+
+.table-wrap {
+    z-index: 1;
+    position: relative;
+}
+
+.auto-loading {
+    z-index: 1;
+    position: relative;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.10);
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.18);
+}
+
+/* ── Selection ── */
+::selection {
+    background: rgba(59, 130, 246, 0.3);
+    color: #fff;
+}

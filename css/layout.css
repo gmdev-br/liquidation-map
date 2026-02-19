@@ -1,0 +1,240 @@
+/* ═══════════════════════════════════════════════════════════
+   LIQUID GLASS — Layout Components
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── Header ── */
+.header {
+    background: rgba(7, 12, 26, 0.75);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border-bottom: 1px solid var(--glass-border);
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+}
+
+.header-center {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.btc-price-label {
+    position: absolute;
+    top: 15px;
+    right: 20px;
+    font-family: var(--mono);
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--gold);
+    background: rgba(7, 12, 26, 0.7);
+    padding: 6px 10px;
+    border-radius: var(--r-sm);
+    border: 1px solid var(--glass-border);
+    pointer-events: none;
+    z-index: 20;
+    backdrop-filter: blur(4px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.logo-icon {
+    font-size: 22px;
+    filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.6));
+}
+
+.logo h1 {
+    font-size: 16px;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: -0.3px;
+}
+
+.logo p {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 1px;
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+/* ── Controls Bar ── */
+.controls {
+    padding: 10px 24px;
+    display: flex;
+    gap: 14px;
+    align-items: center;
+    flex-wrap: wrap;
+    border-bottom: 1px solid var(--glass-border);
+    background: rgba(7, 12, 26, 0.60);
+    backdrop-filter: var(--glass-blur-sm);
+    -webkit-backdrop-filter: var(--glass-blur-sm);
+}
+
+.filter-sep {
+    width: 1px;
+    height: 24px;
+    background: var(--glass-border);
+    margin: 0 2px;
+    border-radius: 1px;
+}
+
+.ctrl {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.ctrl label {
+    font-size: 11px;
+    color: var(--muted);
+    white-space: nowrap;
+    font-weight: 500;
+}
+
+/* ── Progress Bar ── */
+.progress-bar {
+    height: 2px;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    width: 0%;
+    transition: width 0.4s ease;
+    box-shadow: 0 0 8px rgba(59, 130, 246, 0.5);
+}
+
+/* ── Stats Row ── */
+.stats-row {
+    display: flex;
+    gap: 1px;
+    background: var(--glass-border);
+    border-bottom: 1px solid var(--glass-border);
+}
+
+.stat {
+    flex: 1;
+    background: rgba(7, 12, 26, 0.55);
+    backdrop-filter: var(--glass-blur-sm);
+    -webkit-backdrop-filter: var(--glass-blur-sm);
+    padding: 14px 20px;
+    min-width: 140px;
+    transition: background 0.2s;
+}
+
+.stat:hover {
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.stat-label {
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    margin-bottom: 5px;
+    font-weight: 500;
+}
+
+.stat-value {
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+}
+
+.stat-value.blue {
+    color: #60a5fa;
+    text-shadow: var(--glow-blue);
+}
+
+.stat-value.green {
+    color: #4ade80;
+    text-shadow: var(--glow-green);
+}
+
+.stat-value.gold {
+    color: #fbbf24;
+    text-shadow: var(--glow-gold);
+}
+
+/* ── Filter Row (inline column filters) ── */
+.filter-row {
+    background: rgba(4, 6, 15, 0.70) !important;
+}
+
+.filter-cell {
+    padding: 6px 8px !important;
+    border-bottom: 2px solid var(--glass-border) !important;
+    vertical-align: top;
+    overflow: visible !important;
+}
+
+.col-filter {
+    display: block;
+    width: 100%;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--glass-border);
+    color: var(--text);
+    padding: 4px 7px;
+    border-radius: var(--r-sm);
+    font-size: 11px;
+    font-family: inherit;
+    backdrop-filter: var(--glass-blur-sm);
+    -webkit-backdrop-filter: var(--glass-blur-sm);
+    transition: border-color 0.2s, box-shadow 0.2s;
+    -webkit-appearance: none;
+    appearance: none;
+    box-sizing: border-box;
+}
+
+.col-filter:focus {
+    outline: none;
+    border-color: rgba(59, 130, 246, 0.6);
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.12);
+}
+
+.col-filter::placeholder {
+    color: var(--muted);
+    opacity: 0.7;
+}
+
+/* ── Resizing Fix ── */
+.filter-cell {
+    padding: 6px 8px !important;
+    border-bottom: 2px solid var(--glass-border) !important;
+    vertical-align: top;
+    min-width: 0;
+}
+
+/* ── Auto Loading ── */
+.auto-loading {
+    text-align: center;
+    padding: 12px;
+    color: var(--muted);
+    font-size: 11px;
+    display: none;
+    background: rgba(7, 12, 26, 0.5);
+    backdrop-filter: var(--glass-blur-sm);
+    -webkit-backdrop-filter: var(--glass-blur-sm);
+}
