@@ -2,10 +2,19 @@
 // LIQUID GLASS — Charts Liquidation
 // ═══════════════════════════════════════════════════════════
 
+// Helper function to convert hex color to rgba
+function hexToRgba(hex, alpha) {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
 import {
     getDisplayedRows, getCurrentPrices, getActiveEntryCurrency, getShowSymbols,
     getLiqChartHeight, getChartMode, getAggregationFactor, getSavedLiqState,
-    getFxRates, getChartHighLevSplit, getColorMaxLev, getDecimalPlaces, getLeverageColors
+    getFxRates, getChartHighLevSplit, getColorMaxLev, getDecimalPlaces, getLeverageColors,
+    getBubbleScale, getBubbleOpacity
 } from '../state.js';
 import { CURRENCY_META } from '../config.js';
 import { chartPlugins, chartOptions } from './config.js';
@@ -184,12 +193,13 @@ export function renderLiqScatterPlot() {
         }
 
         const liqPrice = r.liquidationPx > 0 ? getCorrelatedPrice(r, r.liquidationPx, activeEntryCurrency, currentPrices, getFxRates()) : 0;
-        
+
         if (liqPrice <= 0) return null;
 
         return {
             x: liqPrice,
             y: volBTC,
+            r: Math.sqrt(r.positionValue) / 1000 * getBubbleScale(),
             _raw: r
         };
     }).filter(d => d !== null);
@@ -235,7 +245,7 @@ export function renderLiqScatterPlot() {
 
     // Configure chart based on mode
     let datasets = [];
-    let chartType = 'bar';
+    let chartType = 'bubble';
     let scales = {};
 
     // Get custom colors
@@ -298,7 +308,8 @@ export function renderLiqScatterPlot() {
     } else {
         // Scatter mode - create 4 series based on leverage split
         const highLevSplit = getChartHighLevSplit();
-        
+        const opacity = getBubbleOpacity();
+
         const longLowData = data.filter(d => d._raw.side === 'long' && Math.abs(d._raw.leverageValue) < highLevSplit);
         const longHighData = data.filter(d => d._raw.side === 'long' && Math.abs(d._raw.leverageValue) >= highLevSplit);
         const shortLowData = data.filter(d => d._raw.side === 'short' && Math.abs(d._raw.leverageValue) < highLevSplit);
@@ -308,7 +319,7 @@ export function renderLiqScatterPlot() {
             datasets.push({
                 label: `Longs (≤${highLevSplit}x)`,
                 data: longLowData,
-                backgroundColor: customColors.longLow,
+                backgroundColor: hexToRgba(customColors.longLow, opacity),
                 borderColor: customColors.longLow,
                 borderWidth: 1
             });
@@ -318,7 +329,7 @@ export function renderLiqScatterPlot() {
             datasets.push({
                 label: `Longs (>${highLevSplit}x)`,
                 data: longHighData,
-                backgroundColor: customColors.longHigh,
+                backgroundColor: hexToRgba(customColors.longHigh, opacity),
                 borderColor: customColors.longHigh,
                 borderWidth: 2
             });
@@ -328,7 +339,7 @@ export function renderLiqScatterPlot() {
             datasets.push({
                 label: `Shorts (≤${highLevSplit}x)`,
                 data: shortLowData,
-                backgroundColor: customColors.shortLow,
+                backgroundColor: hexToRgba(customColors.shortLow, opacity),
                 borderColor: customColors.shortLow,
                 borderWidth: 1
             });
@@ -338,7 +349,7 @@ export function renderLiqScatterPlot() {
             datasets.push({
                 label: `Shorts (>${highLevSplit}x)`,
                 data: shortHighData,
-                backgroundColor: customColors.shortHigh,
+                backgroundColor: hexToRgba(customColors.shortHigh, opacity),
                 borderColor: customColors.shortHigh,
                 borderWidth: 2
             });
