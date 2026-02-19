@@ -416,6 +416,14 @@ export function renderScatterPlot() {
             x: {
                 type: 'linear',
                 ...chartOptions.scales.x,
+                min: function() {
+                    const minInput = document.getElementById('minEntryCcy');
+                    return minInput && minInput.value ? parseFloat(minInput.value) : undefined;
+                }(),
+                max: function() {
+                    const maxInput = document.getElementById('maxEntryCcy');
+                    return maxInput && maxInput.value ? parseFloat(maxInput.value) : undefined;
+                }(),
                 title: {
                     display: true,
                     text: entryLabel,

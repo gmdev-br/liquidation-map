@@ -411,8 +411,8 @@ export function setupColumnResizing() {
 export const btcGridPlugin = {
     id: 'btcGrid',
     defaults: {
-        minorInterval: 500, // Minor vertical lines every 500 BTC points
-        majorInterval: 2500, // Major vertical lines every 2500 BTC points (5x minor)
+        minorInterval: 500, // Will be overridden by user input
+        majorInterval: 2500, // Will be calculated as 5x minor
         minorColor: 'rgba(255, 255, 255, 0.05)',
         minorWidth: 1,
         majorColor: 'rgba(255, 255, 255, 0.12)',
@@ -427,19 +427,27 @@ export const btcGridPlugin = {
         
         ctx.save();
         
+        // Get grid spacing from user input
+        const gridSpacingInput = document.getElementById('gridSpacingRange');
+        const userGridSpacing = gridSpacingInput && gridSpacingInput.value ? parseInt(gridSpacingInput.value) : 500;
+        
         // Get filter values from inputs
         const minEntryInput = document.getElementById('minEntryCcy');
         const maxEntryInput = document.getElementById('maxEntryCcy');
         const minPrice = minEntryInput && minEntryInput.value ? parseFloat(minEntryInput.value) : (xScale.min || 0);
         const maxPrice = maxEntryInput && maxEntryInput.value ? parseFloat(maxEntryInput.value) : (xScale.max || 100000);
         
-        // Draw minor vertical lines every 500 BTC points
-        const startMinor = Math.ceil(minPrice / options.minorInterval) * options.minorInterval;
+        // Update intervals based on user spacing
+        const minorInterval = userGridSpacing;
+        const majorInterval = userGridSpacing * 5;
+        
+        // Draw minor vertical lines
+        const startMinor = Math.ceil(minPrice / minorInterval) * minorInterval;
         
         ctx.strokeStyle = options.minorColor;
         ctx.lineWidth = options.minorWidth;
         
-        for (let price = startMinor; price <= maxPrice; price += options.minorInterval) {
+        for (let price = startMinor; price <= maxPrice; price += minorInterval) {
             const xPixel = xScale.getPixelForValue(price);
             if (xPixel >= left && xPixel <= right) {
                 ctx.beginPath();
@@ -449,13 +457,13 @@ export const btcGridPlugin = {
             }
         }
         
-        // Draw major vertical lines every 2500 BTC points with labels
-        const startMajor = Math.ceil(minPrice / options.majorInterval) * options.majorInterval;
+        // Draw major vertical lines with labels
+        const startMajor = Math.ceil(minPrice / majorInterval) * majorInterval;
         
         ctx.strokeStyle = options.majorColor;
         ctx.lineWidth = options.majorWidth;
         
-        for (let price = startMajor; price <= maxPrice; price += options.majorInterval) {
+        for (let price = startMajor; price <= maxPrice; price += majorInterval) {
             const xPixel = xScale.getPixelForValue(price);
             if (xPixel >= left && xPixel <= right) {
                 ctx.beginPath();

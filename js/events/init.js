@@ -171,6 +171,55 @@ function setupEventListeners() {
         setupResizable(liqChartSection, updateLiqChartHeight);
     }
 
+    // Grid spacing control
+    const gridSpacingRange = document.getElementById('gridSpacingRange');
+    if (gridSpacingRange) {
+        gridSpacingRange.addEventListener('input', (e) => {
+            document.getElementById('gridSpacingVal').textContent = e.target.value;
+            // Force chart redraw to update grid
+            const scatterChart = window.getScatterChart ? window.getScatterChart() : null;
+            const liqChart = window.getLiqChartInstance ? window.getLiqChartInstance() : null;
+            if (scatterChart) scatterChart.update('none');
+            if (liqChart) liqChart.update('none');
+        });
+    }
+
+    // Price filter controls for chart scale
+    const minEntryCcy = document.getElementById('minEntryCcy');
+    const maxEntryCcy = document.getElementById('maxEntryCcy');
+    
+    if (minEntryCcy) {
+        minEntryCcy.addEventListener('input', () => {
+            // Re-render charts to update scale
+            const scatterChart = window.getScatterChart ? window.getScatterChart() : null;
+            const liqChart = window.getLiqChartInstance ? window.getLiqChartInstance() : null;
+            if (scatterChart) {
+                scatterChart.destroy();
+                renderScatterPlot();
+            }
+            if (liqChart) {
+                liqChart.destroy();
+                renderLiqScatterPlot();
+            }
+        });
+    }
+    
+    if (maxEntryCcy) {
+        maxEntryCcy.addEventListener('input', () => {
+            // Re-render charts to update scale
+            const scatterChart = window.getScatterChart ? window.getScatterChart() : null;
+            const liqChart = window.getLiqChartInstance ? window.getLiqChartInstance() : null;
+            if (scatterChart) {
+                scatterChart.destroy();
+                renderScatterPlot();
+            }
+            if (liqChart) {
+                liqChart.destroy();
+                renderLiqScatterPlot();
+            }
+        });
+    }
+
     // Currency selectors
     const currencySelect = document.getElementById('currencySelect');
     const entryCurrencySelect = document.getElementById('entryCurrencySelect');
