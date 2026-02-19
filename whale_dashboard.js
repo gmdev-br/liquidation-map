@@ -46,6 +46,8 @@ let chartHighLevSplit = 50; // Threshold for Low/High leverage split
 let chartMode = 'scatter'; // 'scatter' or 'column'
 let bubbleScale = 1.0;
 let aggregationFactor = 50;
+let savedScatterState = null;
+let savedLiqState = null;
 
 // Currency conversion
 const CURRENCY_META = {
@@ -262,7 +264,21 @@ function loadTableData() {
 }
 
 function saveSettings() {
+    // Helper to get chart state
+    function getChartState(chart) {
+        if (!chart) return null;
+        if (chart.isZoomed) {
+            return {
+                x: { min: chart.scales.x.min, max: chart.scales.x.max },
+                y: { min: chart.scales.y.min, max: chart.scales.y.max }
+            };
+        }
+        return null; // Return null if not zoomed (user wants default view)
+    }
+
     const settings = {
+        scatterChartState: getChartState(scatterChart) || savedScatterState,
+        liqChartState: getChartState(liqChartInstance) || savedLiqState,
         minValue: document.getElementById('minValue').value,
         coinFilter: document.getElementById('coinFilter').value,
         sideFilter: document.getElementById('sideFilter').value,
@@ -431,13 +447,19 @@ function loadSettings() {
         if (s.chartHeight) {
             chartHeight = s.chartHeight;
             const section = document.getElementById('chart-section');
-            if (section) section.style.height = chartHeight + 'px';
+            if (section) {
+                section.style.height = chartHeight + 'px';
+            }
         }
         if (s.liqChartHeight) {
             liqChartHeight = s.liqChartHeight;
             const section = document.getElementById('liq-chart-section');
-            if (section) section.style.height = liqChartHeight + 'px';
+            if (section) {
+                section.style.height = liqChartHeight + 'px';
+            }
         }
+        if (s.scatterChartState) savedScatterState = s.scatterChartState;
+        if (s.liqChartState) savedLiqState = s.liqChartState;
     } catch (e) { console.warn('Failed to load settings', e); }
 }
 
@@ -1321,10 +1343,14 @@ function renderScatterPlot() {
         const currentX = scatterChart.scales.x;
         const currentY = scatterChart.scales.y;
         
-        // Check if we are in a zoomed state
-        const isZoomed = scatterChart.isZoomed || (scatterChart.isZoomedOrPanned && scatterChart.isZoomedOrPanned());
-
-        if (isZoomed && currentX && currentY) {
+        // Check if we are in a zoomed state (saved or current)
+        if (savedScatterState) {
+            if (scales.x) { scales.x.min = savedScatterState.x.min; scales.x.max = savedScatterState.x.max; }
+            if (scales.y) { scales.y.min = savedScatterState.y.min; scales.y.max = savedScatterState.y.max; }
+            scatterChart.isZoomed = true;
+            const btn = document.getElementById('resetZoomBtn');
+            if (btn) btn.style.display = 'block';
+        } else if ((scatterChart.isZoomed || (scatterChart.isZoomedOrPanned && scatterChart.isZoomedOrPanned())) && currentX && currentY) {
             // Apply current min/max to the new scales config
             if (scales.x) {
                 scales.x.min = currentX.min;
@@ -1352,6 +1378,13 @@ function renderScatterPlot() {
     } else {
         Chart.defaults.color = '#9ca3af';
         Chart.defaults.borderColor = 'rgba(255, 255, 255, 0.1)';
+
+        if (savedScatterState) {
+            if (scales.x) { scales.x.min = savedScatterState.x.min; scales.x.max = savedScatterState.x.max; }
+            if (scales.y) { scales.y.min = savedScatterState.y.min; scales.y.max = savedScatterState.y.max; }
+            const btn = document.getElementById('resetZoomBtn');
+            if (btn) btn.style.display = 'block';
+        }
 
         scatterChart = new Chart(ctx, {
             type: chartType,
@@ -1415,12 +1448,22 @@ function renderScatterPlot() {
                                 modifierKey: 'shift',
                             },
                             mode: 'xy',
-                            onZoom: function({chart}) { chart.isZoomed = true; }
+                            onZoom: function({chart}) { 
+                                chart.isZoomed = true; 
+                                saveSettings(); 
+                                const btn = document.getElementById('resetZoomBtn');
+                                if(btn) btn.style.display = 'block';
+                            }
                         },
                         pan: {
                             enabled: true,
                             mode: 'xy',
-                            onPan: function({chart}) { chart.isZoomed = true; }
+                            onPan: function({chart}) { 
+                                chart.isZoomed = true; 
+                                saveSettings(); 
+                                const btn = document.getElementById('resetZoomBtn');
+                                if(btn) btn.style.display = 'block';
+                            }
                         }
                     },
                     btcPriceLabel: {
@@ -1545,116 +1588,10 @@ function renderScatterPlot() {
                         ctx.restore();
                     }
                 }
-            }, {
-                id: 'dragScales',
-                beforeEvent: (chart, args) => {
-                    const { event } = args;
-                    const { x, y, type } = event;
-                    const scales = chart.scales;
-                    
-                    if (!chart.dragScaleState) {
-                        chart.dragScaleState = {
-                            dragging: false,
-                            axis: null,
-                            startPos: 0,
-                            initialMin: 0,
-                            initialMax: 0
-                        };
-                    }
-                    const state = chart.dragScaleState;
-
-                    // Helper to check bounds
-                    const inX = x >= scales.x.left && x <= scales.x.right && y >= scales.x.top && y <= scales.x.bottom;
-                    const inY = x >= scales.y.left && x <= scales.y.right && y >= scales.y.top && y <= scales.y.bottom;
-
-                    // 1. Handle Pan Blocking (Hover or Drag)
-                    if (chart.options.plugins.zoom && chart.options.plugins.zoom.pan) {
-                        if (state.dragging || inX || inY) {
-                            if (chart.options.plugins.zoom.pan.enabled !== false) {
-                                chart.options.plugins.zoom.pan.enabled = false;
-                            }
-                        } else {
-                            if (chart.options.plugins.zoom.pan.enabled !== true) {
-                                chart.options.plugins.zoom.pan.enabled = true;
-                            }
-                        }
-                    }
-
-                    // 2. Handle Cursor Style
-                    if (type === 'mousemove' && !state.dragging) {
-                        if (inX) {
-                            event.native.target.style.cursor = 'col-resize';
-                        } else if (inY) {
-                            event.native.target.style.cursor = 'row-resize';
-                        } else {
-                            event.native.target.style.cursor = 'default';
-                        }
-                    }
-
-                    // 3. Start Drag
-                    if (type === 'mousedown') {
-                        if (inX) {
-                            console.log('Drag started on X');
-                            state.dragging = true;
-                            state.axis = 'x';
-                            state.startPos = x;
-                            state.initialMin = scales.x.min;
-                            state.initialMax = scales.x.max;
-                            return false; // Stop propagation
-                        } else if (inY) {
-                            console.log('Drag started on Y');
-                            state.dragging = true;
-                            state.axis = 'y';
-                            state.startPos = y;
-                            state.initialMin = scales.y.min;
-                            state.initialMax = scales.y.max;
-                            return false; // Stop propagation
-                        }
-                    }
-
-                    // 4. Dragging
-                    if (type === 'mousemove' && state.dragging) {
-                        const axis = state.axis;
-                        const currentPos = axis === 'x' ? x : y;
-                        const delta = state.startPos - currentPos;
-                        
-                        const range = state.initialMax - state.initialMin;
-                        const center = (state.initialMin + state.initialMax) / 2;
-                        
-                        // Sensitivity
-                        const sensitivity = 0.002;
-                        let scaleFactor = 1;
-                        
-                        if (axis === 'y') {
-                            scaleFactor = Math.exp(-delta * sensitivity);
-                        } else {
-                            scaleFactor = Math.exp(delta * sensitivity);
-                        }
-                        
-                        const newRange = range * scaleFactor;
-                        const newMin = center - newRange / 2;
-                        const newMax = center + newRange / 2;
-                        
-                        // Update scale options
-                        chart.options.scales[axis].min = newMin;
-                        chart.options.scales[axis].max = newMax;
-                        
-                        chart.update('none');
-                        return false; // Stop propagation
-                    }
-
-                    // 5. End Drag
-                    if (type === 'mouseup' || type === 'mouseout') {
-                        if (state.dragging) {
-                            console.log('Drag ended');
-                            state.dragging = false;
-                            event.native.target.style.cursor = 'default';
-                            return false;
-                        }
-                    }
-                }
             }]
         });
+        
+        if (savedScatterState) scatterChart.isZoomed = true;
     }
 }
 
@@ -1971,18 +1908,27 @@ function renderLiqScatterPlot() {
 
         liqChartInstance.data.datasets = datasets;
         
-        const currentX = liqChartInstance.scales.x;
-        const currentY = liqChartInstance.scales.y;
-        const isZoomed = liqChartInstance.isZoomed;
+        // Check if we are in a zoomed state (saved or current)
+        if (savedLiqState) {
+            if (scales.x) { scales.x.min = savedLiqState.x.min; scales.x.max = savedLiqState.x.max; }
+            if (scales.y) { scales.y.min = savedLiqState.y.min; scales.y.max = savedLiqState.y.max; }
+            liqChartInstance.isZoomed = true;
+            const btn = document.getElementById('resetLiqZoomBtn');
+            if (btn) btn.style.display = 'block';
+        } else {
+            const currentX = liqChartInstance.scales.x;
+            const currentY = liqChartInstance.scales.y;
+            const isZoomed = liqChartInstance.isZoomed;
 
-        if (isZoomed && currentX && currentY) {
-            if (scales.x) {
-                scales.x.min = currentX.min;
-                scales.x.max = currentX.max;
-            }
-            if (scales.y) {
-                scales.y.min = currentY.min;
-                scales.y.max = currentY.max;
+            if (isZoomed && currentX && currentY) {
+                if (scales.x) {
+                    scales.x.min = currentX.min;
+                    scales.x.max = currentX.max;
+                }
+                if (scales.y) {
+                    scales.y.min = currentY.min;
+                    scales.y.max = currentY.max;
+                }
             }
         }
 
@@ -2001,6 +1947,14 @@ function renderLiqScatterPlot() {
 
     if (liqChartInstance) {
         liqChartInstance.destroy();
+    }
+
+    // Apply saved state to new chart if available
+    if (savedLiqState) {
+        if (scales.x) { scales.x.min = savedLiqState.x.min; scales.x.max = savedLiqState.x.max; }
+        if (scales.y) { scales.y.min = savedLiqState.y.min; scales.y.max = savedLiqState.y.max; }
+        const btn = document.getElementById('resetLiqZoomBtn');
+        if (btn) btn.style.display = 'block';
     }
 
     liqChartInstance = new Chart(ctx, {
@@ -2069,6 +2023,7 @@ function renderLiqScatterPlot() {
                         modifierKey: null,
                         onPan: ({chart}) => {
                              chart.isZoomed = true;
+                             saveSettings();
                              const btn = document.getElementById('resetLiqZoomBtn');
                              if(btn) btn.style.display = 'block';
                         }
@@ -2080,6 +2035,7 @@ function renderLiqScatterPlot() {
                         mode: 'xy',
                         onZoom: ({chart}) => {
                              chart.isZoomed = true;
+                             saveSettings();
                              const btn = document.getElementById('resetLiqZoomBtn');
                              if(btn) btn.style.display = 'block';
                         }
@@ -2190,95 +2146,6 @@ function renderLiqScatterPlot() {
                         ctx.fillText(yLabel, left - 6, y);
 
                         ctx.restore();
-                    }
-                }
-            }, {
-                id: 'dragScales',
-                beforeEvent: (chart, args) => {
-                    const { event } = args;
-                    const { x, y, type } = event;
-                    const scales = chart.scales;
-                    
-                    if (!chart.dragScaleState) {
-                        chart.dragScaleState = {
-                            dragging: false,
-                            axis: null,
-                            startPos: 0,
-                            initialMin: 0,
-                            initialMax: 0
-                        };
-                    }
-                    const state = chart.dragScaleState;
-                    const inX = x >= scales.x.left && x <= scales.x.right && y >= scales.x.top && y <= scales.x.bottom;
-                    const inY = x >= scales.y.left && x <= scales.y.right && y >= scales.y.top && y <= scales.y.bottom;
-
-                    if (chart.options.plugins.zoom && chart.options.plugins.zoom.pan) {
-                        if (state.dragging || inX || inY) {
-                            if (chart.options.plugins.zoom.pan.enabled !== false) {
-                                chart.options.plugins.zoom.pan.enabled = false;
-                            }
-                        } else {
-                            if (chart.options.plugins.zoom.pan.enabled !== true) {
-                                chart.options.plugins.zoom.pan.enabled = true;
-                            }
-                        }
-                    }
-
-                    if (type === 'mousemove' && !state.dragging) {
-                        if (inX) {
-                            event.native.target.style.cursor = 'col-resize';
-                        } else if (inY) {
-                            event.native.target.style.cursor = 'row-resize';
-                        } else {
-                            event.native.target.style.cursor = 'default';
-                        }
-                    }
-
-                    if (type === 'mousedown') {
-                        if (inX) {
-                            state.dragging = true;
-                            state.axis = 'x';
-                            state.startPos = x;
-                            state.initialMin = scales.x.min;
-                            state.initialMax = scales.x.max;
-                            return false;
-                        } else if (inY) {
-                            state.dragging = true;
-                            state.axis = 'y';
-                            state.startPos = y;
-                            state.initialMin = scales.y.min;
-                            state.initialMax = scales.y.max;
-                            return false;
-                        }
-                    }
-
-                    if (type === 'mousemove' && state.dragging) {
-                        const axis = state.axis;
-                        const currentPos = axis === 'x' ? x : y;
-                        const delta = state.startPos - currentPos;
-                        const range = state.initialMax - state.initialMin;
-                        const center = (state.initialMin + state.initialMax) / 2;
-                        const sensitivity = 0.002;
-                        let scaleFactor = 1;
-                        if (axis === 'y') scaleFactor = Math.exp(-delta * sensitivity);
-                        else scaleFactor = Math.exp(delta * sensitivity);
-                        const newRange = range * scaleFactor;
-                        const newMin = center - newRange / 2;
-                        const newMax = center + newRange / 2;
-                        chart.options.scales[axis].min = newMin;
-                        chart.options.scales[axis].max = newMax;
-                        chart.update('none');
-                        const btn = document.getElementById('resetLiqZoomBtn');
-                        if(btn) btn.style.display = 'block';
-                        return false;
-                    }
-
-                    if (type === 'mouseup' || type === 'mouseout') {
-                        if (state.dragging) {
-                            state.dragging = false;
-                            event.native.target.style.cursor = 'default';
-                            return false;
-                        }
                     }
                 }
             }
@@ -3067,6 +2934,11 @@ init();
 function resetChartZoom() {
     if (scatterChart) {
         scatterChart.resetZoom();
+        scatterChart.isZoomed = false;
+        savedScatterState = null;
+        saveSettings();
+        const btn = document.getElementById('resetZoomBtn');
+        if (btn) btn.style.display = 'none';
     }
 }
 
@@ -3074,7 +2946,148 @@ function resetLiqChartZoom() {
     if (liqChartInstance) {
         liqChartInstance.resetZoom();
         liqChartInstance.isZoomed = false;
+        savedLiqState = null;
+        saveSettings();
         const btn = document.getElementById('resetLiqZoomBtn');
         if (btn) btn.style.display = 'none';
     }
 }
+
+// ── Chart Scale Resizing ──
+function enableChartScaleResizing(canvasId, getChartInstance, resetBtnId) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+
+    let isDragging = false;
+    let dragAxis = null;
+    let startPos = 0;
+    let initialMin = 0;
+    let initialMax = 0;
+
+    canvas.addEventListener('mousedown', (e) => {
+        const chart = getChartInstance();
+        if (!chart) return;
+
+        const rect = canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        
+        const { left, right, top, bottom } = chart.chartArea;
+        
+        // Y Axis (Left)
+        if (x < left && y >= top && y <= bottom) {
+            isDragging = true;
+            dragAxis = 'y';
+            startPos = y;
+            initialMin = chart.scales.y.min;
+            initialMax = chart.scales.y.max;
+            e.preventDefault();
+        }
+        // X Axis (Bottom)
+        else if (y > bottom && x >= left && x <= right) {
+            isDragging = true;
+            dragAxis = 'x';
+            startPos = x;
+            initialMin = chart.scales.x.min;
+            initialMax = chart.scales.x.max;
+            e.preventDefault();
+        }
+
+        if (isDragging) {
+            chart.isZoomed = true;
+            if (resetBtnId) {
+                const btn = document.getElementById(resetBtnId);
+                if (btn) btn.style.display = 'block';
+            }
+        }
+    });
+
+    window.addEventListener('mousemove', (e) => {
+        if (!isDragging || !dragAxis) return;
+        const chart = getChartInstance();
+        if (!chart) return;
+
+        const rect = canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
+        const scale = chart.scales[dragAxis];
+        const isLog = scale.type === 'logarithmic';
+        const sensitivity = 2.0;
+
+        if (dragAxis === 'y') {
+            const delta = y - startPos; // Drag down > 0
+            const height = chart.chartArea.bottom - chart.chartArea.top;
+            const factor = (delta / height) * sensitivity;
+
+            if (isLog) {
+                if (initialMin <= 0) initialMin = 0.0001;
+                const logMin = Math.log(initialMin);
+                const logMax = Math.log(initialMax);
+                const logRange = logMax - logMin;
+                
+                const newLogRange = logRange * (1 + factor);
+                const logCenter = (logMax + logMin) / 2;
+                
+                const newLogMin = logCenter - newLogRange / 2;
+                const newLogMax = logCenter + newLogRange / 2;
+                
+                chart.options.scales.y.min = Math.exp(newLogMin);
+                chart.options.scales.y.max = Math.exp(newLogMax);
+            } else {
+                const range = initialMax - initialMin;
+                const newRange = range * (1 + factor);
+                const center = (initialMax + initialMin) / 2;
+                
+                chart.options.scales.y.min = center - newRange / 2;
+                chart.options.scales.y.max = center + newRange / 2;
+            }
+        } else if (dragAxis === 'x') {
+            const delta = x - startPos; // Drag right > 0
+            const width = chart.chartArea.right - chart.chartArea.left;
+            // Drag Right -> Zoom In -> Negative factor
+            const factor = -(delta / width) * sensitivity;
+            
+            if (isLog) {
+                if (initialMin <= 0) initialMin = 0.0001;
+                const logMin = Math.log(initialMin);
+                const logMax = Math.log(initialMax);
+                const logRange = logMax - logMin;
+                
+                const newLogRange = logRange * (1 + factor);
+                const logCenter = (logMax + logMin) / 2;
+                
+                const newLogMin = logCenter - newLogRange / 2;
+                const newLogMax = logCenter + newLogRange / 2;
+                
+                chart.options.scales.x.min = Math.exp(newLogMin);
+                chart.options.scales.x.max = Math.exp(newLogMax);
+            } else {
+                const range = initialMax - initialMin;
+                const newRange = range * (1 + factor);
+                const center = (initialMax + initialMin) / 2;
+                
+                chart.options.scales.x.min = center - newRange / 2;
+                chart.options.scales.x.max = center + newRange / 2;
+            }
+        }
+
+        chart.update('none');
+    });
+
+    window.addEventListener('mouseup', () => {
+        if (isDragging) {
+            isDragging = false;
+            dragAxis = null;
+            const chart = getChartInstance();
+            if (chart) {
+                chart.isZoomed = true;
+                saveSettings();
+            }
+        }
+    });
+}
+
+// Enable resizing for both charts
+enableChartScaleResizing('scatterChart', () => scatterChart, 'resetZoomBtn');
+enableChartScaleResizing('liqChart', () => liqChartInstance, 'resetLiqZoomBtn');
