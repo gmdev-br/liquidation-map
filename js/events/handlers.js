@@ -14,7 +14,7 @@ function syncControls(valueSelectors, value) {
 }
 
 import {
-    setShowSymbols, setChartMode, setBubbleScale, setBubbleOpacity, setAggregationFactor,
+    setShowSymbols, setChartMode, setBubbleScale, setBubbleOpacity, setLineThickness, setAggregationFactor,
     setRankingLimit, setColorMaxLev, setChartHighLevSplit, setChartHeight,
     setLiqChartHeight, setSortKey, setSortDir, setActiveWindow, getSortKey,
     getSortDir, getShowSymbols, getChartMode, getBubbleScale, getAggregationFactor,
@@ -111,6 +111,14 @@ export function updateBubbleSize(val) {
 export function updateBubbleOpacity(val) {
     setBubbleOpacity(parseFloat(val));
     syncControls(['#bubbleOpacityVal'], val);
+    saveSettings();
+    // Trigger chart update by re-rendering table
+    renderTable();
+}
+
+export function updateLineThickness(val) {
+    setLineThickness(parseInt(val, 10));
+    syncControls(['#lineThicknessVal'], val);
     saveSettings();
     // Trigger chart update by re-rendering table
     renderTable();
@@ -228,10 +236,18 @@ export function setChartModeHandler(mode) {
 
     // Update control visibility
     const bubbleCtrl = document.getElementById('bubbleSizeCtrl');
+    const bubbleOpacityCtrl = document.getElementById('bubbleOpacityCtrl');
+    const lineThicknessCtrl = document.getElementById('lineThicknessCtrl');
     const aggCtrl = document.getElementById('aggregationCtrl');
 
     if (bubbleCtrl) {
         bubbleCtrl.style.display = (mode === 'scatter') ? 'block' : 'none';
+    }
+    if (bubbleOpacityCtrl) {
+        bubbleOpacityCtrl.style.display = (mode === 'scatter') ? 'block' : 'none';
+    }
+    if (lineThicknessCtrl) {
+        lineThicknessCtrl.style.display = (mode === 'lines') ? 'block' : 'none';
     }
     if (aggCtrl) {
         aggCtrl.style.display = (mode === 'column') ? 'block' : 'none';

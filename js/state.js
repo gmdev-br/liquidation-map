@@ -46,6 +46,7 @@ let chartHighLevSplit = 50; // Threshold for Low/High leverage split
 let chartMode = 'scatter'; // 'scatter' or 'column'
 let bubbleScale = 1.0;
 let bubbleOpacity = 0.6;
+let lineThickness = 2; // Default line thickness for lines chart
 let aggregationFactor = 50;
 let savedScatterState = null;
 let savedLiqState = null;
@@ -149,8 +150,9 @@ export const setState = (updates) => {
         chartHighLevSplit,
         chartMode,
         bubbleScale,
-        bubbleOpacity,
-        aggregationFactor,
+    bubbleOpacity,
+    lineThickness,
+    aggregationFactor,
         savedScatterState,
         savedLiqState,
         fxRates,
@@ -198,8 +200,9 @@ export const setColorMaxLev = (value) => { colorMaxLev = value; };
 export const setChartHighLevSplit = (value) => { chartHighLevSplit = value; };
 export const setChartMode = (value) => { chartMode = value; };
 export const setBubbleScale = (value) => { bubbleScale = value; };
-export const setBubbleOpacity = (value) => { bubbleOpacity = value; };
-export const setAggregationFactor = (value) => { aggregationFactor = value; };
+export const setBubbleOpacity = (val) => { bubbleOpacity = val; };
+export const setLineThickness = (val) => { lineThickness = val; };
+export const setAggregationFactor = (val) => { aggregationFactor = val; };
 export const setSavedScatterState = (value) => { savedScatterState = value; };
 export const setSavedLiqState = (value) => { savedLiqState = value; };
 export const setVisibleColumns = (value) => { visibleColumns = value; };
@@ -241,6 +244,7 @@ export const getChartHighLevSplit = () => chartHighLevSplit;
 export const getChartMode = () => chartMode;
 export const getBubbleScale = () => bubbleScale;
 export const getBubbleOpacity = () => bubbleOpacity;
+export const getLineThickness = () => lineThickness;
 export const getAggregationFactor = () => aggregationFactor;
 export const getSavedScatterState = () => savedScatterState;
 export const getSavedLiqState = () => savedLiqState;

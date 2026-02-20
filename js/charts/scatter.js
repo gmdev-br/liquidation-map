@@ -13,7 +13,7 @@ function hexToRgba(hex, alpha) {
 import {
     getDisplayedRows, getCurrentPrices, getActiveCurrency, getActiveEntryCurrency,
     getShowSymbols, getChartHeight, getChartHighLevSplit,
-    getBubbleScale, getBubbleOpacity, getChartMode, getAggregationFactor, getSavedScatterState,
+    getBubbleScale, getBubbleOpacity, getLineThickness, getChartMode, getAggregationFactor, getSavedScatterState,
     getFxRates, getDecimalPlaces, getLeverageColors, getMinBtcVolume
 } from '../state.js';
 import { CURRENCY_META } from '../config.js';
@@ -366,7 +366,7 @@ export function renderScatterPlot() {
                 backgroundColor: hexToRgba(color, 0.7),
                 borderColor: color,
                 borderWidth: 1,
-                barThickness: 2, // Fine lines
+                barThickness: getLineThickness(), // User adjustable thickness
                 _raw: r
             };
         });

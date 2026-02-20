@@ -22,7 +22,7 @@ import { setLastSaveTime, setRenderPending } from '../state.js';
 import { fetchAllMids } from '../api/exchangeRates.js';
 import {
     updateSpeed, updateRankingLimit, updateColorSettings, updateChartFilters,
-    updateBubbleSize, updateBubbleOpacity, updateAggregation, setChartModeHandler, updateChartHeight,
+    updateBubbleSize, updateBubbleOpacity, updateLineThickness, updateAggregation, setChartModeHandler, updateChartHeight,
     updateLiqChartHeight, onCurrencyChange, openColumnCombobox, closeColumnComboboxDelayed,
     renderColumnDropdown as renderColumnDropdownFn, toggleColumn as toggleColumnFn, showAllColumns as showAllColumnsFn, hideAllColumns as hideAllColumnsFn, updateColumnSelectDisplay, applyColumnOrder,
     applyColumnWidths, applyColumnVisibility, toggleShowSymbols, updatePriceInterval, updateDecimalPlaces, updateFontSize, updateFontSizeKnown, updateLeverageColors, updateGridSpacing, updateMinBtcVolume
@@ -341,6 +341,14 @@ function setupEventListeners() {
     bubbleOpacityRanges.forEach(range => {
         range.addEventListener('input', (e) => {
             updateBubbleOpacity(e.target.value);
+        });
+    });
+
+    // Line thickness - attach to both mobile and desktop
+    const lineThicknessRanges = document.querySelectorAll('#lineThicknessRange');
+    lineThicknessRanges.forEach(range => {
+        range.addEventListener('input', (e) => {
+            updateLineThickness(e.target.value);
         });
     });
 

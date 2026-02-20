@@ -3,13 +3,13 @@
 // ═══════════════════════════════════════════════════════════
 
 import {
-    getSortKey, getSortDir, getShowSymbols, getChartMode, getBubbleScale, getBubbleOpacity,
+    getSortKey, getSortDir, getShowSymbols, getChartMode, getBubbleScale, getBubbleOpacity, getLineThickness,
     getAggregationFactor, getSelectedCoins, getPriceMode, getPriceUpdateInterval, getActiveWindow,
     getVisibleColumns, getColumnOrder, getRankingLimit, getColorMaxLev,
     getChartHighLevSplit, getChartHeight, getLiqChartHeight, getSavedScatterState,
     getSavedLiqState, getColumnWidths, getColumnWidth, getActiveCurrency, getActiveEntryCurrency, getDecimalPlaces, getLeverageColors, getFontSize, getFontSizeKnown, getGridSpacing, getMinBtcVolume,
     setSortKey, setSortDir, setSavedScatterState, setSavedLiqState,
-    setColumnOrder, setVisibleColumns, setSelectedCoins, setRankingLimit, setColorMaxLev, setChartHighLevSplit, setChartMode, setBubbleScale, setBubbleOpacity, setAggregationFactor, setPriceMode, setShowSymbols, setPriceUpdateInterval, setDecimalPlaces, setFontSize, setFontSizeKnown, setLeverageColors, setColumnWidth, setGridSpacing, setMinBtcVolume
+    setColumnOrder, setVisibleColumns, setSelectedCoins, setRankingLimit, setColorMaxLev, setChartHighLevSplit, setChartMode, setBubbleScale, setBubbleOpacity, setLineThickness, setAggregationFactor, setPriceMode, setShowSymbols, setPriceUpdateInterval, setDecimalPlaces, setFontSize, setFontSizeKnown, setLeverageColors, setColumnWidth, setGridSpacing, setMinBtcVolume
 } from '../state.js';
 import { COLUMN_DEFS } from '../config.js';
 import { cbSetValue, updateCoinSearchLabel } from '../ui/combobox.js';
@@ -75,6 +75,7 @@ export function saveSettings(getChartState = null, savedScatterState = null, sav
         chartMode: getChartMode(),
         bubbleScale: getBubbleScale(),
         bubbleOpacity: getBubbleOpacity(),
+        lineThickness: getLineThickness(),
         aggregationFactor: getAggregationFactor(),
         decimalPlaces: getDecimalPlaces(),
         fontSize: getFontSize(),
@@ -204,6 +205,10 @@ export function loadSettings() {
         });
         const bubbleCtrls = document.querySelectorAll('#bubbleSizeCtrl');
         bubbleCtrls.forEach(ctrl => ctrl.style.display = (s.chartMode === 'scatter') ? 'block' : 'none');
+        const bubbleOpacityCtrls = document.querySelectorAll('#bubbleOpacityCtrl');
+        bubbleOpacityCtrls.forEach(ctrl => ctrl.style.display = (s.chartMode === 'scatter') ? 'block' : 'none');
+        const lineThicknessCtrls = document.querySelectorAll('#lineThicknessCtrl');
+        lineThicknessCtrls.forEach(ctrl => ctrl.style.display = (s.chartMode === 'lines') ? 'block' : 'none');
         const aggCtrls = document.querySelectorAll('#aggregationCtrl');
         aggCtrls.forEach(ctrl => ctrl.style.display = (s.chartMode === 'column') ? 'block' : 'none');
     }
@@ -220,6 +225,13 @@ export function loadSettings() {
         const bubbleOpacityRanges = document.querySelectorAll('#bubbleOpacityRange');
         bubbleOpacityVals.forEach(el => el.textContent = s.bubbleOpacity.toFixed(2));
         bubbleOpacityRanges.forEach(el => el.value = s.bubbleOpacity);
+    }
+    if (s.lineThickness) {
+        setLineThickness(s.lineThickness);
+        const lineThicknessVals = document.querySelectorAll('#lineThicknessVal');
+        const lineThicknessRanges = document.querySelectorAll('#lineThicknessRange');
+        lineThicknessVals.forEach(el => el.textContent = s.lineThickness);
+        lineThicknessRanges.forEach(el => el.value = s.lineThickness);
     }
     if (s.aggregationFactor) {
         setAggregationFactor(s.aggregationFactor);
