@@ -18,13 +18,16 @@ export const liqChartOptions = {
         },
         tooltip: {
             enabled: true,
-            backgroundColor: 'rgba(15, 23, 42, 0.9)',
-            titleColor: '#fff',
-            bodyColor: '#cbd5e1',
-            borderColor: 'rgba(255,255,255,0.1)',
+            backgroundColor: 'rgba(7, 12, 26, 0.98)',
+            titleColor: '#e2e8f4',
+            bodyColor: '#e2e8f4',
+            borderColor: 'rgba(255, 255, 255, 0.12)',
             borderWidth: 1,
-            padding: 10,
+            padding: 12,
             displayColors: false,
+            backdropFilter: 'blur(16px)',
+            WebkitBackdropFilter: 'blur(16px)',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
             callbacks: {
                 label: function(context) {
                     if (context.chart.config.type === 'bar') {
@@ -68,10 +71,11 @@ export const liqChartOptions = {
     scales: {
         x: {
             grid: {
-                color: 'rgba(255, 255, 255, 0.05)'
+                color: 'rgba(255, 255, 255, 0.04)',
+                drawBorder: false
             },
             ticks: {
-                color: '#5a6a88',
+                color: '#6b7280',
                 font: {
                     size: 11
                 }
@@ -79,10 +83,11 @@ export const liqChartOptions = {
         },
         y: {
             grid: {
-                color: 'rgba(255, 255, 255, 0.05)'
+                color: 'rgba(255, 255, 255, 0.04)',
+                drawBorder: false
             },
             ticks: {
-                color: '#5a6a88',
+                color: '#6b7280',
                 font: {
                     size: 11
                 }

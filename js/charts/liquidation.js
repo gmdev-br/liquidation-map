@@ -320,7 +320,9 @@ export function renderLiqScatterPlot() {
                 data: longLowData,
                 backgroundColor: hexToRgba(customColors.longLow, opacity),
                 borderColor: customColors.longLow,
-                borderWidth: 1
+                borderWidth: 1,
+                hoverBackgroundColor: hexToRgba(customColors.longLow, Math.min(opacity + 0.15, 0.8)),
+                hoverBorderColor: customColors.longLow
             });
         }
 
@@ -330,7 +332,9 @@ export function renderLiqScatterPlot() {
                 data: longHighData,
                 backgroundColor: hexToRgba(customColors.longHigh, opacity),
                 borderColor: customColors.longHigh,
-                borderWidth: 2
+                borderWidth: 2,
+                hoverBackgroundColor: hexToRgba(customColors.longHigh, Math.min(opacity + 0.15, 0.8)),
+                hoverBorderColor: customColors.longHigh
             });
         }
 
@@ -340,7 +344,9 @@ export function renderLiqScatterPlot() {
                 data: shortLowData,
                 backgroundColor: hexToRgba(customColors.shortLow, opacity),
                 borderColor: customColors.shortLow,
-                borderWidth: 1
+                borderWidth: 1,
+                hoverBackgroundColor: hexToRgba(customColors.shortLow, Math.min(opacity + 0.15, 0.8)),
+                hoverBorderColor: customColors.shortLow
             });
         }
 
@@ -350,7 +356,9 @@ export function renderLiqScatterPlot() {
                 data: shortHighData,
                 backgroundColor: hexToRgba(customColors.shortHigh, opacity),
                 borderColor: customColors.shortHigh,
-                borderWidth: 2
+                borderWidth: 2,
+                hoverBackgroundColor: hexToRgba(customColors.shortHigh, Math.min(opacity + 0.15, 0.8)),
+                hoverBorderColor: customColors.shortHigh
             });
         }
 

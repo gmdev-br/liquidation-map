@@ -169,14 +169,26 @@
         width: 80%;
         max-width: 320px;
         height: 100vh;
-        background: rgba(7, 12, 26, 0.98);
-        backdrop-filter: blur(20px);
-        -webkit-backdrop-filter: blur(20px);
+        background: linear-gradient(180deg, rgba(7, 12, 26, 0.98) 0%, rgba(7, 12, 26, 0.95) 100%);
+        backdrop-filter: var(--glass-blur);
+        -webkit-backdrop-filter: var(--glass-blur);
         z-index: 1000;
         padding: 20px;
         border-left: 1px solid var(--glass-border);
-        transition: right 0.3s ease;
+        transition: right 0.4s cubic-bezier(0.4, 0, 0.2, 1);
         overflow-y: auto;
+        box-shadow: -8px 0 32px rgba(0, 0, 0, 0.5);
+    }
+
+    .mobile-menu::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: linear-gradient(90deg, transparent 0%, var(--glass-highlight) 50%, transparent 100%);
+        opacity: 0.5;
     }
 
     .mobile-menu.active {
@@ -191,12 +203,16 @@
         left: 0;
         width: 100%;
         height: 100%;
-        background: rgba(0, 0, 0, 0.5);
+        background: rgba(0, 0, 0, 0.6);
+        backdrop-filter: blur(4px);
+        -webkit-backdrop-filter: blur(4px);
         z-index: 999;
+        transition: opacity 0.3s ease;
     }
 
     .mobile-menu-overlay.active {
         display: block;
+        opacity: 1;
     }
 
     .mobile-menu-header {
@@ -310,6 +326,11 @@
     .stat {
         min-width: 140px;
         padding: 12px 16px;
+        background: linear-gradient(180deg, rgba(7, 12, 26, 0.65) 0%, rgba(7, 12, 26, 0.50) 100%);
+    }
+
+    .stat:active {
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.04) 100%);
     }
 
     .stat-value {
@@ -793,12 +814,24 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(7, 12, 26, 0.95);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
+    background: linear-gradient(180deg, rgba(7, 12, 26, 0.98) 0%, rgba(7, 12, 26, 0.95) 100%);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
     z-index: 10000;
     transform: translateY(-100%);
-    transition: transform 0.3s ease;
+    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    border-bottom: 1px solid var(--glass-border);
+}
+
+.pull-to-refresh::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent 0%, var(--glass-highlight) 50%, transparent 100%);
+    opacity: 0.5;
 }
 
 .pull-to-refresh.active {

@@ -7,13 +7,26 @@
 #liq-chart-section {
     position: relative;
     padding: 20px;
-    background: rgba(7, 12, 26, 0.3);
+    background: linear-gradient(180deg, rgba(7, 12, 26, 0.40) 0%, rgba(7, 12, 26, 0.25) 100%);
     border-bottom: 1px solid var(--glass-border);
     display: none;
     min-height: 200px;
     z-index: 50;
     backdrop-filter: var(--glass-blur-sm);
     -webkit-backdrop-filter: var(--glass-blur-sm);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+#chart-section::before,
+#liq-chart-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent 0%, var(--glass-highlight) 50%, transparent 100%);
+    opacity: 0.4;
 }
 
 /* Mobile chart section */

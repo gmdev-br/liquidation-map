@@ -11,8 +11,8 @@ export const crosshairPlugin = {
     id: 'crosshair',
     defaults: {
         width: 1,
-        color: 'rgba(255, 255, 255, 0.2)',
-        dash: [3, 3]
+        color: 'rgba(255, 255, 255, 0.15)',
+        dash: [4, 4]
     },
     afterInit: (chart, _args, _options) => {
         chart.crosshair = { x: 0, y: 0, visible: false };
@@ -47,26 +47,39 @@ export const crosshairPlugin = {
             
             const xValue = xScale.getValueForPixel(x);
             const xLabel = xValue.toLocaleString(undefined, { maximumFractionDigits: 2 });
-            const xLabelWidth = ctx.measureText(xLabel).width + 12;
-            const xLabelHeight = 20;
+            const xLabelWidth = ctx.measureText(xLabel).width + 16;
+            const xLabelHeight = 24;
             
-            ctx.fillStyle = 'rgba(7, 12, 26, 0.9)';
-            ctx.fillRect(x - xLabelWidth / 2, bottom, xLabelWidth, xLabelHeight);
+            // Liquid Glass tooltip background
+            ctx.fillStyle = 'rgba(7, 12, 26, 0.95)';
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
+            ctx.shadowBlur = 8;
+            ctx.beginPath();
+            const r = 6;
+            ctx.roundRect(x - xLabelWidth / 2, bottom, xLabelWidth, xLabelHeight, r);
+            ctx.fill();
+            ctx.shadowBlur = 0;
             
             ctx.fillStyle = '#e2e8f4';
-            ctx.fillText(xLabel, x, bottom + 10);
+            ctx.fillText(xLabel, x, bottom + 12);
 
             const yValue = yScale.getValueForPixel(y);
             const yLabel = yValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 });
-            const yLabelWidth = ctx.measureText(yLabel).width + 12;
-            const yLabelHeight = 20;
+            const yLabelWidth = ctx.measureText(yLabel).width + 16;
+            const yLabelHeight = 24;
             
-            ctx.fillStyle = 'rgba(7, 12, 26, 0.9)';
-            ctx.fillRect(left - yLabelWidth, y - yLabelHeight / 2, yLabelWidth, yLabelHeight);
+            // Liquid Glass tooltip background
+            ctx.fillStyle = 'rgba(7, 12, 26, 0.95)';
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
+            ctx.shadowBlur = 8;
+            ctx.beginPath();
+            ctx.roundRect(left - yLabelWidth, y - yLabelHeight / 2, yLabelWidth, yLabelHeight, r);
+            ctx.fill();
+            ctx.shadowBlur = 0;
             
             ctx.textAlign = 'right';
             ctx.fillStyle = '#e2e8f4';
-            ctx.fillText(yLabel, left - 6, y);
+            ctx.fillText(yLabel, left - 8, y);
 
             ctx.restore();
         }
@@ -89,20 +102,24 @@ export const btcPriceLabelPlugin = {
         ctx.save();
         ctx.font = 'bold 11px sans-serif';
         const textWidth = ctx.measureText(text).width + 16;
-        const textHeight = 22;
+        const textHeight = 24;
         const yPos = bottom + 25;
         
-        ctx.fillStyle = 'rgba(255, 165, 0, 0.9)';
+        // Liquid Glass background with glow
+        ctx.fillStyle = 'rgba(255, 165, 0, 0.95)';
+        ctx.shadowColor = 'rgba(255, 165, 0, 0.4)';
+        ctx.shadowBlur = 12;
         ctx.beginPath();
-        const r = 4;
+        const r = 6;
         ctx.roundRect(xVal - textWidth / 2, yPos, textWidth, textHeight, r);
         ctx.fill();
+        ctx.shadowBlur = 0;
         
         ctx.beginPath();
         ctx.moveTo(xVal, yPos);
         ctx.lineTo(xVal - 5, yPos + 6);
         ctx.lineTo(xVal + 5, yPos + 6);
-        ctx.fillStyle = 'rgba(255, 165, 0, 0.9)';
+        ctx.fillStyle = 'rgba(255, 165, 0, 0.95)';
         ctx.fill();
         
         ctx.fillStyle = '#000';
@@ -134,8 +151,8 @@ export const originalZoomConfig = {
         pinch: { enabled: true },
         drag: {
             enabled: true,
-            backgroundColor: 'rgba(156, 163, 175, 0.2)',
-            borderColor: 'rgba(156, 163, 175, 0.4)',
+            backgroundColor: 'rgba(255, 255, 255, 0.08)',
+            borderColor: 'rgba(255, 255, 255, 0.15)',
             borderWidth: 1,
             modifierKey: 'shift',
         },
@@ -515,11 +532,11 @@ export const btcGridPlugin = {
     defaults: {
         minorInterval: 500, // Will be overridden by user input
         majorInterval: 2500, // Will be calculated as 5x minor
-        minorColor: 'rgba(255, 255, 255, 0.05)',
+        minorColor: 'rgba(255, 255, 255, 0.03)',
         minorWidth: 1,
-        majorColor: 'rgba(255, 255, 255, 0.12)',
+        majorColor: 'rgba(255, 255, 255, 0.10)',
         majorWidth: 1.5,
-        horizontalColor: 'rgba(255, 255, 255, 0.05)',
+        horizontalColor: 'rgba(255, 255, 255, 0.03)',
         horizontalWidth: 1
     },
     afterDraw: (chart, _args, options) => {
@@ -573,8 +590,8 @@ export const btcGridPlugin = {
                 ctx.lineTo(xPixel, bottom);
                 ctx.stroke();
                 
-                // Add price labels for major grid lines
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+                // Add price labels for major grid lines with Liquid Glass styling
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
                 ctx.font = '10px sans-serif';
                 ctx.textAlign = 'center';
                 ctx.fillText(price.toLocaleString(), xPixel, top - 5);
