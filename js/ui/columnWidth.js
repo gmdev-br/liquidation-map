@@ -27,12 +27,12 @@ export function initColumnWidthControl() {
     // Event listener for column width changes
     columnWidthInput.addEventListener('input', (e) => {
         let width = parseInt(e.target.value, 10);
-        
+
         // Validate and clamp the value
         if (isNaN(width)) width = 100;
         if (width < 60) width = 60;
         if (width > 500) width = 500;
-        
+
         columnWidthVal.textContent = width;
         setColumnWidth(width);
         applyColumnWidth(width);
@@ -54,46 +54,8 @@ export function applyColumnWidth(width) {
         return;
     }
 
-    console.log('Table found, applying width to table');
+    // Set the CSS variable on the document root or table
+    document.documentElement.style.setProperty('--column-width', width + 'px');
 
-    // Set table-layout to auto to allow width changes
-    table.style.tableLayout = 'auto';
-
-    // Clear all inline styles on table cells
-    const thElements = table.querySelectorAll('th');
-    const tdElements = table.querySelectorAll('td');
-    
-    if (thElements.length === 0) {
-        console.warn('No table headers found - table might not be fully rendered');
-        setTimeout(() => applyColumnWidth(width), 100);
-        return;
-    }
-    
-    // Clear inline styles first
-    thElements.forEach(th => {
-        th.style.removeProperty('width');
-        th.style.removeProperty('min-width');
-        th.style.removeProperty('max-width');
-    });
-    
-    tdElements.forEach(td => {
-        td.style.removeProperty('width');
-        td.style.removeProperty('min-width');
-        td.style.removeProperty('max-width');
-    });
-
-    // Force width with !important
-    thElements.forEach(th => {
-        th.style.setProperty('width', width + 'px', 'important');
-        th.style.setProperty('max-width', width + 'px', 'important');
-        th.style.setProperty('min-width', width + 'px', 'important');
-    });
-    
-    tdElements.forEach(td => {
-        td.style.setProperty('width', width + 'px', 'important');
-        td.style.setProperty('max-width', width + 'px', 'important');
-        td.style.setProperty('min-width', width + 'px', 'important');
-    });
-
-    console.log('Column width applied to', thElements.length, 'headers and', tdElements.length, 'cells');
+    console.log('Column width variable --column-width set to:', width + 'px');
 }

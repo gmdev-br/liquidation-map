@@ -20,21 +20,21 @@ import { updateRankingPanel } from './panels.js';
 function reorderTableHeadersAndFilters(columnOrder) {
     const headerRow = document.querySelector('thead tr');
     if (!headerRow) return;
-    
+
     // Get all header cells
     const headers = Array.from(headerRow.querySelectorAll('th'));
     const filterRow = document.querySelector('.filter-row');
     const filterHeaders = filterRow ? Array.from(filterRow.querySelectorAll('th')) : [];
-    
+
     // Create a map of column key to header element
     const headerMap = {};
     const filterHeaderMap = {};
-    
+
     headers.forEach(th => {
         const colKey = th.id.replace('th-', '');
         headerMap[`col-${colKey}`] = th;
     });
-    
+
     filterHeaders.forEach(th => {
         const classes = Array.from(th.classList);
         const colClass = classes.find(cls => cls.startsWith('col-'));
@@ -42,13 +42,13 @@ function reorderTableHeadersAndFilters(columnOrder) {
             filterHeaderMap[colClass] = th;
         }
     });
-    
+
     // Clear header row
     headerRow.innerHTML = '';
     if (filterRow) {
         filterRow.innerHTML = '';
     }
-    
+
     // Reorder headers based on columnOrder
     columnOrder.forEach(colKey => {
         if (headerMap[colKey]) {
@@ -277,7 +277,7 @@ export function renderTable() {
         // Filter cells based on visible columns
         const visibleColumns = getVisibleColumns();
         let filteredCells = {};
-        
+
         if (visibleColumns.length === 0) {
             // All columns visible
             filteredCells = cells;
@@ -294,14 +294,35 @@ export function renderTable() {
             ${columnOrder.filter(Key => filteredCells[Key]).map(Key => filteredCells[Key]).join('')}
         </tr>`;
     }).join('');
-    
+
     // Update ranking panel after rendering table (async)
     updateRankingPanel();
-    
+
+    // Apply column widths after table is rendered
+    applyColumnWidthAfterRender();
+
     // Setup drag and drop for column reordering only once
     if (!document.querySelector('.dragging-initialized')) {
         setTimeout(() => {
             setupColumnDragAndDrop();
         }, 100);
     }
+}
+
+// Apply column widths after table is rendered
+function applyColumnWidthAfterRender() {
+    const table = document.querySelector('table');
+    if (table) {
+        table.style.tableLayout = 'auto';
+    }
+
+    const headers = document.querySelectorAll('th[id^="th-"]');
+    headers.forEach(th => {
+        const savedWidth = localStorage.getItem(`col-width-${th.id}`);
+        if (savedWidth) {
+            th.style.width = savedWidth + 'px';
+            th.style.minWidth = savedWidth + 'px';
+            th.style.maxWidth = savedWidth + 'px';
+        }
+    });
 }

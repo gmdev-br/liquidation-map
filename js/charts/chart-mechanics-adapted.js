@@ -29,12 +29,12 @@ export const crosshairPlugin = {
             const { x, y } = chart.crosshair;
 
             ctx.save();
-            
+
             ctx.beginPath();
             ctx.lineWidth = options.width;
             ctx.strokeStyle = options.color;
             ctx.setLineDash(options.dash);
-            
+
             ctx.moveTo(x, top);
             ctx.lineTo(x, bottom);
             ctx.moveTo(left, y);
@@ -44,12 +44,12 @@ export const crosshairPlugin = {
             ctx.font = '11px sans-serif';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            
+
             const xValue = xScale.getValueForPixel(x);
             const xLabel = xValue.toLocaleString(undefined, { maximumFractionDigits: 2 });
             const xLabelWidth = ctx.measureText(xLabel).width + 16;
             const xLabelHeight = 24;
-            
+
             // Liquid Glass tooltip background
             ctx.fillStyle = 'rgba(7, 12, 26, 0.95)';
             ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
@@ -59,7 +59,7 @@ export const crosshairPlugin = {
             ctx.roundRect(x - xLabelWidth / 2, bottom, xLabelWidth, xLabelHeight, r);
             ctx.fill();
             ctx.shadowBlur = 0;
-            
+
             ctx.fillStyle = '#e2e8f4';
             ctx.fillText(xLabel, x, bottom + 12);
 
@@ -67,7 +67,7 @@ export const crosshairPlugin = {
             const yLabel = yValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 });
             const yLabelWidth = ctx.measureText(yLabel).width + 16;
             const yLabelHeight = 24;
-            
+
             // Liquid Glass tooltip background
             ctx.fillStyle = 'rgba(7, 12, 26, 0.95)';
             ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
@@ -76,7 +76,7 @@ export const crosshairPlugin = {
             ctx.roundRect(left - yLabelWidth, y - yLabelHeight / 2, yLabelWidth, yLabelHeight, r);
             ctx.fill();
             ctx.shadowBlur = 0;
-            
+
             ctx.textAlign = 'right';
             ctx.fillStyle = '#e2e8f4';
             ctx.fillText(yLabel, left - 8, y);
@@ -92,19 +92,19 @@ export const btcPriceLabelPlugin = {
     afterDraw: (chart) => {
         const opts = chart.options.plugins.btcPriceLabel;
         if (!opts || !opts.text) return;
-        
+
         const { ctx, chartArea: { bottom, left, right }, scales: { x } } = chart;
         const xVal = x.getPixelForValue(opts.price);
-        
+
         if (xVal < left || xVal > right) return;
-        
+
         const text = opts.text;
         ctx.save();
         ctx.font = 'bold 11px sans-serif';
         const textWidth = ctx.measureText(text).width + 16;
         const textHeight = 24;
         const yPos = bottom + 25;
-        
+
         // Liquid Glass background with glow
         ctx.fillStyle = 'rgba(255, 165, 0, 0.95)';
         ctx.shadowColor = 'rgba(255, 165, 0, 0.4)';
@@ -114,19 +114,19 @@ export const btcPriceLabelPlugin = {
         ctx.roundRect(xVal - textWidth / 2, yPos, textWidth, textHeight, r);
         ctx.fill();
         ctx.shadowBlur = 0;
-        
+
         ctx.beginPath();
         ctx.moveTo(xVal, yPos);
         ctx.lineTo(xVal - 5, yPos + 6);
         ctx.lineTo(xVal + 5, yPos + 6);
         ctx.fillStyle = 'rgba(255, 165, 0, 0.95)';
         ctx.fill();
-        
+
         ctx.fillStyle = '#000';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(text, xVal, yPos + textHeight / 2);
-        
+
         ctx.restore();
     }
 };
@@ -137,13 +137,13 @@ export const originalZoomConfig = {
         enabled: true,
         mode: 'xy',
         modifierKey: null,
-        onPan: function({chart}) { 
-            chart.isZoomed = true; 
-            saveSettings(); 
+        onPan: function ({ chart }) {
+            chart.isZoomed = true;
+            saveSettings();
         }
     },
     zoom: {
-        wheel: { 
+        wheel: {
             enabled: true,
             speed: 0.05,
             modifierKey: 'ctrl',
@@ -157,9 +157,9 @@ export const originalZoomConfig = {
             modifierKey: 'shift',
         },
         mode: 'xy',
-        onZoom: function({chart}) { 
-            chart.isZoomed = true; 
-            saveSettings(); 
+        onZoom: function ({ chart }) {
+            chart.isZoomed = true;
+            saveSettings();
         }
     }
 };
@@ -171,9 +171,9 @@ export const liqZoomConfig = {
         drag: { enabled: true, modifierKey: 'shift' },
         pinch: { enabled: true },
         mode: 'xy',
-        onZoom: ({chart}) => {
-             chart.isZoomed = true;
-             saveSettings();
+        onZoom: ({ chart }) => {
+            chart.isZoomed = true;
+            saveSettings();
         }
     }
 };
@@ -196,9 +196,9 @@ export function originalScaleResizing(canvasId, getChartInstance, resetBtnId) {
         const rect = canvas.getBoundingClientRect();
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
-        
+
         const { left, right, top, bottom } = chart.chartArea;
-        
+
         // Y Axis (Left)
         if (x < left && y >= top && y <= bottom) {
             isDragging = true;
@@ -250,20 +250,20 @@ export function originalScaleResizing(canvasId, getChartInstance, resetBtnId) {
                 const logMin = Math.log(initialMin);
                 const logMax = Math.log(initialMax);
                 const logRange = logMax - logMin;
-                
+
                 const newLogRange = logRange * (1 + factor);
                 const logCenter = (logMax + logMin) / 2;
-                
+
                 const newLogMin = logCenter - newLogRange / 2;
                 const newLogMax = logCenter + newLogRange / 2;
-                
+
                 chart.options.scales.y.min = Math.exp(newLogMin);
                 chart.options.scales.y.max = Math.exp(newLogMax);
             } else {
                 const range = initialMax - initialMin;
                 const newRange = range * (1 + factor);
                 const center = (initialMax + initialMin) / 2;
-                
+
                 chart.options.scales.y.min = center - newRange / 2;
                 chart.options.scales.y.max = center + newRange / 2;
             }
@@ -272,26 +272,26 @@ export function originalScaleResizing(canvasId, getChartInstance, resetBtnId) {
             const width = chart.chartArea.right - chart.chartArea.left;
             // Drag Right -> Zoom In -> Negative factor
             const factor = -(delta / width) * sensitivity;
-            
+
             if (isLog) {
                 if (initialMin <= 0) initialMin = 0.0001;
                 const logMin = Math.log(initialMin);
                 const logMax = Math.log(initialMax);
                 const logRange = logMax - logMin;
-                
+
                 const newLogRange = logRange * (1 + factor);
                 const logCenter = (logMax + logMin) / 2;
-                
+
                 const newLogMin = logCenter - newLogRange / 2;
                 const newLogMax = logCenter + newLogRange / 2;
-                
+
                 chart.options.scales.x.min = Math.exp(newLogMin);
                 chart.options.scales.x.max = Math.exp(newLogMax);
             } else {
                 const range = initialMax - initialMin;
                 const newRange = range * (1 + factor);
                 const center = (initialMax + initialMin) / 2;
-                
+
                 chart.options.scales.x.min = center - newRange / 2;
                 chart.options.scales.x.max = center + newRange / 2;
             }
@@ -351,8 +351,8 @@ export function setupChartHeightResizing(sectionId, heightKey, updateCallback) {
     function isResizerHandle(e) {
         const target = e.target;
         return target.classList.contains('chart-resizer-handle') ||
-               target.closest('.chart-resizer-handle') ||
-               target.classList.contains('chart-resizer');
+            target.closest('.chart-resizer-handle') ||
+            target.classList.contains('chart-resizer');
     }
 
     // Start resize
@@ -409,7 +409,14 @@ export function setupChartHeightResizing(sectionId, heightKey, updateCallback) {
 // ── Column Width Resizing (Adapted) ──
 export function setupColumnResizing() {
     console.log('Setting up column resizing...');
-    
+
+    // Track if we're currently resizing
+    let isResizing = false;
+    let currentResizer = null;
+    let currentTh = null;
+    let startX = 0;
+    let startWidth = 0;
+
     // Helper to get X position from mouse or touch event
     function getXPosition(e) {
         if (e.touches && e.touches.length > 0) {
@@ -419,109 +426,109 @@ export function setupColumnResizing() {
     }
 
     function startResize(e) {
-        const th = e.target.closest('th');
-        if (!th || !th.id || !th.id.startsWith('th-')) return;
-        
-        const resizer = th.querySelector('.resizer');
-        if (!resizer || e.target !== resizer) return;
+        const resizer = e.target.closest('.resizer');
+        if (!resizer) return false;
+
+        const th = resizer.closest('th');
+        if (!th || !th.id || !th.id.startsWith('th-')) return false;
 
         console.log('Column resizer clicked:', th.id);
-        const startX = getXPosition(e);
-        const startWidth = th.offsetWidth;
-        
-        // Prevent drag-and-drop during resize
+        startX = getXPosition(e);
+        startWidth = th.offsetWidth;
+        currentResizer = resizer;
+        currentTh = th;
+
+        // Mark that we're resizing
+        isResizing = true;
+
+        // Prevent drag-and-drop and sorting during resize
         e.stopPropagation();
         e.preventDefault();
-        
+
         document.body.classList.add('resizing');
         resizer.classList.add('active');
 
-        const onMove = (e) => {
-            const currentX = getXPosition(e);
-            const width = startWidth + (currentX - startX);
-            if (width > 30) {
-                th.style.width = width + 'px';
-            }
-        };
+        // Add move/end listeners to document
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onEnd);
+        document.addEventListener('touchmove', onMove, { passive: false });
+        document.addEventListener('touchend', onEnd);
 
-        const onEnd = () => {
-            document.body.classList.remove('resizing');
-            resizer.classList.remove('active');
-            window.removeEventListener('mousemove', onMove);
-            window.removeEventListener('mouseup', onEnd);
-            window.removeEventListener('touchmove', onMove, { passive: false });
-            window.removeEventListener('touchend', onEnd);
-            saveSettings();
-        };
-
-        window.addEventListener('mousemove', onMove);
-        window.addEventListener('mouseup', onEnd);
-        window.addEventListener('touchmove', onMove, { passive: false });
-        window.addEventListener('touchend', onEnd);
+        return true; // Indicate resize was started
     }
 
-    // Mouse events
-    document.addEventListener('mousedown', startResize);
-    
-    // Touch events
-    document.addEventListener('touchstart', startResize, { passive: false });
+    function onMove(e) {
+        if (!isResizing || !currentTh) return;
 
-    // Double-click to auto-fit column width
+        const currentX = getXPosition(e);
+        const width = Math.max(40, startWidth + (currentX - startX));
+
+        currentTh.style.width = width + 'px';
+        currentTh.style.minWidth = width + 'px';
+        currentTh.style.maxWidth = width + 'px'; // Ensure individual max-width doesn't constrain
+
+        // Save width to localStorage during resize
+        localStorage.setItem(`col-width-${currentTh.id}`, width);
+
+        // Prevent scrolling while resizing
+        if (e.cancelable) e.preventDefault();
+    }
+
+    function onEnd() {
+        if (!isResizing) return;
+
+        console.log('Column resize ended');
+
+        // Small delay before removing the resizing class to prevent 'click' events (sorting)
+        setTimeout(() => {
+            document.body.classList.remove('resizing');
+        }, 100);
+
+        if (currentResizer) currentResizer.classList.remove('active');
+
+        isResizing = false;
+        currentResizer = null;
+        currentTh = null;
+
+        // Remove listeners
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onEnd);
+        document.removeEventListener('touchmove', onMove);
+        document.removeEventListener('touchend', onEnd);
+
+        // Save settings to persist changes across sessions if needed
+        saveSettings();
+    }
+
+    // Use delegation on the table header area or document
+    document.addEventListener('mousedown', (e) => {
+        if (startResize(e)) {
+            // Event was handled
+        }
+    }, true); // Use capture to intercept before other handlers
+
+    document.addEventListener('touchstart', (e) => {
+        if (startResize(e)) {
+            // Event was handled
+        }
+    }, { passive: false });
+
+    // Double-click to auto-fit column width (Reset to default)
     document.addEventListener('dblclick', (e) => {
-        const th = e.target.closest('th');
+        const resizer = e.target.closest('.resizer');
+        if (!resizer) return;
+
+        const th = resizer.closest('th');
         if (!th || !th.id || !th.id.startsWith('th-')) return;
-        
-        const resizer = th.querySelector('.resizer');
-        if (!resizer || e.target !== resizer) return;
 
-        console.log('Column resizer double-clicked:', th.id);
-        e.stopPropagation();
-        e.preventDefault();
+        console.log('Column resizer double-clicked (reset):', th.id);
 
-        // Calculate optimal width based on content
-        const columnKey = th.id.replace('th-', '');
-        const table = th.closest('table');
-        if (!table) return;
+        // Remove individual override
+        localStorage.removeItem(`col-width-${th.id}`);
+        th.style.width = '';
+        th.style.minWidth = '';
+        th.style.maxWidth = '';
 
-        // Get all cells in this column
-        const headerCell = th;
-        const bodyCells = Array.from(table.querySelectorAll(`tbody td.${columnKey}`));
-        
-        // Create a temporary element to measure text width
-        const tempDiv = document.createElement('div');
-        tempDiv.style.position = 'absolute';
-        tempDiv.style.visibility = 'hidden';
-        tempDiv.style.whiteSpace = 'nowrap';
-        tempDiv.style.padding = '0';
-        tempDiv.style.margin = '0';
-        tempDiv.style.font = window.getComputedStyle(headerCell).font;
-        document.body.appendChild(tempDiv);
-
-        let maxWidth = 0;
-
-        // Measure header text
-        tempDiv.textContent = headerCell.textContent.trim();
-        const headerWidth = tempDiv.offsetWidth;
-        maxWidth = Math.max(maxWidth, headerWidth);
-
-        // Measure all body cells
-        bodyCells.forEach(cell => {
-            tempDiv.textContent = cell.textContent.trim();
-            const cellWidth = tempDiv.offsetWidth;
-            maxWidth = Math.max(maxWidth, cellWidth);
-        });
-
-        document.body.removeChild(tempDiv);
-
-        // Add padding (approximately 20px for cell padding + borders)
-        const optimalWidth = maxWidth + 40;
-        
-        // Apply the optimal width with a minimum of 60px
-        const finalWidth = Math.max(60, optimalWidth);
-        
-        console.log(`Auto-fitting column ${columnKey} to ${finalWidth}px`);
-        th.style.width = finalWidth + 'px';
-        
         saveSettings();
     });
 }
@@ -541,31 +548,31 @@ export const btcGridPlugin = {
     },
     afterDraw: (chart, _args, options) => {
         const { ctx, chartArea: { top, bottom, left, right }, scales: { x: xScale, y: yScale } } = chart;
-        
+
         if (!xScale || !yScale) return;
-        
+
         ctx.save();
-        
+
         // Get grid spacing from user input
         const gridSpacingInput = document.getElementById('gridSpacingRange');
         const userGridSpacing = gridSpacingInput && gridSpacingInput.value ? parseInt(gridSpacingInput.value) : 500;
-        
+
         // Get filter values from inputs
         const minEntryInput = document.getElementById('minEntryCcy');
         const maxEntryInput = document.getElementById('maxEntryCcy');
         const minPrice = minEntryInput && minEntryInput.value ? parseFloat(minEntryInput.value) : (xScale.min || 0);
         const maxPrice = maxEntryInput && maxEntryInput.value ? parseFloat(maxEntryInput.value) : (xScale.max || 100000);
-        
+
         // Update intervals based on user spacing
         const minorInterval = userGridSpacing;
         const majorInterval = userGridSpacing * 5;
-        
+
         // Draw minor vertical lines
         const startMinor = Math.ceil(minPrice / minorInterval) * minorInterval;
-        
+
         ctx.strokeStyle = options.minorColor;
         ctx.lineWidth = options.minorWidth;
-        
+
         for (let price = startMinor; price <= maxPrice; price += minorInterval) {
             const xPixel = xScale.getPixelForValue(price);
             if (xPixel >= left && xPixel <= right) {
@@ -575,13 +582,13 @@ export const btcGridPlugin = {
                 ctx.stroke();
             }
         }
-        
+
         // Draw major vertical lines with labels
         const startMajor = Math.ceil(minPrice / majorInterval) * majorInterval;
-        
+
         ctx.strokeStyle = options.majorColor;
         ctx.lineWidth = options.majorWidth;
-        
+
         for (let price = startMajor; price <= maxPrice; price += majorInterval) {
             const xPixel = xScale.getPixelForValue(price);
             if (xPixel >= left && xPixel <= right) {
@@ -589,7 +596,7 @@ export const btcGridPlugin = {
                 ctx.moveTo(xPixel, top);
                 ctx.lineTo(xPixel, bottom);
                 ctx.stroke();
-                
+
                 // Add price labels for major grid lines with Liquid Glass styling
                 ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
                 ctx.font = '10px sans-serif';
@@ -597,11 +604,11 @@ export const btcGridPlugin = {
                 ctx.fillText(price.toLocaleString(), xPixel, top - 5);
             }
         }
-        
+
         // Draw horizontal lines
         ctx.strokeStyle = options.horizontalColor;
         ctx.lineWidth = options.horizontalWidth;
-        
+
         const yTicks = yScale.getTicks();
         yTicks.forEach(tick => {
             const yPixel = yScale.getPixelForValue(tick.value);
@@ -612,7 +619,7 @@ export const btcGridPlugin = {
                 ctx.stroke();
             }
         });
-        
+
         ctx.restore();
     }
 };

@@ -108,8 +108,18 @@ th {
     width: 6px;
     height: 100%;
     cursor: col-resize;
-    z-index: 10;
+    z-index: 1;
     transition: background 0.2s;
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    pointer-events: auto;
+}
+
+/* Disable pointer events on th when hovering over resizer */
+th:hover .resizer {
+    pointer-events: auto;
 }
 
 .resizer:hover,

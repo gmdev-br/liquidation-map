@@ -14,6 +14,9 @@ async function init() {
     // Setup event listeners
     setupEventListeners();
 
+    // Initialize charts
+    initializeCharts();
+
     // Initialize panels (charts are rendered within loadInitialState via renderTable)
     initializePanels();
 

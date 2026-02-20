@@ -364,112 +364,139 @@ export function applyColumnOrder() {
     setupColumnDragAndDrop();
 }
 
-
 export function setupColumnDragAndDrop() {
-    // Check if already setup to avoid multiple event listeners
     if (document.querySelector('.dragging-initialized')) {
         console.log('Drag and drop already initialized');
         return;
     }
-    
+
     console.log('Setting up column drag and drop...');
     const tableHeaders = document.querySelectorAll('th[id^="th-"]');
     console.log('Found table headers:', tableHeaders.length);
-    
+
+    // Track drag state
+    let isDragging = false;
+    let dragStartX = 0;
+    let dragStartY = 0;
+    let draggedTh = null;
+
+    // Remove draggable from all headers (we handle manually)
     tableHeaders.forEach(th => {
-        th.draggable = true;
-        console.log('Made draggable:', th.id);
+        th.draggable = false;
+    });
+
+    // Global mouse event delegation for drag start (no capture to run after resize)
+    document.addEventListener('mousedown', (e) => {
+        // Skip if resizing
+        if (document.body.classList.contains('resizing')) return;
+
+        const th = e.target.closest('th[id^="th-"]');
+        if (!th) return;
+
+        // Skip if clicking on resizer
+        const resizer = th.querySelector('.resizer');
+        if (resizer && (e.target === resizer || resizer.contains(e.target))) return;
+
+        // Start drag
+        isDragging = true;
+        draggedTh = th;
+        dragStartX = e.clientX;
+        dragStartY = e.clientY;
         
-        th.addEventListener('dragstart', (e) => {
-            // Prevent drag-and-drop during column resize
-            if (document.body.classList.contains('resizing')) {
-                e.preventDefault();
-                return;
-            }
-            
-            th.classList.add('dragging');
-            e.dataTransfer.effectAllowed = 'move';
-            e.dataTransfer.setData('text/html', th.innerHTML);
-            e.dataTransfer.setData('columnId', th.id);
-            console.log('Drag started on:', th.id);
-        });
+        th.classList.add('dragging');
+    }, false); // No capture to run after resize handler
+
+    // Global mouse move for drag feedback
+    document.addEventListener('mousemove', (e) => {
+        if (!isDragging || !draggedTh) return;
+
+        const deltaX = e.clientX - dragStartX;
+        const deltaY = e.clientY - dragStartY;
         
-        th.addEventListener('dragend', (_e) => {
-            th.classList.remove('dragging');
+        // Only show dragging state after moving a bit
+        if (Math.abs(deltaX) > 5 || Math.abs(deltaY) > 5) {
+            draggedTh.style.opacity = '0.5';
+        }
+
+        // Find potential drop target
+        const targetElement = document.elementFromPoint(e.clientX, e.clientY);
+        const targetTh = targetElement?.closest('th[id^="th-"]');
+        
+        if (targetTh && targetTh !== draggedTh) {
+            // Remove drag-over from all headers
             document.querySelectorAll('th').forEach(header => {
                 header.classList.remove('drag-over');
             });
-        });
+            // Add drag-over to current target
+            targetTh.classList.add('drag-over');
+        }
+    });
+
+    // Global mouse up for drop
+    document.addEventListener('mouseup', (e) => {
+        if (!isDragging || !draggedTh) return;
+
+        // Find drop target
+        const targetElement = document.elementFromPoint(e.clientX, e.clientY);
+        const targetTh = targetElement?.closest('th[id^="th-"]');
         
-        th.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            e.dataTransfer.dropEffect = 'move';
+        if (targetTh && targetTh !== draggedTh) {
+            console.log('Drop completed:', draggedTh.id, '->', targetTh.id);
             
-            const draggingHeader = document.querySelector('.dragging');
-            if (draggingHeader && draggingHeader !== th) {
-                // Remove drag-over from all headers
-                document.querySelectorAll('th').forEach(header => {
-                    header.classList.remove('drag-over');
-                });
-                
-                // Add drag-over to current header
-                th.classList.add('drag-over');
-            }
-        });
-        
-        th.addEventListener('drop', (e) => {
-            e.preventDefault();
-            console.log('Drop event triggered');
-            
-            const draggingHeader = document.querySelector('.dragging');
-            if (!draggingHeader || draggingHeader === th) {
-                console.log('Invalid drop - no dragging header or same header');
-                return;
-            }
-            
-            const draggedColumnId = draggingHeader.id.replace('th-', '');
-            const targetColumnId = th.id.replace('th-', '');
+            const draggedColumnId = draggedTh.id.replace('th-', '');
+            const targetColumnId = targetTh.id.replace('th-', '');
             console.log('Dragged:', draggedColumnId, 'Target:', targetColumnId);
-            
+
             // Get current column order
             const currentOrder = getColumnOrder();
             console.log('Current order:', currentOrder);
-            
+
             const draggedIndex = currentOrder.indexOf(`col-${draggedColumnId}`);
             const targetIndex = currentOrder.indexOf(`col-${targetColumnId}`);
             console.log('Indices - Dragged:', draggedIndex, 'Target:', targetIndex);
-            
-            if (draggedIndex === -1 || targetIndex === -1) {
-                console.log('Invalid indices found');
-                return;
+
+            if (draggedIndex !== -1 && targetIndex !== -1) {
+                // Reorder columns
+                const newOrder = [...currentOrder];
+                const [draggedColumn] = newOrder.splice(draggedIndex, 1);
+                newOrder.splice(targetIndex, 0, draggedColumn);
+                console.log('New order:', newOrder);
+
+                // Update state and save
+                setColumnOrder(newOrder);
+                saveSettings();
+                console.log('Order saved');
+
+                // Re-render table to apply new column order
+                renderTable();
+                console.log('Table re-rendered');
             }
-            
-            // Reorder columns
-            const newOrder = [...currentOrder];
-            const [draggedColumn] = newOrder.splice(draggedIndex, 1);
-            newOrder.splice(targetIndex, 0, draggedColumn);
-            console.log('New order:', newOrder);
-            
-            // Update state and save
-            setColumnOrder(newOrder);
-            saveSettings();
-            console.log('Order saved');
-            
-            // Re-render table to apply new column order
-            renderTable();
-            console.log('Table re-rendered');
-        });
-        
-        th.addEventListener('dragenter', (e) => {
-            e.preventDefault();
+        }
+
+        // Clean up
+        isDragging = false;
+        if (draggedTh) {
+            draggedTh.classList.remove('dragging');
+            draggedTh.style.opacity = '';
+            draggedTh = null;
+        }
+        document.querySelectorAll('th').forEach(header => {
+            header.classList.remove('drag-over');
         });
     });
-    
+
+    // Prevent default dragstart (we're handling it manually)
+    document.addEventListener('dragstart', (e) => {
+        if (e.target.closest('th[id^="th-"]')) {
+            e.preventDefault();
+        }
+    });
+
     // Mark as initialized
-    const firstHeader = document.querySelector('th[id^="th-"]');
-    if (firstHeader) {
-        firstHeader.classList.add('dragging-initialized');
-    }
+    const marker = document.createElement('div');
+    marker.className = 'dragging-initialized';
+    marker.style.display = 'none';
+    document.body.appendChild(marker);
 }
 
 export function applyColumnVisibility() {
