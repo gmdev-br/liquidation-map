@@ -50,6 +50,7 @@ let aggregationFactor = 50;
 let savedScatterState = null;
 let savedLiqState = null;
 let gridSpacing = 500; // Grid spacing in px
+let minBtcVolume = 0; // Volume BTC minimum for highlighting
 
 // Custom colors for leverage categories
 let leverageColors = {
@@ -117,7 +118,8 @@ export const getState = () => ({
     renderPending,
     lastSaveTime,
     leverageColors,
-    columnWidth
+    columnWidth,
+    minBtcVolume
 });
 
 // Setters
@@ -162,7 +164,8 @@ export const setState = (updates) => {
         lastSaveTime,
         leverageColors,
         columnWidth,
-        gridSpacing
+        gridSpacing,
+        minBtcVolume
     }, updates);
 };
 
@@ -206,6 +209,7 @@ export const setRenderPending = (value) => { renderPending = value; };
 export const setLastSaveTime = (value) => { lastSaveTime = value; };
 export const setLeverageColors = (value) => { leverageColors = value; };
 export const setGridSpacing = (value) => { gridSpacing = value; };
+export const setMinBtcVolume = (value) => { minBtcVolume = value; };
 
 // Getters for common state access
 export const getAllRows = () => allRows;
@@ -247,6 +251,7 @@ export const getSelectedCoins = () => selectedCoins;
 export const getLeverageColors = () => leverageColors;
 export const getColumnWidth = () => columnWidth;
 export const getGridSpacing = () => gridSpacing;
+export const getMinBtcVolume = () => minBtcVolume;
 export const setPriceMode = (mode) => {
     priceMode = mode;
 };

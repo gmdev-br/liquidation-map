@@ -7,15 +7,15 @@ import {
     getAggregationFactor, getSelectedCoins, getPriceMode, getPriceUpdateInterval, getActiveWindow,
     getVisibleColumns, getColumnOrder, getRankingLimit, getColorMaxLev,
     getChartHighLevSplit, getChartHeight, getLiqChartHeight, getSavedScatterState,
-    getSavedLiqState, getColumnWidths, getColumnWidth, getActiveCurrency, getActiveEntryCurrency, getDecimalPlaces, getLeverageColors, getFontSize, getFontSizeKnown, getGridSpacing,
+    getSavedLiqState, getColumnWidths, getColumnWidth, getActiveCurrency, getActiveEntryCurrency, getDecimalPlaces, getLeverageColors, getFontSize, getFontSizeKnown, getGridSpacing, getMinBtcVolume,
     setSortKey, setSortDir, setSavedScatterState, setSavedLiqState,
-    setColumnOrder, setVisibleColumns, setSelectedCoins, setRankingLimit, setColorMaxLev, setChartHighLevSplit, setChartMode, setBubbleScale, setBubbleOpacity, setAggregationFactor, setPriceMode, setShowSymbols, setPriceUpdateInterval, setDecimalPlaces, setFontSize, setFontSizeKnown, setLeverageColors, setColumnWidth, setGridSpacing
+    setColumnOrder, setVisibleColumns, setSelectedCoins, setRankingLimit, setColorMaxLev, setChartHighLevSplit, setChartMode, setBubbleScale, setBubbleOpacity, setAggregationFactor, setPriceMode, setShowSymbols, setPriceUpdateInterval, setDecimalPlaces, setFontSize, setFontSizeKnown, setLeverageColors, setColumnWidth, setGridSpacing, setMinBtcVolume
 } from '../state.js';
 import { COLUMN_DEFS } from '../config.js';
 import { cbSetValue, updateCoinSearchLabel } from '../ui/combobox.js';
-import { 
-    applyColumnVisibility, 
-    updateColumnSelectDisplay 
+import {
+    applyColumnVisibility,
+    updateColumnSelectDisplay
 } from '../events/handlers.js';
 import { renderQuotesPanel, updatePriceModeUI } from '../ui/panels.js';
 
@@ -38,7 +38,7 @@ export function saveSettings(getChartState = null, savedScatterState = null, sav
     const entryCurrencySelectEl = document.getElementById('entryCurrencySelect');
     const minValueCcyEl = document.getElementById('minValueCcy');
     const maxValueCcyEl = document.getElementById('maxValueCcy');
-    
+
     const settings = {
         scatterChartState: getChartStateHelper(scatterChart) || savedScatterState,
         liqChartState: getChartStateHelper(liqChartInstance) || savedLiqState,
@@ -83,34 +83,35 @@ export function saveSettings(getChartState = null, savedScatterState = null, sav
         columnOrder: getColumnOrder(),
         leverageColors: getLeverageColors(),
         columnWidth: getColumnWidth(),
-        gridSpacing: getGridSpacing()
+        gridSpacing: getGridSpacing(),
+        minBtcVolume: getMinBtcVolume()
     };
-    
+
     console.log('Saving currency settings:', {
         currencySelect: settings.currencySelect,
         entryCurrencySelect: settings.entryCurrencySelect
     });
-    
+
     console.log('Saving VALUE column data:', {
         minValueCcy: settings.minValueCcy,
         maxValueCcy: settings.maxValueCcy
     });
-    
+
     localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
 }
 
 export function loadSettings() {
     const saved = localStorage.getItem(STORAGE_KEY);
     let s = null;
-    
+
     if (saved) {
         try {
             s = JSON.parse(saved);
-        } catch (e) { 
-            console.warn('Failed to parse saved settings', e); 
+        } catch (e) {
+            console.warn('Failed to parse saved settings', e);
         }
     }
-    
+
     // Initialize column order
     if (s && s.columnOrder && s.columnOrder.length > 0) {
         // Merge new columns from COLUMN_DEFS that are missing in saved order
@@ -138,7 +139,7 @@ export function loadSettings() {
         s = s || {};
         s.columnOrder = defaultOrder;
     }
-    
+
     // Initialize visible columns
     if (s && s.visibleColumns && s.visibleColumns.length > 0) {
         // Merge new columns
@@ -161,28 +162,28 @@ export function loadSettings() {
         s = s || {};
         s.visibleColumns = defaultVisible;
     }
-    
+
     // ENSURE SYNCHRONIZATION: Make sure columnOrder and visibleColumns are identical
     // This prevents persistence issues where columns get out of sync
     const finalColumnOrder = getColumnOrder();
     const finalVisibleColumns = getVisibleColumns();
-    
+
     if (JSON.stringify(finalColumnOrder) !== JSON.stringify(finalVisibleColumns)) {
         console.warn('Column order mismatch detected, synchronizing...');
         console.warn('columnOrder:', finalColumnOrder);
         console.warn('visibleColumns:', finalVisibleColumns);
-        
+
         // Use columnOrder as the source of truth and update visibleColumns to match
         setVisibleColumns([...finalColumnOrder]);
         applyColumnVisibility();
         updateColumnSelectDisplay();
-        
+
         console.log('Synchronized columnOrder and visibleColumns:', finalColumnOrder);
     }
-    
+
     // Load other settings if they exist
     if (!s) return;
-    
+
     if (s.showSymbols !== undefined) {
         setShowSymbols(s.showSymbols);
         const btnMobile = document.getElementById('btnShowSymMobile');
@@ -261,7 +262,7 @@ export function loadSettings() {
     if (s.maxSzi) document.getElementById('maxSzi').value = s.maxSzi;
     if (s.minValueCcy) document.getElementById('minValueCcy').value = s.minValueCcy;
     if (s.maxValueCcy) document.getElementById('maxValueCcy').value = s.maxValueCcy;
-    
+
     console.log('Loading VALUE column data:', {
         minValueCcy: s.minValueCcy,
         maxValueCcy: s.maxValueCcy
@@ -274,12 +275,12 @@ export function loadSettings() {
     if (s.levTypeFilter) cbSetValue('levTypeFilter', s.levTypeFilter);
     if (s.currencySelect) cbSetValue('currencySelect', s.currencySelect);
     if (s.entryCurrencySelect) cbSetValue('entryCurrencySelect', s.entryCurrencySelect);
-    
+
     console.log('Loading currency settings:', {
         currencySelect: s.currencySelect,
         entryCurrencySelect: s.entryCurrencySelect
     });
-    
+
     // Trigger currency change handler to update state and headers
     if (s.currencySelect || s.entryCurrencySelect) {
         console.log('Triggering onCurrencyChange after loading settings');
@@ -362,7 +363,7 @@ export function loadSettings() {
         colorLongHigh.forEach(el => el.value = s.leverageColors.longHigh || '#16a34a');
         colorShortLow.forEach(el => el.value = s.leverageColors.shortLow || '#ef4444');
         colorShortHigh.forEach(el => el.value = s.leverageColors.shortHigh || '#dc2626');
-        
+
         // Update CSS variables with loaded colors
         document.documentElement.style.setProperty('--long-low-color', s.leverageColors.longLow || '#22c55e');
         document.documentElement.style.setProperty('--long-high-color', s.leverageColors.longHigh || '#16a34a');
@@ -390,5 +391,10 @@ export function loadSettings() {
         const gridSpacingVals = document.querySelectorAll('#gridSpacingVal');
         gridSpacingRanges.forEach(el => el.value = s.gridSpacing);
         gridSpacingVals.forEach(el => el.textContent = s.gridSpacing);
+    }
+    if (s.minBtcVolume !== undefined) {
+        setMinBtcVolume(s.minBtcVolume);
+        const minBtcVolumeEls = document.querySelectorAll('#minBtcVolume');
+        minBtcVolumeEls.forEach(el => el.value = s.minBtcVolume);
     }
 }

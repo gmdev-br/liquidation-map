@@ -97,6 +97,29 @@ export const btcPriceLabelPlugin = {
         const isVertical = chart.options.indexAxis === 'y';
 
         ctx.save();
+        
+        // Draw the price line (dashed orange line)
+        ctx.beginPath();
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = '#f59e0b';
+        ctx.setLineDash([5, 5]);
+
+        if (isVertical) {
+            const yVal = y.getPixelForValue(opts.price);
+            if (yVal >= top && yVal <= bottom) {
+                ctx.moveTo(left, yVal);
+                ctx.lineTo(right, yVal);
+                ctx.stroke();
+            }
+        } else {
+            const xVal = x.getPixelForValue(opts.price);
+            if (xVal >= left && xVal <= right) {
+                ctx.moveTo(xVal, top);
+                ctx.lineTo(xVal, bottom);
+                ctx.stroke();
+            }
+        }
+
         ctx.font = '9px sans-serif';
         const text = opts.text;
         const textWidth = ctx.measureText(text).width + 16;

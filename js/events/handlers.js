@@ -21,7 +21,7 @@ import {
     getRankingLimit, getColorMaxLev, getChartHighLevSplit, getChartHeight,
     getLiqChartHeight, getActiveWindow, setColumnOrder, setVisibleColumns,
     getColumnOrder, getVisibleColumns, setPriceUpdateInterval, setActiveCurrency,
-    setActiveEntryCurrency, setDecimalPlaces, setFontSize, setFontSizeKnown, setLeverageColors, setGridSpacing
+    setActiveEntryCurrency, setDecimalPlaces, setFontSize, setFontSizeKnown, setLeverageColors, setGridSpacing, setMinBtcVolume, getMinBtcVolume
 } from '../state.js';
 import { renderTable, updateStats } from '../ui/table.js';
 import { renderQuotesPanel, updateRankingPanel } from '../ui/panels.js';
@@ -202,6 +202,18 @@ export function updateGridSpacing(val) {
         const liqChart = window.getLiqChartInstance ? window.getLiqChartInstance() : null;
         if (scatterChart) scatterChart.update('none');
         if (liqChart) liqChart.update('none');
+    }
+}
+
+export function updateMinBtcVolume(val) {
+    const v = parseFloat(val);
+    if (!isNaN(v) && v >= 0) {
+        setMinBtcVolume(v);
+        // Sync both mobile and desktop controls
+        syncControls(['#minBtcVolume'], v);
+        saveSettings();
+        // Trigger table re-render to apply new highlighting
+        renderTable();
     }
 }
 

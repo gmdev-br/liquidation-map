@@ -14,7 +14,7 @@ import {
     getDisplayedRows, getCurrentPrices, getActiveCurrency, getActiveEntryCurrency,
     getShowSymbols, getChartHeight, getChartHighLevSplit,
     getBubbleScale, getBubbleOpacity, getChartMode, getAggregationFactor, getSavedScatterState,
-    getFxRates, getDecimalPlaces, getLeverageColors
+    getFxRates, getDecimalPlaces, getLeverageColors, getMinBtcVolume
 } from '../state.js';
 import { CURRENCY_META } from '../config.js';
 import { chartPlugins, chartOptions } from './config.js';
@@ -186,14 +186,14 @@ export function renderScatterPlot() {
     const entryLabel = `Entry Price (${getActiveEntryCurrency() || 'USD'})`;
     const valueLabel = `Position Value (${getActiveCurrency()})`;
 
+    // Get min BTC volume setting from state
+    const minBtcVolume = getMinBtcVolume();
+
     // Prepare data
     const data = displayedRows.map(r => {
-        let volBTC = 0;
-        if (r.coin === 'BTC') {
-            volBTC = Math.abs(r.szi);
-        } else if (btcPrice > 0) {
-            volBTC = r.positionValue / btcPrice;
-        }
+        const currentPrices = getCurrentPrices();
+        const btcPrice = parseFloat(currentPrices['BTC'] || 0);
+        const volBTC = btcPrice > 0 ? r.positionValue / btcPrice : 0;
 
         const entryPrice = r.entryPx;
         const correlatedEntry = getCorrelatedPrice(r, entryPrice, getActiveEntryCurrency(), getCurrentPrices());
@@ -220,19 +220,6 @@ export function renderScatterPlot() {
     const refPrice = btcPrice * rate;
 
     const isLinesMode = getChartMode() === 'lines';
-    const annotations = {
-        currentPriceLine: {
-            type: 'line',
-            xMin: isLinesMode ? undefined : refPrice,
-            xMax: isLinesMode ? undefined : refPrice,
-            yMin: isLinesMode ? refPrice : undefined,
-            yMax: isLinesMode ? refPrice : undefined,
-            borderColor: '#f59e0b',
-            borderWidth: 1,
-            borderDash: [5, 5],
-            clip: false
-        }
-    };
 
     // Configure chart based on mode
     let datasets = [];
@@ -451,7 +438,10 @@ export function renderScatterPlot() {
                 hoverBackgroundColor: hexToRgba(customColors.longLow, Math.min(opacity + 0.15, 0.8)),
                 hoverBorderColor: customColors.longLow,
                 pointStyle: (context) => {
-                    return context.raw?._raw?.displayName ? 'star' : 'circle';
+                    const raw = context.raw?._raw;
+                    const displayName = raw?.displayName;
+                    const volBTC = context.raw?.y || 0;
+                    return (displayName || (minBtcVolume > 0 && volBTC >= minBtcVolume)) ? 'star' : 'circle';
                 }
             });
         }
@@ -466,7 +456,10 @@ export function renderScatterPlot() {
                 hoverBackgroundColor: hexToRgba(customColors.longHigh, Math.min(opacity + 0.15, 0.8)),
                 hoverBorderColor: customColors.longHigh,
                 pointStyle: (context) => {
-                    return context.raw?._raw?.displayName ? 'star' : 'circle';
+                    const raw = context.raw?._raw;
+                    const displayName = raw?.displayName;
+                    const volBTC = context.raw?.y || 0;
+                    return (displayName || (minBtcVolume > 0 && volBTC >= minBtcVolume)) ? 'star' : 'circle';
                 }
             });
         }
@@ -481,7 +474,10 @@ export function renderScatterPlot() {
                 hoverBackgroundColor: hexToRgba(customColors.shortLow, Math.min(opacity + 0.15, 0.8)),
                 hoverBorderColor: customColors.shortLow,
                 pointStyle: (context) => {
-                    return context.raw?._raw?.displayName ? 'star' : 'circle';
+                    const raw = context.raw?._raw;
+                    const displayName = raw?.displayName;
+                    const volBTC = context.raw?.y || 0;
+                    return (displayName || (minBtcVolume > 0 && volBTC >= minBtcVolume)) ? 'star' : 'circle';
                 }
             });
         }
@@ -496,7 +492,10 @@ export function renderScatterPlot() {
                 hoverBackgroundColor: hexToRgba(customColors.shortHigh, Math.min(opacity + 0.15, 0.8)),
                 hoverBorderColor: customColors.shortHigh,
                 pointStyle: (context) => {
-                    return context.raw?._raw?.displayName ? 'star' : 'circle';
+                    const raw = context.raw?._raw;
+                    const displayName = raw?.displayName;
+                    const volBTC = context.raw?.y || 0;
+                    return (displayName || (minBtcVolume > 0 && volBTC >= minBtcVolume)) ? 'star' : 'circle';
                 }
             });
         }
@@ -563,8 +562,24 @@ export function renderScatterPlot() {
                             if (chartType === 'bar' && getChartMode() === 'column') {
                                 return 'Position Count';
                             }
-                            const r = context[0].raw?._raw || (context[0].raw?.y ? context[0].raw : context[0].dataset._raw);
-                            if (!r) return '';
+                            let r = null;
+                            
+                            // Try different ways to get the raw data
+                            if (context[0] && context[0].dataset && context[0].dataset._raw) {
+                                r = context[0].dataset._raw;
+                            } else if (context[0] && context[0].raw && context[0].raw._raw) {
+                                r = context[0].raw._raw;
+                            } else if (context[0] && context[0].raw) {
+                                r = context[0].raw;
+                            }
+                            
+                            if (!r || !r.coin) {
+                                // Fallback: try to get from dataset label
+                                if (context[0] && context[0].dataset && context[0].dataset.label) {
+                                    return context[0].dataset.label;
+                                }
+                                return 'Unknown';
+                            }
                             return `${r.coin} ${r.side === 'long' ? '▲' : '▼'}`;
                         },
                         titleColor: function (context) {
@@ -593,9 +608,6 @@ export function renderScatterPlot() {
                             ];
                         }
                     }
-                },
-                annotation: {
-                    annotations: (chartType === 'bubble' || isLinesMode) ? annotations : {}
                 },
                 btcPriceLabel: (chartType === 'bubble' || isLinesMode) ? {
                     price: refPrice,
@@ -639,7 +651,6 @@ export function renderScatterPlot() {
     scatterChart.options.scales = config.options.scales;
 
     // Re-assign plugins/annotations (moved outside zoom check block)
-    scatterChart.options.plugins.annotation.annotations = config.options.plugins.annotation.annotations;
     if (config.options.plugins.btcPriceLabel) {
         scatterChart.options.plugins.btcPriceLabel = {
             price: config.options.plugins.btcPriceLabel.price,

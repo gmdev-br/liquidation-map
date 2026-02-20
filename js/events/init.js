@@ -25,7 +25,7 @@ import {
     updateBubbleSize, updateBubbleOpacity, updateAggregation, setChartModeHandler, updateChartHeight,
     updateLiqChartHeight, onCurrencyChange, openColumnCombobox, closeColumnComboboxDelayed,
     renderColumnDropdown as renderColumnDropdownFn, toggleColumn as toggleColumnFn, showAllColumns as showAllColumnsFn, hideAllColumns as hideAllColumnsFn, updateColumnSelectDisplay, applyColumnOrder,
-    applyColumnWidths, applyColumnVisibility, toggleShowSymbols, updatePriceInterval, updateDecimalPlaces, updateFontSize, updateFontSizeKnown, updateLeverageColors, updateGridSpacing
+    applyColumnWidths, applyColumnVisibility, toggleShowSymbols, updatePriceInterval, updateDecimalPlaces, updateFontSize, updateFontSizeKnown, updateLeverageColors, updateGridSpacing, updateMinBtcVolume
 } from './handlers.js';
 import { initColumnWidthControl, applyColumnWidth } from '../ui/columnWidth.js';
 import { setWindow, setStatus, setProgress } from '../ui/status.js';
@@ -37,31 +37,31 @@ function setupSwipeGestures() {
     let touchStartX = 0;
     let touchStartY = 0;
     const swipeThreshold = 50;
-    
+
     function handleTouchStart(e) {
         touchStartX = e.touches[0].clientX;
         touchStartY = e.touches[0].clientY;
     }
-    
+
     function handleTouchEnd(e) {
         if (!touchStartX || !touchStartY) return;
-        
+
         const touchEndX = e.changedTouches[0].clientX;
         const touchEndY = e.changedTouches[0].clientY;
-        
+
         const diffX = touchEndX - touchStartX;
         const diffY = touchEndY - touchStartY;
-        
+
         // Only handle horizontal swipes
         if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > swipeThreshold) {
             // Check if we're on a tab element
             const target = e.target;
             const tab = target.closest('.tab');
-            
+
             if (tab) {
                 const tabs = Array.from(tab.parentElement.querySelectorAll('.tab'));
                 const currentIndex = tabs.indexOf(tab);
-                
+
                 if (diffX > 0 && currentIndex > 0) {
                     // Swipe right - go to previous tab
                     tabs[currentIndex - 1].click();
@@ -71,11 +71,11 @@ function setupSwipeGestures() {
                 }
             }
         }
-        
+
         touchStartX = 0;
         touchStartY = 0;
     }
-    
+
     document.addEventListener('touchstart', handleTouchStart, { passive: true });
     document.addEventListener('touchend', handleTouchEnd);
 }
@@ -86,7 +86,7 @@ function setupPullToRefresh() {
     let isPulling = false;
     const pullThreshold = 100;
     const pullToRefresh = document.getElementById('pullToRefresh');
-    
+
     if (!pullToRefresh) return;
 
     function handleTouchStart(e) {
@@ -109,7 +109,7 @@ function setupPullToRefresh() {
             e.preventDefault();
             const progress = Math.min(diff / pullThreshold, 1);
             pullToRefresh.style.transform = `translateY(${diff}px)`;
-            
+
             if (progress >= 1) {
                 pullToRefresh.classList.add('active');
             } else {
@@ -122,7 +122,7 @@ function setupPullToRefresh() {
         if (!isPulling) return;
 
         const isActive = pullToRefresh.classList.contains('active');
-        
+
         if (isActive) {
             // Trigger refresh
             window.location.reload();
@@ -270,10 +270,10 @@ function setupEventListeners() {
         th.addEventListener('click', (e) => {
             // Skip if currently resizing or if clicking on resizer
             if (document.body.classList.contains('resizing')) return;
-            
+
             const resizer = th.querySelector('.resizer');
             if (resizer && (e.target === resizer || resizer.contains(e.target))) return;
-            
+
             const key = th.id.replace('th-', '');
             sortBy(key, renderTable);
         });
@@ -281,8 +281,8 @@ function setupEventListeners() {
 
     // Filter inputs
     const filterInputs = ['minValue', 'coinFilter', 'sideFilter', 'minLev', 'maxLev', 'minSize',
-                          'minSzi', 'maxSzi', 'minValueCcy', 'maxValueCcy', 'minEntryCcy', 'maxEntryCcy',
-                          'minUpnl', 'maxUpnl', 'minFunding', 'levTypeFilter', 'addressFilter'];
+        'minSzi', 'maxSzi', 'minValueCcy', 'maxValueCcy', 'minEntryCcy', 'maxEntryCcy',
+        'minUpnl', 'maxUpnl', 'minFunding', 'levTypeFilter', 'addressFilter', 'minBtcVolume'];
 
     filterInputs.forEach(id => {
         const el = document.getElementById(id);
@@ -291,7 +291,7 @@ function setupEventListeners() {
                 saveSettings();
                 renderTable();
             });
-            
+
             // Also add input event listener for number inputs to save as user types
             if (el.type === 'number') {
                 el.addEventListener('input', () => {
@@ -423,10 +423,18 @@ function setupEventListeners() {
         });
     });
 
+    // Min BTC Volume control - attach to both mobile and desktop
+    const minBtcVolumeInputs = document.querySelectorAll('#minBtcVolume');
+    minBtcVolumeInputs.forEach(input => {
+        input.addEventListener('input', (e) => {
+            updateMinBtcVolume(e.target.value);
+        });
+    });
+
     // Price filter controls for chart scale
     const minEntryCcy = document.getElementById('minEntryCcy');
     const maxEntryCcy = document.getElementById('maxEntryCcy');
-    
+
     if (minEntryCcy) {
         minEntryCcy.addEventListener('input', () => {
             // Re-render charts to update scale
@@ -442,7 +450,7 @@ function setupEventListeners() {
             }
         });
     }
-    
+
     if (maxEntryCcy) {
         maxEntryCcy.addEventListener('input', () => {
             // Re-render charts to update scale
@@ -528,7 +536,7 @@ function setupEventListeners() {
             cbSelectFn(id, value, label, null, renderTable);
         }
     };
-    
+
     // Make onCurrencyChange globally accessible
     window.onCurrencyChange = onCurrencyChange;
     window.selectCoin = (value, label) => {
@@ -615,10 +623,10 @@ async function loadInitialState() {
     console.log('Initializing currency comboboxes with options:', currencyOptions);
     cbInit('currencySelect', currencyOptions, onCurrencyChange);
     cbInit('entryCurrencySelect', currencyOptions, onCurrencyChange);
-    
+
     console.log('loadInitialState: Loading settings...');
     loadSettings();
-    
+
     // Carregar preços atuais e taxas de câmbio antes de renderizar a tabela
     try {
         await Promise.all([
@@ -629,23 +637,23 @@ async function loadInitialState() {
     } catch (e) {
         console.error('Error fetching initial data:', e);
     }
-    
+
     // Apply column visibility first
     applyColumnVisibility();
     updateColumnSelectDisplay();
-    
+
     // Update chart control visibility based on current mode
     const chartMode = getChartMode();
     const bubbleCtrl = document.getElementById('bubbleSizeCtrl');
     const aggCtrl = document.getElementById('aggregationCtrl');
-    
+
     if (bubbleCtrl) {
         bubbleCtrl.style.display = (chartMode === 'scatter') ? 'block' : 'none';
     }
     if (aggCtrl) {
         aggCtrl.style.display = (chartMode === 'column') ? 'block' : 'none';
     }
-    
+
     console.log('loadInitialState: Rendering table...');
     renderTable();
 
