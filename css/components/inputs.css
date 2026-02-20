@@ -6,8 +6,8 @@
 input[type="number"],
 input[type="text"],
 select {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
     color: var(--text);
     padding: 6px 10px;
     border-radius: var(--r-sm);
@@ -16,7 +16,7 @@ select {
     width: 130px;
     backdrop-filter: var(--glass-blur-sm);
     -webkit-backdrop-filter: var(--glass-blur-sm);
-    transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     -webkit-appearance: none;
     appearance: none;
     transform: translateZ(0);
@@ -57,8 +57,8 @@ select {
 }
 
 select:hover {
-    border-color: rgba(255, 255, 255, 0.22);
-    background-color: rgba(255, 255, 255, 0.07);
+    border-color: var(--glass-border-hi);
+    background-color: var(--glass-bg-hover);
 }
 
 input[type="number"]:focus,
@@ -66,8 +66,8 @@ input[type="text"]:focus,
 select:focus {
     outline: none;
     border-color: rgba(156, 163, 175, 0.65);
-    box-shadow: 0 0 0 3px rgba(156, 163, 175, 0.13);
-    background-color: rgba(156, 163, 175, 0.06);
+    box-shadow: 0 0 0 3px rgba(156, 163, 175, 0.15), 0 0 16px rgba(156, 163, 175, 0.15);
+    background-color: var(--glass-bg-strong);
 }
 
 /* Hide native number spinners for consistent theme */
@@ -126,10 +126,10 @@ select option {
     left: 0;
     right: 0;
     min-width: 140px;
-    background: rgba(7, 12, 26, 0.97);
-    border: 1px solid rgba(156, 163, 175, 0.3);
+    background: linear-gradient(180deg, rgba(7, 12, 26, 0.98) 0%, rgba(7, 12, 26, 0.95) 100%);
+    border: 1px solid var(--glass-border);
     border-radius: var(--r-md);
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.04) inset;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.06) inset;
     backdrop-filter: var(--glass-blur);
     -webkit-backdrop-filter: var(--glass-blur);
     z-index: 200;
@@ -137,7 +137,7 @@ select option {
     overflow-y: auto;
     display: none;
     padding: 4px;
-    animation: dropIn 0.15s ease;
+    animation: dropIn 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .combobox.open .combobox-dropdown {
@@ -153,16 +153,34 @@ select option {
     display: flex;
     align-items: center;
     gap: 8px;
-    transition: all 0.2s ease;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.combobox-item::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: var(--glass-shimmer);
+    transition: left 0.6s ease;
+    pointer-events: none;
+}
+
+.combobox-item:hover::before {
+    left: 100%;
 }
 
 .combobox-item:hover {
-    background: rgba(156, 163, 175, 0.15);
+    background: var(--glass-bg-strong);
     color: #9ca3af;
 }
 
 .combobox-item.selected {
-    background: rgba(156, 163, 175, 0.25);
+    background: linear-gradient(135deg, rgba(156, 163, 175, 0.30) 0%, rgba(156, 163, 175, 0.20) 100%);
     color: #fff;
     border-left: 3px solid var(--accent);
 }
@@ -292,7 +310,8 @@ input[type="color"] {
     cursor: pointer;
     background: transparent;
     overflow: hidden;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 input[type="color"]::-webkit-color-swatch-wrapper {
@@ -310,13 +329,13 @@ input[type="color"]::-moz-color-swatch {
 }
 
 input[type="color"]:hover {
-    transform: scale(1.05);
-    box-shadow: 0 0 12px rgba(156, 163, 175, 0.25);
+    transform: scale(1.08);
+    box-shadow: 0 4px 16px rgba(156, 163, 175, 0.35);
 }
 
 input[type="color"]:focus {
     outline: none;
-    box-shadow: 0 0 0 3px rgba(156, 163, 175, 0.2), 0 0 12px rgba(156, 163, 175, 0.35);
+    box-shadow: 0 0 0 3px rgba(156, 163, 175, 0.25), 0 4px 20px rgba(156, 163, 175, 0.45);
 }
 
 input[type="color"]::-webkit-color-swatch:active,

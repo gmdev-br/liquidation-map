@@ -18,23 +18,28 @@
     --muted: #6b7280;
     --mono: 'JetBrains Mono', monospace;
 
-    /* Glass tokens - iOS optimized */
-    --glass-bg: rgba(255, 255, 255, 0.04);
-    --glass-bg-hover: rgba(255, 255, 255, 0.07);
-    --glass-bg-strong: rgba(255, 255, 255, 0.08);
-    --glass-border: rgba(255, 255, 255, 0.10);
-    --glass-border-hi: rgba(255, 255, 255, 0.18);
-    --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.45), 0 1.5px 0 rgba(255, 255, 255, 0.06) inset;
-    --glass-blur: blur(20px) saturate(140%);
-    --glass-blur-sm: blur(10px) saturate(130%);
-    --glass-blur-heavy: blur(40px) saturate(150%);
+    /* Glass tokens - iOS optimized with Liquid Glass enhancements */
+    --glass-bg: rgba(255, 255, 255, 0.06);
+    --glass-bg-hover: rgba(255, 255, 255, 0.10);
+    --glass-bg-strong: rgba(255, 255, 255, 0.10);
+    --glass-border: rgba(255, 255, 255, 0.08);
+    --glass-border-hi: rgba(255, 255, 255, 0.15);
+    --glass-shadow: 0 12px 48px rgba(0, 0, 0, 0.55), 0 2px 0 rgba(255, 255, 255, 0.08) inset;
+    --glass-blur: blur(32px) saturate(160%);
+    --glass-blur-sm: blur(16px) saturate(150%);
+    --glass-blur-heavy: blur(48px) saturate(170%);
 
-    /* Neon glows */
-    --glow-blue: 0 0 16px rgba(156, 163, 175, 0.35);
-    --glow-purple: 0 0 16px rgba(107, 114, 128, 0.35);
-    --glow-gold: 0 0 12px rgba(245, 158, 11, 0.30);
-    --glow-green: 0 0 12px rgba(34, 197, 94, 0.30);
-    --glow-red: 0 0 12px rgba(239, 68, 68, 0.30);
+    /* Refraction and glow effects */
+    --glass-refraction: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, transparent 50%, rgba(255, 255, 255, 0.05) 100%);
+    --glass-shimmer: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.08) 50%, transparent 100%);
+    --glass-highlight: rgba(255, 255, 255, 0.12);
+
+    /* Neon glows - intensified */
+    --glow-blue: 0 0 24px rgba(156, 163, 175, 0.45);
+    --glow-purple: 0 0 24px rgba(107, 114, 128, 0.45);
+    --glow-gold: 0 0 18px rgba(245, 158, 11, 0.40);
+    --glow-green: 0 0 18px rgba(34, 197, 94, 0.40);
+    --glow-red: 0 0 18px rgba(239, 68, 68, 0.40);
 
     /* Radius */
     --r-sm: 8px;

@@ -38,7 +38,7 @@
 
 /* ── Body & Background ── */
 body {
-    background: var(--bg-deep);
+    background: linear-gradient(135deg, #0a0a0a 0%, #0d0d15 50%, #0a0a0a 100%);
     color: var(--text);
     font-family: 'Inter', sans-serif;
     font-size: 13px;
@@ -49,31 +49,50 @@ body {
     -moz-osx-font-smoothing: grayscale;
 }
 
-/* Ambient background orbs */
+/* Animated ambient background orbs with gradients */
 body::before,
 body::after {
     content: '';
     position: fixed;
     border-radius: 50%;
-    filter: blur(120px);
+    filter: blur(140px);
     pointer-events: none;
     z-index: 0;
+    animation: orbFloat 20s ease-in-out infinite;
 }
 
 body::before {
-    width: 700px;
-    height: 700px;
-    top: -200px;
-    left: -200px;
-    background: radial-gradient(circle, rgba(255, 255, 255, 0.03) 0%, transparent 70%);
+    width: 800px;
+    height: 800px;
+    top: -250px;
+    left: -250px;
+    background: radial-gradient(ellipse at center, rgba(156, 163, 175, 0.08) 0%, rgba(107, 114, 128, 0.04) 40%, transparent 70%);
+    animation-delay: 0s;
 }
 
 body::after {
-    width: 600px;
-    height: 600px;
-    bottom: -150px;
-    right: -150px;
-    background: radial-gradient(circle, rgba(255, 255, 255, 0.02) 0%, transparent 70%);
+    width: 700px;
+    height: 700px;
+    bottom: -200px;
+    right: -200px;
+    background: radial-gradient(ellipse at center, rgba(245, 158, 11, 0.06) 0%, rgba(156, 163, 175, 0.03) 40%, transparent 70%);
+    animation-delay: -10s;
+}
+
+/* Orb floating animation */
+@keyframes orbFloat {
+    0%, 100% {
+        transform: translate(0, 0) scale(1);
+    }
+    25% {
+        transform: translate(30px, -20px) scale(1.05);
+    }
+    50% {
+        transform: translate(-20px, 30px) scale(0.95);
+    }
+    75% {
+        transform: translate(20px, 20px) scale(1.02);
+    }
 }
 
 /* ── Z-Index Hierarchy ── */

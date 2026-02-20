@@ -9,7 +9,7 @@
     padding: 10px 24px;
     padding-bottom: calc(10px + var(--safe-bottom));
     overflow-x: auto;
-    background: rgba(10, 15, 30, 0.4);
+    background: linear-gradient(180deg, rgba(10, 15, 30, 0.55) 0%, rgba(10, 15, 30, 0.40) 100%);
     border-bottom: 1px solid var(--glass-border);
     position: relative;
     z-index: 75;
@@ -18,6 +18,17 @@
     flex-wrap: nowrap;
     align-items: center;
     -webkit-overflow-scrolling: touch;
+}
+
+#ranking-panel::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent 0%, var(--glass-highlight) 50%, transparent 100%);
+    opacity: 0.4;
 }
 
 /* Mobile ranking panel */
@@ -58,6 +69,23 @@
     transform: translateZ(0);
     -webkit-transform: translateZ(0);
     -webkit-tap-highlight-color: transparent;
+    overflow: hidden;
+}
+
+.ranking-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: var(--glass-shimmer);
+    transition: left 0.6s ease;
+    pointer-events: none;
+}
+
+.ranking-card:hover::before {
+    left: 100%;
 }
 
 .ranking-card:active {
@@ -65,16 +93,16 @@
 }
 
 .ranking-card:hover {
-    background: rgba(255, 255, 255, 0.08);
+    background: var(--glass-bg-strong);
     transform: translateY(-2px);
-    border-color: rgba(255, 255, 255, 0.2);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    border-color: var(--glass-border-hi);
+    box-shadow: var(--glass-shadow);
 }
 
 .ranking-card.selected {
     border-color: var(--gold);
-    background: rgba(255, 191, 0, 0.1);
-    box-shadow: 0 0 15px rgba(255, 191, 0, 0.2);
+    background: linear-gradient(135deg, rgba(255, 191, 0, 0.12) 0%, rgba(255, 191, 0, 0.08) 100%);
+    box-shadow: 0 0 20px rgba(255, 191, 0, 0.25), 0 4px 12px rgba(0, 0, 0, 0.3);
     transform: translateY(-1px);
 }
 
@@ -159,7 +187,7 @@
     padding: 10px 24px;
     padding-bottom: calc(10px + var(--safe-bottom));
     overflow-x: auto;
-    background: rgba(4, 6, 15, 0.55);
+    background: linear-gradient(180deg, rgba(4, 6, 15, 0.65) 0%, rgba(4, 6, 15, 0.50) 100%);
     border-bottom: 1px solid var(--glass-border);
     position: relative;
     z-index: 80;
@@ -168,6 +196,17 @@
     flex-wrap: nowrap;
     align-items: center;
     -webkit-overflow-scrolling: touch;
+}
+
+#quotes-panel::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent 0%, var(--glass-highlight) 50%, transparent 100%);
+    opacity: 0.4;
 }
 
 /* Mobile quotes panel */
@@ -200,11 +239,27 @@
     min-width: 130px;
     backdrop-filter: var(--glass-blur-sm);
     -webkit-backdrop-filter: var(--glass-blur-sm);
-    transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
     overflow: hidden;
     transform: translateZ(0);
     -webkit-transform: translateZ(0);
+}
+
+.quote-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: var(--glass-shimmer);
+    transition: left 0.6s ease;
+    pointer-events: none;
+}
+
+.quote-card:hover::before {
+    left: 100%;
 }
 
 .quote-card:active {
@@ -214,6 +269,7 @@
 .quote-card:hover {
     border-color: var(--glass-border-hi);
     box-shadow: var(--glass-shadow);
+    transform: translateY(-1px);
 }
 
 .quote-remove {
