@@ -483,7 +483,7 @@
     /* Chart Section Mobile */
     #chart-section,
     #liq-chart-section {
-        padding: 16px;
+        padding: 16px 24px;
         min-height: 300px;
         position: relative;
     }
@@ -677,7 +677,7 @@
     /* Chart */
     #chart-section,
     #liq-chart-section {
-        padding: 12px;
+        padding: 12px 24px;
         min-height: 250px;
     }
 }
