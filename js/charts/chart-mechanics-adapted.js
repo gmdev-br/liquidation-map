@@ -93,39 +93,80 @@ export const btcPriceLabelPlugin = {
         const opts = chart.options.plugins.btcPriceLabel;
         if (!opts || !opts.text) return;
 
-        const { ctx, chartArea: { bottom, left, right }, scales: { x } } = chart;
-        const xVal = x.getPixelForValue(opts.price);
+        const { ctx, chartArea: { top, bottom, left, right }, scales: { x, y } } = chart;
+        const isVertical = chart.options.indexAxis === 'y';
 
-        if (xVal < left || xVal > right) return;
-
-        const text = opts.text;
         ctx.save();
-        ctx.font = 'bold 11px sans-serif';
+        ctx.font = '9px sans-serif';
+        const text = opts.text;
         const textWidth = ctx.measureText(text).width + 16;
-        const textHeight = 24;
-        const yPos = bottom + 25;
+        const textHeight = 20;
+        const r = 4;
 
-        // Liquid Glass background with glow
-        ctx.fillStyle = 'rgba(255, 165, 0, 0.95)';
-        ctx.shadowColor = 'rgba(255, 165, 0, 0.4)';
-        ctx.shadowBlur = 12;
-        ctx.beginPath();
-        const r = 6;
-        ctx.roundRect(xVal - textWidth / 2, yPos, textWidth, textHeight, r);
-        ctx.fill();
-        ctx.shadowBlur = 0;
+        if (isVertical) {
+            // Price is on Y axis
+            const yVal = y.getPixelForValue(opts.price);
+            if (yVal < top || yVal > bottom) {
+                ctx.restore();
+                return;
+            }
 
-        ctx.beginPath();
-        ctx.moveTo(xVal, yPos);
-        ctx.lineTo(xVal - 5, yPos + 6);
-        ctx.lineTo(xVal + 5, yPos + 6);
-        ctx.fillStyle = 'rgba(255, 165, 0, 0.95)';
-        ctx.fill();
+            const xPos = left - textWidth - 10;
 
-        ctx.fillStyle = '#000';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(text, xVal, yPos + textHeight / 2);
+            // Liquid Glass background with transparency
+            ctx.fillStyle = 'rgba(255, 165, 0, 0.85)';
+            ctx.shadowColor = 'rgba(255, 165, 0, 0.3)';
+            ctx.shadowBlur = 8;
+            ctx.beginPath();
+            ctx.roundRect(xPos, yVal - textHeight / 2, textWidth, textHeight, r);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+
+            // Arrow pointing to the right
+            ctx.beginPath();
+            ctx.moveTo(xPos + textWidth, yVal);
+            ctx.lineTo(xPos + textWidth - 4, yVal - 4);
+            ctx.lineTo(xPos + textWidth - 4, yVal + 4);
+            ctx.fillStyle = 'rgba(255, 165, 0, 0.85)';
+            ctx.fill();
+
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.9)';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(text, xPos + textWidth / 2, yVal);
+
+        } else {
+            // Price is on X axis
+            const xVal = x.getPixelForValue(opts.price);
+            if (xVal < left || xVal > right) {
+                ctx.restore();
+                return;
+            }
+
+            const yPos = bottom + 20;
+
+            // Liquid Glass background with transparency
+            ctx.fillStyle = 'rgba(255, 165, 0, 0.85)';
+            ctx.shadowColor = 'rgba(255, 165, 0, 0.3)';
+            ctx.shadowBlur = 8;
+            ctx.beginPath();
+            ctx.roundRect(xVal - textWidth / 2, yPos, textWidth, textHeight, r);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+
+            // Arrow pointing up
+            ctx.beginPath();
+            ctx.moveTo(xVal, yPos);
+            ctx.lineTo(xVal - 4, yPos + 4);
+            ctx.lineTo(xVal + 4, yPos + 4);
+            ctx.fillStyle = 'rgba(255, 165, 0, 0.85)';
+            ctx.fill();
+
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.9)';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(text, xVal, yPos + textHeight / 2);
+        }
 
         ctx.restore();
     }
@@ -574,72 +615,119 @@ export const btcGridPlugin = {
 
         ctx.save();
 
+        // Check if we're in lines mode (horizontal bars)
+        const isLinesMode = chart.config.type === 'bar' && chart.config.options.indexAxis === 'y';
+
         // Get grid spacing from user input
         const gridSpacingInput = document.getElementById('gridSpacingRange');
         const userGridSpacing = gridSpacingInput && gridSpacingInput.value ? parseInt(gridSpacingInput.value) : 500;
-
-        // Get filter values from inputs
-        const minEntryInput = document.getElementById('minEntryCcy');
-        const maxEntryInput = document.getElementById('maxEntryCcy');
-        const minPrice = minEntryInput && minEntryInput.value ? parseFloat(minEntryInput.value) : (xScale.min || 0);
-        const maxPrice = maxEntryInput && maxEntryInput.value ? parseFloat(maxEntryInput.value) : (xScale.max || 100000);
 
         // Update intervals based on user spacing
         const minorInterval = userGridSpacing;
         const majorInterval = userGridSpacing * 5;
 
-        // Draw minor vertical lines
-        const startMinor = Math.ceil(minPrice / minorInterval) * minorInterval;
+        if (isLinesMode) {
+            // Lines mode: Draw horizontal lines based on y-scale (price values)
+            const minPrice = yScale.min || 0;
+            const maxPrice = yScale.max || 100000;
 
-        ctx.strokeStyle = options.minorColor;
-        ctx.lineWidth = options.minorWidth;
+            // Draw minor horizontal lines
+            const startMinor = Math.ceil(minPrice / minorInterval) * minorInterval;
+            ctx.strokeStyle = options.minorColor;
+            ctx.lineWidth = options.minorWidth;
 
-        for (let price = startMinor; price <= maxPrice; price += minorInterval) {
-            const xPixel = xScale.getPixelForValue(price);
-            if (xPixel >= left && xPixel <= right) {
-                ctx.beginPath();
-                ctx.moveTo(xPixel, top);
-                ctx.lineTo(xPixel, bottom);
-                ctx.stroke();
+            for (let price = startMinor; price <= maxPrice; price += minorInterval) {
+                const yPixel = yScale.getPixelForValue(price);
+                if (yPixel >= top && yPixel <= bottom) {
+                    ctx.beginPath();
+                    ctx.moveTo(yScale.left || left, yPixel);
+                    ctx.lineTo(right, yPixel);
+                    ctx.stroke();
+                }
             }
+
+            // Draw major horizontal lines
+            const startMajor = Math.ceil(minPrice / majorInterval) * majorInterval;
+            ctx.strokeStyle = options.majorColor;
+            ctx.lineWidth = options.majorWidth;
+
+            for (let price = startMajor; price <= maxPrice; price += majorInterval) {
+                const yPixel = yScale.getPixelForValue(price);
+                if (yPixel >= top && yPixel <= bottom) {
+                    ctx.beginPath();
+                    ctx.moveTo(yScale.left || left, yPixel);
+                    ctx.lineTo(right, yPixel);
+                    ctx.stroke();
+                }
+            }
+
+            // Draw minor vertical lines (based on x-scale ticks)
+            ctx.strokeStyle = options.horizontalColor;
+            ctx.lineWidth = options.horizontalWidth;
+            const xTicks = xScale.getTicks();
+            xTicks.forEach(tick => {
+                const xPixel = xScale.getPixelForValue(tick.value);
+                if (xPixel >= left && xPixel <= right) {
+                    ctx.beginPath();
+                    ctx.moveTo(xPixel, top);
+                    ctx.lineTo(xPixel, bottom);
+                    ctx.stroke();
+                }
+            });
+
+        } else {
+            // Normal mode: Draw vertical lines (original logic)
+            // Get filter values from inputs
+            const minEntryInput = document.getElementById('minEntryCcy');
+            const maxEntryInput = document.getElementById('maxEntryCcy');
+            const minPrice = minEntryInput && minEntryInput.value ? parseFloat(minEntryInput.value) : (xScale.min || 0);
+            const maxPrice = maxEntryInput && maxEntryInput.value ? parseFloat(maxEntryInput.value) : (xScale.max || 100000);
+
+            // Draw minor vertical lines
+            const startMinor = Math.ceil(minPrice / minorInterval) * minorInterval;
+            ctx.strokeStyle = options.minorColor;
+            ctx.lineWidth = options.minorWidth;
+
+            for (let price = startMinor; price <= maxPrice; price += minorInterval) {
+                const xPixel = xScale.getPixelForValue(price);
+                if (xPixel >= left && xPixel <= right) {
+                    ctx.beginPath();
+                    ctx.moveTo(xPixel, top);
+                    ctx.lineTo(xPixel, bottom);
+                    ctx.stroke();
+                }
+            }
+
+            // Draw major vertical lines with labels
+            const startMajor = Math.ceil(minPrice / majorInterval) * majorInterval;
+            ctx.strokeStyle = options.majorColor;
+            ctx.lineWidth = options.majorWidth;
+
+            for (let price = startMajor; price <= maxPrice; price += majorInterval) {
+                const xPixel = xScale.getPixelForValue(price);
+                if (xPixel >= left && xPixel <= right) {
+                    ctx.beginPath();
+                    ctx.moveTo(xPixel, top);
+                    ctx.lineTo(xPixel, bottom);
+                    ctx.stroke();
+
+                                    }
+            }
+
+            // Draw horizontal lines
+            ctx.strokeStyle = options.horizontalColor;
+            ctx.lineWidth = options.horizontalWidth;
+            const yTicks = yScale.getTicks();
+            yTicks.forEach(tick => {
+                const yPixel = yScale.getPixelForValue(tick.value);
+                if (yPixel >= top && yPixel <= bottom) {
+                    ctx.beginPath();
+                    ctx.moveTo(left, yPixel);
+                    ctx.lineTo(right, yPixel);
+                    ctx.stroke();
+                }
+            });
         }
-
-        // Draw major vertical lines with labels
-        const startMajor = Math.ceil(minPrice / majorInterval) * majorInterval;
-
-        ctx.strokeStyle = options.majorColor;
-        ctx.lineWidth = options.majorWidth;
-
-        for (let price = startMajor; price <= maxPrice; price += majorInterval) {
-            const xPixel = xScale.getPixelForValue(price);
-            if (xPixel >= left && xPixel <= right) {
-                ctx.beginPath();
-                ctx.moveTo(xPixel, top);
-                ctx.lineTo(xPixel, bottom);
-                ctx.stroke();
-
-                // Add price labels for major grid lines with Liquid Glass styling
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
-                ctx.font = '10px sans-serif';
-                ctx.textAlign = 'center';
-                ctx.fillText(price.toLocaleString(), xPixel, top - 5);
-            }
-        }
-
-        // Draw horizontal lines
-        ctx.strokeStyle = options.horizontalColor;
-        ctx.lineWidth = options.horizontalWidth;
-
-        const yTicks = yScale.getTicks();
-        yTicks.forEach(tick => {
-            const yPixel = yScale.getPixelForValue(tick.value);
-            if (yPixel >= top && yPixel <= bottom) {
-                ctx.beginPath();
-                ctx.moveTo(left, yPixel);
-                ctx.lineTo(right, yPixel);
-                ctx.stroke();
-            }
-        });
 
         ctx.restore();
     }

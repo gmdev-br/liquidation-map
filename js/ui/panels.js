@@ -2,7 +2,7 @@
 // LIQUID GLASS — UI Panels
 // ═══════════════════════════════════════════════════════════
 
-import { getAllRows, getCurrentPrices, getSelectedCoins, getPriceMode, getPriceUpdateInterval, getRankingLimit, setSelectedCoins, setPriceMode, getScanning } from '../state.js';
+import { getAllRows, getCurrentPrices, getSelectedCoins, getPriceMode, getPriceUpdateInterval, getRankingLimit, setSelectedCoins, setPriceMode, getScanning, setCurrentPrices } from '../state.js';
 import { saveSettings } from '../storage/settings.js';
 import { fmtCcy } from '../utils/formatters.js';
 import { updateCoinSearchLabel } from './combobox.js';
@@ -307,19 +307,104 @@ export function startPriceTicker() {
     
     priceTicker = setInterval(async () => {
         try {
-            await fetch('https://api.hyperliquid.xyz/info', {
+            const response = await fetch('https://api.hyperliquid.xyz/info', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ type: 'allMids' })
             });
             
-            const selectedCoins = getSelectedCoins();
-            selectedCoins.forEach(coin => {
-                const prevPrice = parseFloat(window[`prevPrice_${coin}`] !== undefined ? window[`prevPrice_${coin}`] : 0);
-                window[`prevPrice_${coin}`] = prevPrice; // Garante que a variável global existe
-            });
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            // Update current prices with the fetched data
+            if (data && typeof data === 'object') {
+                const selectedCoins = getSelectedCoins();
+                const currentPrices = getCurrentPrices();
+                selectedCoins.forEach(coin => {
+                    const newPrice = parseFloat(data[coin]);
+                    if (!isNaN(newPrice)) {
+                        // Store previous price for comparison
+                        const prevPrice = parseFloat(window[`prevPrice_${coin}`] || newPrice);
+                        window[`prevPrice_${coin}`] = prevPrice;
+                        
+                        // Update current price in state
+                        currentPrices[coin] = newPrice;
+                    }
+                });
+                
+                setCurrentPrices(currentPrices);
+            }
             
             updateQuotesHTML();
+            
+            // Update charts to reflect new price line position
+            const scatterChart = window.getScatterChart ? window.getScatterChart() : null;
+            const liqChart = window.getLiqChartInstance ? window.getLiqChartInstance() : null;
+            if (scatterChart) {
+                // Update the price line annotation
+                const currentPrices = getCurrentPrices();
+                const btcPrice = parseFloat(currentPrices['BTC'] || 0);
+                const activeCurrency = window.getActiveCurrency ? window.getActiveCurrency() : 'USD';
+                const fxRates = window.getFxRates ? window.getFxRates() : { USD: 1 };
+                const rate = fxRates[activeCurrency] || 1;
+                const refPrice = btcPrice * rate;
+                
+                // Update annotation
+                if (scatterChart.options.plugins.annotation && scatterChart.options.plugins.annotation.annotations.currentPriceLine) {
+                    scatterChart.options.plugins.annotation.annotations.currentPriceLine.xMin = refPrice;
+                    scatterChart.options.plugins.annotation.annotations.currentPriceLine.xMax = refPrice;
+                    scatterChart.options.plugins.annotation.annotations.currentPriceLine.yMin = undefined;
+                    scatterChart.options.plugins.annotation.annotations.currentPriceLine.yMax = undefined;
+                }
+                
+                // Update BTC price label
+                if (scatterChart.options.plugins.btcPriceLabel) {
+                    scatterChart.options.plugins.btcPriceLabel.price = refPrice;
+                    const currencyMeta = window.CURRENCY_META ? window.CURRENCY_META[activeCurrency] || window.CURRENCY_META.USD : { symbol: '$' };
+                    const showSymbols = window.getShowSymbols ? window.getShowSymbols() : true;
+                    const sym = showSymbols ? currencyMeta.symbol : '';
+                    scatterChart.options.plugins.btcPriceLabel.text = `BTC: ${sym}${refPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                }
+                
+                scatterChart.update('none');
+            }
+            
+            if (liqChart) {
+                // Update liquidation chart price line
+                const currentPrices = getCurrentPrices();
+                const btcPrice = parseFloat(currentPrices['BTC'] || 0);
+                const activeEntryCurrency = window.getActiveEntryCurrency ? window.getActiveEntryCurrency() : 'USD';
+                let refPrice = btcPrice;
+                if (activeEntryCurrency === 'BTC') {
+                    refPrice = 1;
+                } else if (activeEntryCurrency && activeEntryCurrency !== 'USD') {
+                    const fxRates = window.getFxRates ? window.getFxRates() : { USD: 1 };
+                    const rate = fxRates[activeEntryCurrency] || 1;
+                    refPrice = btcPrice * rate;
+                }
+                
+                // Update annotation
+                if (liqChart.options.plugins.annotation && liqChart.options.plugins.annotation.annotations.currentPriceLine) {
+                    liqChart.options.plugins.annotation.annotations.currentPriceLine.xMin = refPrice;
+                    liqChart.options.plugins.annotation.annotations.currentPriceLine.xMax = refPrice;
+                    liqChart.options.plugins.annotation.annotations.currentPriceLine.yMin = undefined;
+                    liqChart.options.plugins.annotation.annotations.currentPriceLine.yMax = undefined;
+                }
+                
+                // Update BTC price label
+                if (liqChart.options.plugins.btcPriceLabel) {
+                    liqChart.options.plugins.btcPriceLabel.price = refPrice;
+                    const currencyMeta = window.CURRENCY_META ? window.CURRENCY_META[activeEntryCurrency] || window.CURRENCY_META.USD : { symbol: '$' };
+                    const showSymbols = window.getShowSymbols ? window.getShowSymbols() : true;
+                    const sym = showSymbols ? currencyMeta.symbol : '';
+                    liqChart.options.plugins.btcPriceLabel.text = `BTC: ${sym}${refPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                }
+                
+                liqChart.update('none');
+            }
         } catch (e) {
             console.warn('Failed to fetch prices', e);
         }

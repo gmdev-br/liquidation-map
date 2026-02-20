@@ -70,7 +70,8 @@ export const chartOptions = {
                 font: {
                     size: 11
                 }
-            }
+            },
+            min: 0
         },
         y: {
             grid: {
@@ -82,7 +83,8 @@ export const chartOptions = {
                 font: {
                     size: 11
                 }
-            }
+            },
+            min: 0
         }
     }
 };

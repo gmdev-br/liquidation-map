@@ -19,7 +19,7 @@ import {
 import { CURRENCY_META } from '../config.js';
 import { chartPlugins, chartOptions } from './config.js';
 import { saveSettings } from '../storage/settings.js';
-import { 
+import {
     originalZoomConfig,
     originalScaleResizing
 } from './chart-mechanics-adapted.js';
@@ -46,9 +46,9 @@ function enableChartScaleResizing(canvasId, getChartInstance, resetBtnId) {
         const rect = canvas.getBoundingClientRect();
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
-        
+
         const { left, right, top, bottom } = chart.chartArea;
-        
+
         // Y Axis (Left)
         if (x < left && y >= top && y <= bottom) {
             isDragging = true;
@@ -100,20 +100,20 @@ function enableChartScaleResizing(canvasId, getChartInstance, resetBtnId) {
                 const logMin = Math.log(initialMin);
                 const logMax = Math.log(initialMax);
                 const logRange = logMax - logMin;
-                
+
                 const newLogRange = logRange * (1 + factor);
                 const logCenter = (logMax + logMin) / 2;
-                
+
                 const newLogMin = logCenter - newLogRange / 2;
                 const newLogMax = logCenter + newLogRange / 2;
-                
+
                 chart.options.scales.y.min = Math.exp(newLogMin);
                 chart.options.scales.y.max = Math.exp(newLogMax);
             } else {
                 const range = initialMax - initialMin;
                 const newRange = range * (1 + factor);
                 const center = (initialMax + initialMin) / 2;
-                
+
                 chart.options.scales.y.min = center - newRange / 2;
                 chart.options.scales.y.max = center + newRange / 2;
             }
@@ -122,26 +122,26 @@ function enableChartScaleResizing(canvasId, getChartInstance, resetBtnId) {
             const width = chart.chartArea.right - chart.chartArea.left;
             // Drag Right -> Zoom In -> Negative factor
             const factor = -(delta / width) * sensitivity;
-            
+
             if (isLog) {
                 if (initialMin <= 0) initialMin = 0.0001;
                 const logMin = Math.log(initialMin);
                 const logMax = Math.log(initialMax);
                 const logRange = logMax - logMin;
-                
+
                 const newLogRange = logRange * (1 + factor);
                 const logCenter = (logMax + logMin) / 2;
-                
+
                 const newLogMin = logCenter - newLogRange / 2;
                 const newLogMax = logCenter + newLogRange / 2;
-                
+
                 chart.options.scales.x.min = Math.exp(newLogMin);
                 chart.options.scales.x.max = Math.exp(newLogMax);
             } else {
                 const range = initialMax - initialMin;
                 const newRange = range * (1 + factor);
                 const center = (initialMax + initialMin) / 2;
-                
+
                 chart.options.scales.x.min = center - newRange / 2;
                 chart.options.scales.x.max = center + newRange / 2;
             }
@@ -218,13 +218,15 @@ export function renderScatterPlot() {
     const fxRates = getFxRates();
     const rate = fxRates[activeCurrency] || 1;
     const refPrice = btcPrice * rate;
-    
-    // Annotations (current price line)
+
+    const isLinesMode = getChartMode() === 'lines';
     const annotations = {
         currentPriceLine: {
             type: 'line',
-            xMin: refPrice,
-            xMax: refPrice,
+            xMin: isLinesMode ? undefined : refPrice,
+            xMax: isLinesMode ? undefined : refPrice,
+            yMin: isLinesMode ? refPrice : undefined,
+            yMax: isLinesMode ? refPrice : undefined,
             borderColor: '#f59e0b',
             borderWidth: 1,
             borderDash: [5, 5],
@@ -235,7 +237,8 @@ export function renderScatterPlot() {
     // Configure chart based on mode
     let datasets = [];
     let chartType = 'bubble';
-    let scales = {};
+    let localScales = {};
+    let localIndexAxis = 'x';
 
     // Get custom colors
     const customColors = getLeverageColors();
@@ -243,30 +246,30 @@ export function renderScatterPlot() {
     if (getChartMode() === 'column') {
         // Histogram mode with stacked columns by side and leverage
         chartType = 'bar';
-        
+
         // Create bins
         const xValues = data.map(d => d.x);
         const minX = Math.min(...xValues, refPrice);
         const maxX = Math.max(...xValues, refPrice);
-        
+
         const numBins = getAggregationFactor();
         const range = maxX - minX || 1;
         const binSize = range / numBins;
-        
+
         const highLevSplit = getChartHighLevSplit();
-        
+
         // Initialize bins for each category
         const longLowBins = new Array(numBins).fill(0);
         const longHighBins = new Array(numBins).fill(0);
         const shortLowBins = new Array(numBins).fill(0);
         const shortHighBins = new Array(numBins).fill(0);
-        
+
         // Categorize and bin data
         data.forEach(d => {
             const binIndex = Math.min(Math.floor((d.x - minX) / binSize), numBins - 1);
             const lev = Math.abs(d._raw.leverageValue);
             const side = d._raw.side;
-            
+
             if (side === 'long' && lev < highLevSplit) {
                 longLowBins[binIndex]++;
             } else if (side === 'long' && lev >= highLevSplit) {
@@ -277,15 +280,15 @@ export function renderScatterPlot() {
                 shortHighBins[binIndex]++;
             }
         });
-        
+
         const binLabels = Array.from({ length: numBins }, (_, i) => {
             const val = minX + (i * binSize);
             return val.toLocaleString(undefined, { maximumFractionDigits: 0 });
         });
-        
+
         // Create stacked datasets
         datasets = [];
-        
+
         if (shortLowBins.some(b => b > 0)) {
             datasets.push({
                 label: `Shorts (≤${highLevSplit}x)`,
@@ -329,8 +332,8 @@ export function renderScatterPlot() {
                 stack: 'positions'
             });
         }
-        
-        scales = {
+
+        localScales = {
             x: {
                 type: 'category',
                 ...chartOptions.scales.x,
@@ -353,6 +356,81 @@ export function renderScatterPlot() {
                 }
             }
         };
+    } else if (getChartMode() === 'lines') {
+        // Support and Resistance Lines mode (Horizontal Bars)
+        chartType = 'bar';
+        const highLevSplit = getChartHighLevSplit();
+
+        // One dataset per position to allow different colors and tooltips
+        datasets = data.map(d => {
+            const r = d._raw;
+            const lev = Math.abs(r.leverageValue);
+            const side = r.side;
+            let color;
+            if (side === 'long') {
+                color = lev >= highLevSplit ? customColors.longHigh : customColors.longLow;
+            } else {
+                color = lev >= highLevSplit ? customColors.shortHigh : customColors.shortLow;
+            }
+
+            return {
+                label: `${r.coin} ${side === 'long' ? 'Long' : 'Short'} @ ${d.x}`,
+                data: [{ x: d.y, y: d.x }], // x = BTC size (volume), y = price - CORRECT
+                backgroundColor: hexToRgba(color, 0.7),
+                borderColor: color,
+                borderWidth: 1,
+                barThickness: 2, // Fine lines
+                _raw: r
+            };
+        });
+
+        // Calculate volume min/max for proper X scale
+        const volumes = data.map(d => d.y); // d.y = BTC size (volume)
+        const minVolume = Math.min(...volumes);
+        const maxVolume = Math.max(...volumes);
+        const volumePadding = (maxVolume - minVolume) * 0.1; // 10% padding
+
+        localScales = {
+            x: {
+                type: 'linear',
+                position: 'bottom',
+                stacked: true,
+                title: {
+                    display: true,
+                    text: 'Size (BTC)',
+                    color: '#5a6a88'
+                },
+                grid: { color: 'rgba(255,255,255,0.05)' },
+                ticks: { color: '#9ca3af' },
+                // Set X scale (always start at 0)
+                min: 0,
+                max: maxVolume + volumePadding
+            },
+            y: {
+                type: 'linear',
+                stacked: true,
+                title: {
+                    display: true,
+                    text: entryLabel,
+                    color: '#5a6a88'
+                },
+                grid: { color: 'rgba(255,255,255,0.05)' },
+                ticks: { color: '#9ca3af' },
+                // Use input filters for Y scale in lines mode (price axis)
+                min: function () {
+                    const minInput = document.getElementById('minEntryCcy');
+                    return minInput && minInput.value ? parseFloat(minInput.value) : 0;
+                }(),
+                max: function () {
+                    const maxInput = document.getElementById('maxEntryCcy');
+                    return maxInput && maxInput.value ? parseFloat(maxInput.value) : undefined;
+                }()
+            }
+        };
+
+        // Horizontal bar setting
+        localIndexAxis = 'y';
+
     } else {
         // Scatter mode - create 4 series based on leverage split
         const highLevSplit = getChartHighLevSplit();
@@ -423,15 +501,16 @@ export function renderScatterPlot() {
             });
         }
 
-        scales = {
+        localScales = {
             x: {
                 type: 'linear',
                 ...chartOptions.scales.x,
-                min: function() {
+                min: function () {
                     const minInput = document.getElementById('minEntryCcy');
-                    return minInput && minInput.value ? parseFloat(minInput.value) : undefined;
+                    const filterValue = minInput && minInput.value ? parseFloat(minInput.value) : undefined;
+                    return filterValue !== undefined && filterValue > 0 ? filterValue : 0;
                 }(),
-                max: function() {
+                max: function () {
                     const maxInput = document.getElementById('maxEntryCcy');
                     return maxInput && maxInput.value ? parseFloat(maxInput.value) : undefined;
                 }(),
@@ -445,6 +524,7 @@ export function renderScatterPlot() {
             y: {
                 type: 'linear',
                 ...chartOptions.scales.y,
+                min: 0,
                 title: {
                     display: true,
                     text: 'Size (BTC)',
@@ -453,6 +533,9 @@ export function renderScatterPlot() {
                 }
             }
         };
+
+        // Reset indexAxis for scatter mode
+        localIndexAxis = 'x';
     }
 
     // Configure chart
@@ -461,10 +544,11 @@ export function renderScatterPlot() {
         data: { datasets },
         options: {
             ...chartOptions,
+            indexAxis: localIndexAxis,
             plugins: {
                 ...chartOptions.plugins,
                 legend: {
-                    display: true,
+                    display: getChartMode() !== 'lines', // Hide legend in lines mode as it's cluttered
                     labels: {
                         color: '#e2e8f4',
                         font: { size: 12 }
@@ -475,51 +559,50 @@ export function renderScatterPlot() {
                     titleColor: undefined,
                     bodyColor: undefined,
                     callbacks: {
-                        title: function(context) {
-                            if (chartType === 'bar') {
+                        title: function (context) {
+                            if (chartType === 'bar' && getChartMode() === 'column') {
                                 return 'Position Count';
                             }
-                            const r = context[0].raw._raw;
+                            const r = context[0].raw?._raw || (context[0].raw?.y ? context[0].raw : context[0].dataset._raw);
+                            if (!r) return '';
                             return `${r.coin} ${r.side === 'long' ? '▲' : '▼'}`;
                         },
-                        titleColor: function(context) {
+                        titleColor: function (context) {
                             return context[0].dataset.borderColor;
                         },
-                        labelColor: function(context) {
+                        labelColor: function (context) {
                             return context.dataset.borderColor;
                         },
-                        labelTextColor: function(context) {
+                        labelTextColor: function (context) {
                             return context.dataset.borderColor;
                         },
-                        label: function(context) {
-                            if (chartType === 'bar') {
+                        label: function (context) {
+                            if (chartType === 'bar' && getChartMode() === 'column') {
                                 return `Count: ${context.parsed.y}`;
                             }
-                            const r = context.raw._raw;
-                            const lev = Math.abs(r.leverageValue);
+                            const r = context.raw?._raw || context.dataset._raw;
+                            if (!r) return '';
                             const decimalPlaces = getDecimalPlaces();
-                            const liqPrice = r.liquidationPx > 0 ? getCorrelatedPrice(r, r.liquidationPx, getActiveEntryCurrency(), getCurrentPrices(), getFxRates()) : 0;
-                            const liqPriceStr = liqPrice > 0 ? sym + liqPrice.toLocaleString(undefined, { minimumFractionDigits: decimalPlaces, maximumFractionDigits: decimalPlaces }) : '—';
+                            const xVal = getChartMode() === 'lines' ? context.parsed.y : context.parsed.x;
+                            const yVal = getChartMode() === 'lines' ? context.parsed.x : context.parsed.y;
+
                             return [
-                                `${r.coin} ${r.side === 'long' ? '▲' : '▼'}`,
-                                `Entry: ${sym}${context.parsed.x.toLocaleString(undefined, { minimumFractionDigits: decimalPlaces, maximumFractionDigits: decimalPlaces })}`,
-                                `BTC Value: ${context.parsed.y.toFixed(decimalPlaces)}`,
-                                `Leverage: ${lev}x`,
-                                `Liq Price: ${liqPriceStr}`,
+                                `Entry Price: ${sym}${xVal.toLocaleString(undefined, { minimumFractionDigits: decimalPlaces, maximumFractionDigits: decimalPlaces })}`,
+                                `BTC Value: ${yVal.toFixed(decimalPlaces)}`,
                                 `Value: $${r.positionValue.toLocaleString(undefined, { minimumFractionDigits: decimalPlaces, maximumFractionDigits: decimalPlaces })}`
                             ];
                         }
                     }
                 },
                 annotation: {
-                    annotations: chartType === 'bubble' ? annotations : {}
+                    annotations: (chartType === 'bubble' || isLinesMode) ? annotations : {}
                 },
-                btcPriceLabel: chartType === 'bubble' ? {
+                btcPriceLabel: (chartType === 'bubble' || isLinesMode) ? {
                     price: refPrice,
                     text: `BTC: ${sym}${refPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                 } : undefined
             },
-            scales
+            scales: localScales
         },
         plugins: [chartPlugins.crosshair, chartPlugins.btcGrid, chartPlugins.btcPriceLabel],
         zoom: originalZoomConfig
@@ -534,7 +617,7 @@ export function renderScatterPlot() {
     // Preserve zoom state if scales exist
     const currentX = scatterChart.scales.x;
     const currentY = scatterChart.scales.y;
-    
+
     // Check if we are in a zoomed state (saved or current)
     if (getSavedScatterState()) {
         if (scatterChart.options.scales.x) { scatterChart.options.scales.x.min = getSavedScatterState().x.min; scatterChart.options.scales.x.max = getSavedScatterState().x.max; }
@@ -554,25 +637,25 @@ export function renderScatterPlot() {
 
     // Now assign the scales to options
     scatterChart.options.scales = config.options.scales;
-    
+
     // Re-assign plugins/annotations (moved outside zoom check block)
     scatterChart.options.plugins.annotation.annotations = config.options.plugins.annotation.annotations;
     if (config.options.plugins.btcPriceLabel) {
-        scatterChart.options.plugins.btcPriceLabel = { 
-            price: config.options.plugins.btcPriceLabel.price, 
-            text: config.options.plugins.btcPriceLabel.text 
+        scatterChart.options.plugins.btcPriceLabel = {
+            price: config.options.plugins.btcPriceLabel.price,
+            text: config.options.plugins.btcPriceLabel.text
         };
     }
     scatterChart.options.plugins.tooltip.callbacks = config.options.plugins.tooltip.callbacks;
-    
+
     // Add zoom event listeners to save state
     scatterChart.options.plugins.zoom = {
         ...scatterChart.options.plugins.zoom,
-        onZoomComplete: function({chart}) {
+        onZoomComplete: function ({ chart }) {
             chart.isZoomed = true;
             saveSettings();
         },
-        onZoomStart: function({chart}) {
+        onZoomStart: function ({ chart }) {
             chart.isZoomed = false;
         }
     };

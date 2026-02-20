@@ -79,7 +79,8 @@ export const liqChartOptions = {
                 font: {
                     size: 11
                 }
-            }
+            },
+            min: 0
         },
         y: {
             grid: {
@@ -91,7 +92,8 @@ export const liqChartOptions = {
                 font: {
                     size: 11
                 }
-            }
+            },
+            min: 0
         }
     }
 };
