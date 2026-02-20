@@ -54,6 +54,20 @@
     color: inherit;
 }
 
+.addr-star {
+    font-size: 18px;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.row-known-address {
+    font-weight: 700;
+}
+
+.row-normal {
+    font-weight: 400;
+}
+
 .addr-name {
     font-size: 10px;
     color: inherit;

@@ -10,7 +10,7 @@ import {
     getRankingLimit, getColorMaxLev, getChartHighLevSplit, getChartHeight,
     getLiqChartHeight, getActiveWindow, setColumnOrder, setVisibleColumns,
     getColumnOrder, getVisibleColumns, setPriceUpdateInterval, setActiveCurrency,
-    setActiveEntryCurrency, setDecimalPlaces, setLeverageColors
+    setActiveEntryCurrency, setDecimalPlaces, setFontSize, setFontSizeKnown, setLeverageColors
 } from '../state.js';
 import { renderTable, updateStats } from '../ui/table.js';
 import { renderQuotesPanel, updateRankingPanel } from '../ui/panels.js';
@@ -111,6 +111,38 @@ export function updateDecimalPlaces(val) {
         document.getElementById('decimalPlacesVal').textContent = v;
         saveSettings();
         // Trigger table re-render to apply new formatting
+        renderTable();
+    }
+}
+
+export function updateFontSize(val) {
+    const v = parseInt(val, 10);
+    console.log('updateFontSize called with:', val, 'parsed:', v);
+    if (v >= 10 && v <= 20) {
+        setFontSize(v);
+        const fontSizeValMobile = document.getElementById('fontSizeVal');
+        const fontSizeValDesktop = document.getElementById('fontSizeValDesktop');
+        if (fontSizeValMobile) fontSizeValMobile.textContent = v;
+        if (fontSizeValDesktop) fontSizeValDesktop.textContent = v;
+        saveSettings();
+        // Trigger table re-render to apply new font size
+        console.log('Calling renderTable for fontSize update');
+        renderTable();
+    }
+}
+
+export function updateFontSizeKnown(val) {
+    const v = parseInt(val, 10);
+    console.log('updateFontSizeKnown called with:', val, 'parsed:', v);
+    if (v >= 10 && v <= 24) {
+        setFontSizeKnown(v);
+        const fontSizeKnownValMobile = document.getElementById('fontSizeKnownVal');
+        const fontSizeKnownValDesktop = document.getElementById('fontSizeKnownValDesktop');
+        if (fontSizeKnownValMobile) fontSizeKnownValMobile.textContent = v;
+        if (fontSizeKnownValDesktop) fontSizeKnownValDesktop.textContent = v;
+        saveSettings();
+        // Trigger table re-render to apply new font size
+        console.log('Calling renderTable for fontSizeKnown update');
         renderTable();
     }
 }

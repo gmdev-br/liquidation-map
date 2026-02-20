@@ -7,9 +7,9 @@ import {
     getAggregationFactor, getSelectedCoins, getPriceMode, getPriceUpdateInterval, getActiveWindow,
     getVisibleColumns, getColumnOrder, getRankingLimit, getColorMaxLev,
     getChartHighLevSplit, getChartHeight, getLiqChartHeight, getSavedScatterState,
-    getSavedLiqState, getColumnWidths, getColumnWidth, getActiveCurrency, getActiveEntryCurrency, getDecimalPlaces, getLeverageColors,
+    getSavedLiqState, getColumnWidths, getColumnWidth, getActiveCurrency, getActiveEntryCurrency, getDecimalPlaces, getLeverageColors, getFontSize, getFontSizeKnown,
     setSortKey, setSortDir, setSavedScatterState, setSavedLiqState,
-    setColumnOrder, setVisibleColumns, setSelectedCoins, setRankingLimit, setColorMaxLev, setChartHighLevSplit, setChartMode, setBubbleScale, setBubbleOpacity, setAggregationFactor, setPriceMode, setShowSymbols, setPriceUpdateInterval, setDecimalPlaces, setLeverageColors, setColumnWidth
+    setColumnOrder, setVisibleColumns, setSelectedCoins, setRankingLimit, setColorMaxLev, setChartHighLevSplit, setChartMode, setBubbleScale, setBubbleOpacity, setAggregationFactor, setPriceMode, setShowSymbols, setPriceUpdateInterval, setDecimalPlaces, setFontSize, setFontSizeKnown, setLeverageColors, setColumnWidth
 } from '../state.js';
 import { COLUMN_DEFS } from '../config.js';
 import { cbSetValue, updateCoinSearchLabel } from '../ui/combobox.js';
@@ -77,6 +77,8 @@ export function saveSettings(getChartState = null, savedScatterState = null, sav
         bubbleOpacity: getBubbleOpacity(),
         aggregationFactor: getAggregationFactor(),
         decimalPlaces: getDecimalPlaces(),
+        fontSize: getFontSize(),
+        fontSizeKnown: getFontSizeKnown(),
         visibleColumns: getVisibleColumns(),
         columnOrder: getColumnOrder(),
         leverageColors: getLeverageColors(),
@@ -226,6 +228,28 @@ export function loadSettings() {
         setDecimalPlaces(s.decimalPlaces);
         document.getElementById('decimalPlacesVal').textContent = s.decimalPlaces;
         document.getElementById('decimalPlacesRange').value = s.decimalPlaces;
+    }
+    if (s.fontSize !== undefined) {
+        setFontSize(s.fontSize);
+        const fontSizeValMobile = document.getElementById('fontSizeVal');
+        const fontSizeValDesktop = document.getElementById('fontSizeValDesktop');
+        const fontSizeRangeMobile = document.getElementById('fontSizeRange');
+        const fontSizeRangeDesktop = document.getElementById('fontSizeRangeDesktop');
+        if (fontSizeValMobile) fontSizeValMobile.textContent = s.fontSize;
+        if (fontSizeValDesktop) fontSizeValDesktop.textContent = s.fontSize;
+        if (fontSizeRangeMobile) fontSizeRangeMobile.value = s.fontSize;
+        if (fontSizeRangeDesktop) fontSizeRangeDesktop.value = s.fontSize;
+    }
+    if (s.fontSizeKnown !== undefined) {
+        setFontSizeKnown(s.fontSizeKnown);
+        const fontSizeKnownValMobile = document.getElementById('fontSizeKnownVal');
+        const fontSizeKnownValDesktop = document.getElementById('fontSizeKnownValDesktop');
+        const fontSizeKnownRangeMobile = document.getElementById('fontSizeKnownRange');
+        const fontSizeKnownRangeDesktop = document.getElementById('fontSizeKnownRangeDesktop');
+        if (fontSizeKnownValMobile) fontSizeKnownValMobile.textContent = s.fontSizeKnown;
+        if (fontSizeKnownValDesktop) fontSizeKnownValDesktop.textContent = s.fontSizeKnown;
+        if (fontSizeKnownRangeMobile) fontSizeKnownRangeMobile.value = s.fontSizeKnown;
+        if (fontSizeKnownRangeDesktop) fontSizeKnownRangeDesktop.value = s.fontSizeKnown;
     }
     if (s.minValue) document.getElementById('minValue').value = s.minValue;
     if (s.coinFilter) {

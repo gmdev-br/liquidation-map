@@ -5,7 +5,7 @@
 import {
     getAllRows, getDisplayedRows, getSelectedCoins, getActiveCurrency,
     getActiveEntryCurrency, getShowSymbols, getSortKey, getSortDir,
-    getVisibleColumns, getColumnOrder, setDisplayedRows, getCurrentPrices, getFxRates, getChartHighLevSplit
+    getVisibleColumns, getColumnOrder, setDisplayedRows, getCurrentPrices, getFxRates, getChartHighLevSplit, getFontSize, getFontSizeKnown
 } from '../state.js';
 import { convertToActiveCcy } from '../utils/currency.js';
 import { fmt, fmtUSD, fmtAddr, fmtCcy } from '../utils/formatters.js';
@@ -194,6 +194,12 @@ export function renderTable() {
         const pnlClass = r.unrealizedPnl >= 0 ? 'green' : 'red';
         const fundClass = r.funding >= 0 ? 'green' : 'red';
 
+        // Get font sizes
+        const fontSize = getFontSize();
+        const fontSizeKnown = getFontSizeKnown();
+        const rowFontSize = r.displayName ? fontSizeKnown : fontSize;
+        const rowFontStyle = `font-size: ${rowFontSize}px`;
+
         // Leverage label
         const levType = r.leverageType === 'isolated' ? 'Isolated' : 'Cross';
         const levLabel = `${r.leverageValue}x ${levType}`;
@@ -247,31 +253,31 @@ export function renderTable() {
         // Cell Renderers Map
         const cells = {
             'col-num': `<td class="muted col-num" style="font-size:11px">${i + 1}</td>`,
-            'col-address': `<td class="col-address ${levClass}">
+            'col-address': `<td class="col-address ${levClass}" style="${rowFontStyle}">
                 <div class="addr-cell">
                     <div class="addr-avatar">${(r.displayName || r.address).slice(0, 2).toUpperCase()}</div>
                     <div>
                         <a class="addr-link" href="https://app.hyperliquid.xyz/explorer/address/${r.address}" target="_blank">
-                            <div class="addr-text">${fmtAddr(r.address)}${r.displayName ? ' ★' : ''}</div>
+                            <div class="addr-text">${fmtAddr(r.address)}${r.displayName ? ' <span class="addr-star">★</span>' : ''}</div>
                         </a>
                         ${r.displayName ? `<div class="addr-name">${r.displayName}</div>` : ''}
                     </div>
                 </div>
             </td>`,
-            'col-coin': `<td class="col-coin">
+            'col-coin': `<td class="col-coin" style="${rowFontStyle}">
                 <span class="coin-badge ${levClass}">${r.coin} ${side === 'long' ? '▲' : '▼'}</span>
             </td>`,
-            'col-szi': `<td class="mono col-szi ${levClass}">${sziStr}</td>`,
-            'col-leverage': `<td class="col-leverage"><span class="lev-badge ${levClass}">${levLabel}</span></td>`,
-            'col-positionValue': `<td class="mono col-positionValue ${levClass}">${usdSym}${fmt(r.positionValue)}</td>`,
-            'col-valueCcy': `<td class="mono col-valueCcy ${levClass}" style="font-weight:600">${ccyStr}</td>`,
-            'col-entryPx': `<td class="mono col-entryPx ${levClass}">${r.entryPx.toLocaleString('en-US', { maximumFractionDigits: 2 })}</td>`,
-            'col-entryCcy': `<td class="mono col-entryCcy ${levClass}" style="font-weight:600">${entStr}</td>`,
-            'col-unrealizedPnl': `<td class="mono col-unrealizedPnl ${pnlClass}" style="font-weight:600">${fmtUSD(r.unrealizedPnl)}</td>`,
-            'col-funding': `<td class="mono col-funding ${fundClass}">${fmtUSD(r.funding)}</td>`,
-            'col-liqPx': `<td class="mono col-liqPx ${levClass}" style="font-weight:600">${liqPriceFormatted}</td>`,
-            'col-distToLiq': `<td class="col-distToLiq ${levClass}">${distHtml}</td>`,
-            'col-accountValue': `<td class="mono col-accountValue ${levClass}">${usdSym}${fmt(r.accountValue)}</td>`
+            'col-szi': `<td class="mono col-szi ${levClass}" style="${rowFontStyle}">${sziStr}</td>`,
+            'col-leverage': `<td class="col-leverage" style="${rowFontStyle}"><span class="lev-badge ${levClass}">${levLabel}</span></td>`,
+            'col-positionValue': `<td class="mono col-positionValue ${levClass}" style="${rowFontStyle}">${usdSym}${fmt(r.positionValue)}</td>`,
+            'col-valueCcy': `<td class="mono col-valueCcy ${levClass}" style="${r.displayName ? 'font-weight:600;' : ''}${rowFontStyle}">${ccyStr}</td>`,
+            'col-entryPx': `<td class="mono col-entryPx ${levClass}" style="${rowFontStyle}">${r.entryPx.toLocaleString('en-US', { maximumFractionDigits: 2 })}</td>`,
+            'col-entryCcy': `<td class="mono col-entryCcy ${levClass}" style="${r.displayName ? 'font-weight:600;' : ''}${rowFontStyle}">${entStr}</td>`,
+            'col-unrealizedPnl': `<td class="mono col-unrealizedPnl ${pnlClass}" style="${r.displayName ? 'font-weight:600;' : ''}${rowFontStyle}">${fmtUSD(r.unrealizedPnl)}</td>`,
+            'col-funding': `<td class="mono col-funding ${fundClass}" style="${rowFontStyle}">${fmtUSD(r.funding)}</td>`,
+            'col-liqPx': `<td class="mono col-liqPx ${levClass}" style="${r.displayName ? 'font-weight:600;' : ''}${rowFontStyle}">${liqPriceFormatted}</td>`,
+            'col-distToLiq': `<td class="col-distToLiq ${levClass}" style="${rowFontStyle}">${distHtml}</td>`,
+            'col-accountValue': `<td class="mono col-accountValue ${levClass}" style="${rowFontStyle}">${usdSym}${fmt(r.accountValue)}</td>`
         };
 
         // Filter cells based on visible columns
@@ -290,7 +296,7 @@ export function renderTable() {
             });
         }
 
-        return `<tr>
+        return `<tr class="${r.displayName ? 'row-known-address' : ''}">
             ${columnOrder.filter(Key => filteredCells[Key]).map(Key => filteredCells[Key]).join('')}
         </tr>`;
     }).join('');
