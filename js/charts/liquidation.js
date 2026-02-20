@@ -322,7 +322,10 @@ export function renderLiqScatterPlot() {
                 borderColor: customColors.longLow,
                 borderWidth: 1,
                 hoverBackgroundColor: hexToRgba(customColors.longLow, Math.min(opacity + 0.15, 0.8)),
-                hoverBorderColor: customColors.longLow
+                hoverBorderColor: customColors.longLow,
+                pointStyle: (context) => {
+                    return context.raw?._raw?.displayName ? 'star' : 'circle';
+                }
             });
         }
 
@@ -334,7 +337,10 @@ export function renderLiqScatterPlot() {
                 borderColor: customColors.longHigh,
                 borderWidth: 2,
                 hoverBackgroundColor: hexToRgba(customColors.longHigh, Math.min(opacity + 0.15, 0.8)),
-                hoverBorderColor: customColors.longHigh
+                hoverBorderColor: customColors.longHigh,
+                pointStyle: (context) => {
+                    return context.raw?._raw?.displayName ? 'star' : 'circle';
+                }
             });
         }
 
@@ -346,7 +352,10 @@ export function renderLiqScatterPlot() {
                 borderColor: customColors.shortLow,
                 borderWidth: 1,
                 hoverBackgroundColor: hexToRgba(customColors.shortLow, Math.min(opacity + 0.15, 0.8)),
-                hoverBorderColor: customColors.shortLow
+                hoverBorderColor: customColors.shortLow,
+                pointStyle: (context) => {
+                    return context.raw?._raw?.displayName ? 'star' : 'circle';
+                }
             });
         }
 
@@ -358,7 +367,10 @@ export function renderLiqScatterPlot() {
                 borderColor: customColors.shortHigh,
                 borderWidth: 2,
                 hoverBackgroundColor: hexToRgba(customColors.shortHigh, Math.min(opacity + 0.15, 0.8)),
-                hoverBorderColor: customColors.shortHigh
+                hoverBorderColor: customColors.shortHigh,
+                pointStyle: (context) => {
+                    return context.raw?._raw?.displayName ? 'star' : 'circle';
+                }
             });
         }
 
@@ -437,7 +449,7 @@ export function renderLiqScatterPlot() {
                             const decimalPlaces = getDecimalPlaces();
                             return [
                                 `Liq Price: ${sym}${context.parsed.x.toLocaleString(undefined, { minimumFractionDigits: decimalPlaces, maximumFractionDigits: decimalPlaces })}`,
-                                `Size: ${Math.abs(r.szi).toFixed(decimalPlaces)}`,
+                                `BTC Value: ${context.parsed.y.toFixed(decimalPlaces)}`,
                                 `Value: $${r.positionValue.toLocaleString(undefined, { minimumFractionDigits: decimalPlaces, maximumFractionDigits: decimalPlaces })}`
                             ];
                         }

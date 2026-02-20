@@ -371,7 +371,10 @@ export function renderScatterPlot() {
                 borderColor: customColors.longLow,
                 borderWidth: 1,
                 hoverBackgroundColor: hexToRgba(customColors.longLow, Math.min(opacity + 0.15, 0.8)),
-                hoverBorderColor: customColors.longLow
+                hoverBorderColor: customColors.longLow,
+                pointStyle: (context) => {
+                    return context.raw?._raw?.displayName ? 'star' : 'circle';
+                }
             });
         }
 
@@ -383,7 +386,10 @@ export function renderScatterPlot() {
                 borderColor: customColors.longHigh,
                 borderWidth: 2,
                 hoverBackgroundColor: hexToRgba(customColors.longHigh, Math.min(opacity + 0.15, 0.8)),
-                hoverBorderColor: customColors.longHigh
+                hoverBorderColor: customColors.longHigh,
+                pointStyle: (context) => {
+                    return context.raw?._raw?.displayName ? 'star' : 'circle';
+                }
             });
         }
 
@@ -395,7 +401,10 @@ export function renderScatterPlot() {
                 borderColor: customColors.shortLow,
                 borderWidth: 1,
                 hoverBackgroundColor: hexToRgba(customColors.shortLow, Math.min(opacity + 0.15, 0.8)),
-                hoverBorderColor: customColors.shortLow
+                hoverBorderColor: customColors.shortLow,
+                pointStyle: (context) => {
+                    return context.raw?._raw?.displayName ? 'star' : 'circle';
+                }
             });
         }
 
@@ -407,7 +416,10 @@ export function renderScatterPlot() {
                 borderColor: customColors.shortHigh,
                 borderWidth: 2,
                 hoverBackgroundColor: hexToRgba(customColors.shortHigh, Math.min(opacity + 0.15, 0.8)),
-                hoverBorderColor: customColors.shortHigh
+                hoverBorderColor: customColors.shortHigh,
+                pointStyle: (context) => {
+                    return context.raw?._raw?.displayName ? 'star' : 'circle';
+                }
             });
         }
 
@@ -486,11 +498,14 @@ export function renderScatterPlot() {
                             const r = context.raw._raw;
                             const lev = Math.abs(r.leverageValue);
                             const decimalPlaces = getDecimalPlaces();
+                            const liqPrice = r.liquidationPx > 0 ? getCorrelatedPrice(r, r.liquidationPx, getActiveEntryCurrency(), getCurrentPrices(), getFxRates()) : 0;
+                            const liqPriceStr = liqPrice > 0 ? sym + liqPrice.toLocaleString(undefined, { minimumFractionDigits: decimalPlaces, maximumFractionDigits: decimalPlaces }) : '—';
                             return [
                                 `${r.coin} ${r.side === 'long' ? '▲' : '▼'}`,
                                 `Entry: ${sym}${context.parsed.x.toLocaleString(undefined, { minimumFractionDigits: decimalPlaces, maximumFractionDigits: decimalPlaces })}`,
-                                `Size: ${Math.abs(r.szi).toFixed(decimalPlaces)}`,
+                                `BTC Value: ${context.parsed.y.toFixed(decimalPlaces)}`,
                                 `Leverage: ${lev}x`,
+                                `Liq Price: ${liqPriceStr}`,
                                 `Value: $${r.positionValue.toLocaleString(undefined, { minimumFractionDigits: decimalPlaces, maximumFractionDigits: decimalPlaces })}`
                             ];
                         }

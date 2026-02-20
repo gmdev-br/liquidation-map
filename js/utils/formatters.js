@@ -36,7 +36,7 @@ export function fmtCcy(value, overrideCcy = null, activeCurrency, showSymbols) {
     const decimalPlaces = getDecimalPlaces();
 
     if (ccy === 'BTC') {
-        return sign + sym + abs.toFixed(abs >= 1 ? 4 : 8);
+        return sign + sym + abs.toFixed(decimalPlaces);
     }
 
     if (abs >= 1e9) return sign + sym + (abs / 1e9).toFixed(2) + 'B';
@@ -54,7 +54,7 @@ export function fmtPriceCcy(value, overrideCcy = null, activeCurrency, showSymbo
     const decimalPlaces = getDecimalPlaces();
 
     if (ccy === 'BTC') {
-        return sign + sym + abs.toFixed(8);
+        return sign + sym + abs.toFixed(decimalPlaces);
     }
 
     // For prices, we want more precision than total values

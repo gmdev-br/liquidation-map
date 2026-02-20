@@ -166,7 +166,7 @@ export function updateLeverageColors() {
     const longHigh = document.querySelector('#colorLongHigh')?.value || '#16a34a';
     const shortLow = document.querySelector('#colorShortLow')?.value || '#ef4444';
     const shortHigh = document.querySelector('#colorShortHigh')?.value || '#dc2626';
-    
+
     setLeverageColors({
         longLow,
         longHigh,
@@ -208,23 +208,23 @@ export function updateGridSpacing(val) {
 export function setChartModeHandler(mode) {
     setChartMode(mode);
     saveSettings();
-    
+
     // Update active tab styling
     document.querySelectorAll('.tab[data-chart]').forEach(tab => {
         tab.classList.toggle('active', tab.dataset.chart === mode);
     });
-    
+
     // Update control visibility
     const bubbleCtrl = document.getElementById('bubbleSizeCtrl');
     const aggCtrl = document.getElementById('aggregationCtrl');
-    
+
     if (bubbleCtrl) {
         bubbleCtrl.style.display = (mode === 'scatter') ? 'block' : 'none';
     }
     if (aggCtrl) {
         aggCtrl.style.display = (mode === 'column') ? 'block' : 'none';
     }
-    
+
     // Trigger chart update
     renderTable();
 }
@@ -251,25 +251,34 @@ export function onCurrencyChange() {
     console.log('onCurrencyChange called');
     const activeCurrency = document.getElementById('currencySelect').value;
     const activeEntryCurrency = document.getElementById('entryCurrencySelect').value;
-    
+
     console.log('Currency changed to:', activeCurrency, 'Entry currency:', activeEntryCurrency);
-    
+
     // Update global state
     setActiveCurrency(activeCurrency);
     setActiveEntryCurrency(activeEntryCurrency);
-    
+
     console.log('Updated global state:', {
         activeCurrency: activeCurrency,
         activeEntryCurrency: activeEntryCurrency
     });
-    
-    // Update column headers
+
+    // Update column headers preserving resizers
     const thVal = document.getElementById('th-valueCcy');
-    if (thVal) thVal.textContent = `Value (${activeCurrency}) ↕`;
+    if (thVal) {
+        const label = thVal.querySelector('.th-label');
+        if (label) label.textContent = `Value (${activeCurrency}) ↕`;
+    }
     const thEntry = document.getElementById('th-entryCcy');
-    if (thEntry) thEntry.textContent = `Entry Corr (${activeEntryCurrency}) ↕`;
+    if (thEntry) {
+        const label = thEntry.querySelector('.th-label');
+        if (label) label.textContent = `Avg Entry (Corr) ↕`; // Keep original label or update as needed
+    }
     const thLiq = document.getElementById('th-liqPx');
-    if (thLiq) thLiq.textContent = `Liq. Price Corr (${activeEntryCurrency}) ↕`;
+    if (thLiq) {
+        const label = thLiq.querySelector('.th-label');
+        if (label) label.textContent = `Liq. Price Corr (${activeEntryCurrency}) ↕`;
+    }
 
     saveSettings();
     console.log('Calling renderTable after currency change');
@@ -293,7 +302,7 @@ export function closeColumnComboboxDelayed() {
 export function renderColumnDropdown(query = '') {
     const dds = document.querySelectorAll('#columnDropdown');
     if (dds.length === 0) return;
-    
+
     const columns = [
         { key: 'col-num', label: '#' },
         { key: 'col-address', label: 'Address' },
@@ -316,13 +325,13 @@ export function renderColumnDropdown(query = '') {
     const visibleColumns = getVisibleColumns();
 
     let html = '';
-    
+
     // Add Show All / Hide All buttons
     html += `<div class="combobox-action-buttons">
         <div class="combobox-action-btn" onmousedown="event.preventDefault(); showAllColumns()">Show All</div>
         <div class="combobox-action-btn" onmousedown="event.preventDefault(); hideAllColumns()">Hide All</div>
     </div>`;
-    
+
     // Add column items with checkboxes
     html += filtered.map(col => {
         const isVisible = visibleColumns.length === 0 || visibleColumns.includes(col.key);
@@ -343,7 +352,7 @@ export function toggleColumn(key) {
         'col-positionValue', 'col-valueCcy', 'col-entryPx', 'col-entryCcy',
         'col-unrealizedPnl', 'col-funding', 'col-liqPx', 'col-distToLiq', 'col-accountValue'
     ];
-    
+
     let newVisibleColumns;
     if (visibleColumns.length === 0) {
         // Currently all visible, remove the specified column
@@ -364,13 +373,13 @@ export function toggleColumn(key) {
             }
         }
     }
-    
+
     setVisibleColumns(newVisibleColumns);
     saveSettings();
     applyColumnVisibility();
     renderTable();
     updateColumnSelectDisplay();
-    
+
     // Keep dropdown open to show updated state
     const cb = document.getElementById('columnCombobox');
     if (cb) cb.classList.add('open');
@@ -383,7 +392,7 @@ export function showAllColumns() {
     applyColumnVisibility();
     renderTable();
     updateColumnSelectDisplay();
-    
+
     // Keep dropdown open to show updated state
     const cb = document.getElementById('columnCombobox');
     if (cb) cb.classList.add('open');
@@ -396,7 +405,7 @@ export function hideAllColumns() {
     applyColumnVisibility();
     renderTable();
     updateColumnSelectDisplay();
-    
+
     // Keep dropdown open to show updated state
     const cb = document.getElementById('columnCombobox');
     if (cb) cb.classList.add('open');
@@ -410,10 +419,10 @@ export function updateColumnSelectDisplay() {
         'col-positionValue', 'col-valueCcy', 'col-entryPx', 'col-entryCcy',
         'col-unrealizedPnl', 'col-funding', 'col-liqPx', 'col-distToLiq', 'col-accountValue'
     ];
-    
+
     const displays = document.querySelectorAll('#columnSelectDisplay');
     if (!displays.length) return;
-    
+
     if (visibleColumns.length === 0) {
         displays.forEach(d => d.value = `All ${allColumns.length} columns`);
     } else {
@@ -427,7 +436,7 @@ export function applyColumnOrder() {
     // This function is called after loading settings
     // The actual application will be handled by renderTable()
     // which reads from getColumnOrder()
-    
+
     // Setup drag and drop for column reordering
     setupColumnDragAndDrop();
 }
@@ -470,7 +479,7 @@ export function setupColumnDragAndDrop() {
         draggedTh = th;
         dragStartX = e.clientX;
         dragStartY = e.clientY;
-        
+
         th.classList.add('dragging');
     }, false); // No capture to run after resize handler
 
@@ -480,7 +489,7 @@ export function setupColumnDragAndDrop() {
 
         const deltaX = e.clientX - dragStartX;
         const deltaY = e.clientY - dragStartY;
-        
+
         // Only show dragging state after moving a bit
         if (Math.abs(deltaX) > 5 || Math.abs(deltaY) > 5) {
             draggedTh.style.opacity = '0.5';
@@ -489,7 +498,7 @@ export function setupColumnDragAndDrop() {
         // Find potential drop target
         const targetElement = document.elementFromPoint(e.clientX, e.clientY);
         const targetTh = targetElement?.closest('th[id^="th-"]');
-        
+
         if (targetTh && targetTh !== draggedTh) {
             // Remove drag-over from all headers
             document.querySelectorAll('th').forEach(header => {
@@ -507,10 +516,10 @@ export function setupColumnDragAndDrop() {
         // Find drop target
         const targetElement = document.elementFromPoint(e.clientX, e.clientY);
         const targetTh = targetElement?.closest('th[id^="th-"]');
-        
+
         if (targetTh && targetTh !== draggedTh) {
             console.log('Drop completed:', draggedTh.id, '->', targetTh.id);
-            
+
             const draggedColumnId = draggedTh.id.replace('th-', '');
             const targetColumnId = targetTh.id.replace('th-', '');
             console.log('Dragged:', draggedColumnId, 'Target:', targetColumnId);
@@ -574,7 +583,7 @@ export function applyColumnVisibility() {
         'col-positionValue', 'col-valueCcy', 'col-entryPx', 'col-entryCcy',
         'col-unrealizedPnl', 'col-funding', 'col-liqPx', 'col-distToLiq', 'col-accountValue'
     ];
-    
+
     // Update table header visibility
     allColumns.forEach(colKey => {
         const thElement = document.getElementById(`th-${colKey.replace('col-', '')}`);
@@ -583,7 +592,7 @@ export function applyColumnVisibility() {
             thElement.style.display = isVisible ? '' : 'none';
         }
     });
-    
+
     // Update filter row visibility
     allColumns.forEach(colKey => {
         const filterCells = document.querySelectorAll(`.filter-cell.${colKey}`);

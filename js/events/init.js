@@ -267,7 +267,13 @@ function setupEventListeners() {
 
     // Column sorting
     document.querySelectorAll('th[id^="th-"]').forEach(th => {
-        th.addEventListener('click', () => {
+        th.addEventListener('click', (e) => {
+            // Skip if currently resizing or if clicking on resizer
+            if (document.body.classList.contains('resizing')) return;
+            
+            const resizer = th.querySelector('.resizer');
+            if (resizer && (e.target === resizer || resizer.contains(e.target))) return;
+            
             const key = th.id.replace('th-', '');
             sortBy(key, renderTable);
         });

@@ -416,6 +416,7 @@ export function setupColumnResizing() {
     let currentTh = null;
     let startX = 0;
     let startWidth = 0;
+    let resizeEndTime = 0;
 
     // Helper to get X position from mouse or touch event
     function getXPosition(e) {
@@ -474,15 +475,17 @@ export function setupColumnResizing() {
         if (e.cancelable) e.preventDefault();
     }
 
-    function onEnd() {
+    function onEnd(e) {
         if (!isResizing) return;
 
         console.log('Column resize ended');
+        resizeEndTime = Date.now();
 
-        // Small delay before removing the resizing class to prevent 'click' events (sorting)
-        setTimeout(() => {
-            document.body.classList.remove('resizing');
-        }, 100);
+        // Prevent click event immediately
+        if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
 
         if (currentResizer) currentResizer.classList.remove('active');
 
@@ -496,9 +499,27 @@ export function setupColumnResizing() {
         document.removeEventListener('touchmove', onMove);
         document.removeEventListener('touchend', onEnd);
 
+        // Remove resizing class after a longer delay to prevent sorting
+        setTimeout(() => {
+            document.body.classList.remove('resizing');
+        }, 300);
+
         // Save settings to persist changes across sessions if needed
         saveSettings();
     }
+
+    // Global click prevention after resize
+    document.addEventListener('click', (e) => {
+        const th = e.target.closest('th[id^="th-"]');
+        if (!th) return;
+
+        // If we recently finished resizing (within 300ms), prevent the click
+        if (resizeEndTime && (Date.now() - resizeEndTime) < 300) {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('Prevented click after resize');
+        }
+    }, true); // Use capture to intercept early
 
     // Use delegation on the table header area or document
     document.addEventListener('mousedown', (e) => {

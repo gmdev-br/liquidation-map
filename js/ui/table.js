@@ -5,7 +5,7 @@
 import {
     getAllRows, getDisplayedRows, getSelectedCoins, getActiveCurrency,
     getActiveEntryCurrency, getShowSymbols, getSortKey, getSortDir,
-    getVisibleColumns, getColumnOrder, setDisplayedRows, getCurrentPrices, getFxRates, getChartHighLevSplit, getFontSize, getFontSizeKnown
+    getVisibleColumns, getColumnOrder, setDisplayedRows, getCurrentPrices, getFxRates, getChartHighLevSplit, getFontSize, getFontSizeKnown, getDecimalPlaces
 } from '../state.js';
 import { convertToActiveCcy } from '../utils/currency.js';
 import { fmt, fmtUSD, fmtAddr, fmtCcy } from '../utils/formatters.js';
@@ -98,6 +98,7 @@ export function renderTable() {
     const columnOrder = getColumnOrder();
     const currentPrices = getCurrentPrices();
     const fxRates = getFxRates();
+    const decimalPlaces = getDecimalPlaces();
 
     // Reorder table headers first
     reorderTableHeadersAndFilters(columnOrder);
@@ -237,7 +238,7 @@ export function renderTable() {
 
         // Size display: show absolute value + coin
         const absSzi = Math.abs(r.szi);
-        const sziStr = absSzi >= 1 ? absSzi.toFixed(4) : absSzi.toFixed(6);
+        const sziStr = absSzi.toFixed(decimalPlaces);
 
         const ccyVal = convertToActiveCcy(r.positionValue, null, activeCurrency, fxRates);
         const ccyStr = fmtCcy(ccyVal, null, activeCurrency, showSymbols);
@@ -255,10 +256,10 @@ export function renderTable() {
             'col-num': `<td class="muted col-num" style="font-size:11px">${i + 1}</td>`,
             'col-address': `<td class="col-address ${levClass}" style="${rowFontStyle}">
                 <div class="addr-cell">
-                    <div class="addr-avatar">${(r.displayName || r.address).slice(0, 2).toUpperCase()}</div>
+                    ${r.displayName ? `<span class="addr-avatar-star ${levClass}">★</span>` : `<div class="addr-avatar">${(r.displayName || r.address).slice(0, 2).toUpperCase()}</div>`}
                     <div>
                         <a class="addr-link" href="https://app.hyperliquid.xyz/explorer/address/${r.address}" target="_blank">
-                            <div class="addr-text">${fmtAddr(r.address)}${r.displayName ? ' <span class="addr-star">★</span>' : ''}</div>
+                            <div class="addr-text">${fmtAddr(r.address)}</div>
                         </a>
                         ${r.displayName ? `<div class="addr-name">${r.displayName}</div>` : ''}
                     </div>
