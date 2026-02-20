@@ -49,6 +49,7 @@ let bubbleOpacity = 0.6;
 let aggregationFactor = 50;
 let savedScatterState = null;
 let savedLiqState = null;
+let gridSpacing = 500; // Grid spacing in px
 
 // Custom colors for leverage categories
 let leverageColors = {
@@ -159,7 +160,9 @@ export const setState = (updates) => {
         maxConcurrency,
         renderPending,
         lastSaveTime,
-        leverageColors
+        leverageColors,
+        columnWidth,
+        gridSpacing
     }, updates);
 };
 
@@ -202,6 +205,7 @@ export const setColumnWidths = (value) => { columnWidths = value; };
 export const setRenderPending = (value) => { renderPending = value; };
 export const setLastSaveTime = (value) => { lastSaveTime = value; };
 export const setLeverageColors = (value) => { leverageColors = value; };
+export const setGridSpacing = (value) => { gridSpacing = value; };
 
 // Getters for common state access
 export const getAllRows = () => allRows;
@@ -242,6 +246,7 @@ export const getPriceMode = () => priceMode;
 export const getSelectedCoins = () => selectedCoins;
 export const getLeverageColors = () => leverageColors;
 export const getColumnWidth = () => columnWidth;
+export const getGridSpacing = () => gridSpacing;
 export const setPriceMode = (mode) => {
     priceMode = mode;
 };

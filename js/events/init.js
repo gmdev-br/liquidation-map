@@ -25,7 +25,7 @@ import {
     updateBubbleSize, updateBubbleOpacity, updateAggregation, setChartModeHandler, updateChartHeight,
     updateLiqChartHeight, onCurrencyChange, openColumnCombobox, closeColumnComboboxDelayed,
     renderColumnDropdown as renderColumnDropdownFn, toggleColumn as toggleColumnFn, showAllColumns as showAllColumnsFn, hideAllColumns as hideAllColumnsFn, updateColumnSelectDisplay, applyColumnOrder,
-    applyColumnWidths, applyColumnVisibility, toggleShowSymbols, updatePriceInterval, updateDecimalPlaces, updateFontSize, updateFontSizeKnown, updateLeverageColors
+    applyColumnWidths, applyColumnVisibility, toggleShowSymbols, updatePriceInterval, updateDecimalPlaces, updateFontSize, updateFontSizeKnown, updateLeverageColors, updateGridSpacing
 } from './handlers.js';
 import { initColumnWidthControl, applyColumnWidth } from '../ui/columnWidth.js';
 import { setWindow, setStatus, setProgress } from '../ui/status.js';
@@ -235,21 +235,21 @@ function setupEventListeners() {
         pauseBtn.addEventListener('click', () => togglePause(setStatus));
     }
 
-    // Speed control
-    const speedRange = document.getElementById('speedRange');
-    if (speedRange) {
-        speedRange.addEventListener('input', (e) => {
+    // Speed control - attach to both mobile and desktop
+    const speedRanges = document.querySelectorAll('#speedRange');
+    speedRanges.forEach(range => {
+        range.addEventListener('input', (e) => {
             updateSpeed(e.target.value);
         });
-    }
+    });
 
-    // Price update interval control
-    const priceIntervalRange = document.getElementById('priceIntervalRange');
-    if (priceIntervalRange) {
-        priceIntervalRange.addEventListener('input', (e) => {
+    // Price update interval control - attach to both mobile and desktop
+    const priceIntervalRanges = document.querySelectorAll('#priceIntervalRange');
+    priceIntervalRanges.forEach(range => {
+        range.addEventListener('input', (e) => {
             updatePriceInterval(e.target.value);
         });
-    }
+    });
 
     // Window tabs
     document.querySelectorAll('.tab[data-window]').forEach(tab => {
@@ -305,148 +305,90 @@ function setupEventListeners() {
         btnShowSymDesktop.addEventListener('click', toggleShowSymbols);
     }
 
-    // Ranking limit
-    const rankingLimit = document.getElementById('rankingLimit');
-    if (rankingLimit) {
-        rankingLimit.addEventListener('change', updateRankingLimit);
-    }
+    // Ranking limit - attach to both mobile and desktop
+    const rankingLimits = document.querySelectorAll('#rankingLimit');
+    rankingLimits.forEach(limit => {
+        limit.addEventListener('change', updateRankingLimit);
+    });
 
-    // Color settings
-    const colorMaxLev = document.getElementById('colorMaxLev');
-    if (colorMaxLev) {
-        colorMaxLev.addEventListener('change', updateColorSettings);
-    }
+    // Color settings - attach to both mobile and desktop
+    const colorMaxLevs = document.querySelectorAll('#colorMaxLev');
+    colorMaxLevs.forEach(el => {
+        el.addEventListener('change', updateColorSettings);
+    });
 
-    const chartHighLevSplit = document.getElementById('chartHighLevSplit');
-    if (chartHighLevSplit) {
-        chartHighLevSplit.addEventListener('change', updateChartFilters);
-    }
+    const chartHighLevSplits = document.querySelectorAll('#chartHighLevSplit');
+    chartHighLevSplits.forEach(el => {
+        el.addEventListener('change', updateChartFilters);
+    });
 
-    // Bubble size
-    const bubbleSizeRange = document.getElementById('bubbleSizeRange');
-    if (bubbleSizeRange) {
-        bubbleSizeRange.addEventListener('input', (e) => {
+    // Bubble size - attach to both mobile and desktop
+    const bubbleSizeRanges = document.querySelectorAll('#bubbleSizeRange');
+    bubbleSizeRanges.forEach(range => {
+        range.addEventListener('input', (e) => {
             updateBubbleSize(e.target.value);
         });
-    }
+    });
 
-    // Bubble opacity
-    const bubbleOpacityRange = document.getElementById('bubbleOpacityRange');
-    if (bubbleOpacityRange) {
-        bubbleOpacityRange.addEventListener('input', (e) => {
+    // Bubble opacity - attach to both mobile and desktop
+    const bubbleOpacityRanges = document.querySelectorAll('#bubbleOpacityRange');
+    bubbleOpacityRanges.forEach(range => {
+        range.addEventListener('input', (e) => {
             updateBubbleOpacity(e.target.value);
         });
-    }
+    });
 
-    // Aggregation
-    const aggregationRange = document.getElementById('aggregationRange');
-    if (aggregationRange) {
-        aggregationRange.addEventListener('input', (e) => {
+    // Aggregation - attach to both mobile and desktop
+    const aggregationRanges = document.querySelectorAll('#aggregationRange');
+    aggregationRanges.forEach(range => {
+        range.addEventListener('input', (e) => {
             updateAggregation(e.target.value);
         });
-    }
+    });
 
-    // Decimal places control
-    const decimalPlacesRange = document.getElementById('decimalPlacesRange');
-    if (decimalPlacesRange) {
-        decimalPlacesRange.addEventListener('input', (e) => {
+    // Decimal places control - attach to both mobile and desktop
+    const decimalPlacesRanges = document.querySelectorAll('#decimalPlacesRange');
+    decimalPlacesRanges.forEach(range => {
+        range.addEventListener('input', (e) => {
             updateDecimalPlaces(e.target.value);
         });
-    }
+    });
 
-    // Font size control
-    console.log('Looking for fontSizeRange element...');
-    const fontSizeRange = document.getElementById('fontSizeRange');
-    console.log('fontSizeRange element:', fontSizeRange);
-    if (fontSizeRange) {
-        console.log('Adding event listeners to fontSizeRange (mobile)');
-        fontSizeRange.addEventListener('input', (e) => {
-            console.log('fontSize INPUT event fired:', e.target.value);
+    // Font size control - attach to both mobile and desktop
+    const fontSizeRanges = document.querySelectorAll('#fontSizeRange, #fontSizeRangeDesktop');
+    fontSizeRanges.forEach(range => {
+        range.addEventListener('input', (e) => {
             updateFontSize(e.target.value);
         });
-        fontSizeRange.addEventListener('change', (e) => {
-            console.log('fontSize CHANGE event fired:', e.target.value);
+        range.addEventListener('change', (e) => {
             updateFontSize(e.target.value);
         });
-        fontSizeRange.addEventListener('keyup', (e) => {
-            console.log('fontSize KEYUP event fired:', e.target.value);
+        range.addEventListener('keyup', (e) => {
             updateFontSize(e.target.value);
         });
-    } else {
-        console.error('fontSizeRange element not found!');
-    }
+    });
 
-    // Font size control (desktop)
-    const fontSizeRangeDesktop = document.getElementById('fontSizeRangeDesktop');
-    console.log('fontSizeRangeDesktop element:', fontSizeRangeDesktop);
-    if (fontSizeRangeDesktop) {
-        console.log('Adding event listeners to fontSizeRangeDesktop');
-        fontSizeRangeDesktop.addEventListener('input', (e) => {
-            console.log('fontSizeDesktop INPUT event fired:', e.target.value);
-            updateFontSize(e.target.value);
+    // Font size for known addresses control - attach to both mobile and desktop
+    const fontSizeKnownRanges = document.querySelectorAll('#fontSizeKnownRange, #fontSizeKnownRangeDesktop');
+    fontSizeKnownRanges.forEach(range => {
+        range.addEventListener('input', (e) => {
+            updateFontSizeKnown(e.target.value);
         });
-        fontSizeRangeDesktop.addEventListener('change', (e) => {
-            console.log('fontSizeDesktop CHANGE event fired:', e.target.value);
-            updateFontSize(e.target.value);
+        range.addEventListener('change', (e) => {
+            updateFontSizeKnown(e.target.value);
         });
-        fontSizeRangeDesktop.addEventListener('keyup', (e) => {
-            console.log('fontSizeDesktop KEYUP event fired:', e.target.value);
-            updateFontSize(e.target.value);
+        range.addEventListener('keyup', (e) => {
+            updateFontSizeKnown(e.target.value);
         });
-    } else {
-        console.error('fontSizeRangeDesktop element not found!');
-    }
+    });
 
-    // Font size for known addresses control
-    console.log('Looking for fontSizeKnownRange element...');
-    const fontSizeKnownRange = document.getElementById('fontSizeKnownRange');
-    console.log('fontSizeKnownRange element:', fontSizeKnownRange);
-    if (fontSizeKnownRange) {
-        console.log('Adding event listeners to fontSizeKnownRange (mobile)');
-        fontSizeKnownRange.addEventListener('input', (e) => {
-            console.log('fontSizeKnown INPUT event fired:', e.target.value);
-            updateFontSizeKnown(e.target.value);
-        });
-        fontSizeKnownRange.addEventListener('change', (e) => {
-            console.log('fontSizeKnown CHANGE event fired:', e.target.value);
-            updateFontSizeKnown(e.target.value);
-        });
-        fontSizeKnownRange.addEventListener('keyup', (e) => {
-            console.log('fontSizeKnown KEYUP event fired:', e.target.value);
-            updateFontSizeKnown(e.target.value);
-        });
-    } else {
-        console.error('fontSizeKnownRange element not found!');
-    }
-
-    // Font size for known addresses control (desktop)
-    const fontSizeKnownRangeDesktop = document.getElementById('fontSizeKnownRangeDesktop');
-    console.log('fontSizeKnownRangeDesktop element:', fontSizeKnownRangeDesktop);
-    if (fontSizeKnownRangeDesktop) {
-        console.log('Adding event listeners to fontSizeKnownRangeDesktop');
-        fontSizeKnownRangeDesktop.addEventListener('input', (e) => {
-            console.log('fontSizeKnownDesktop INPUT event fired:', e.target.value);
-            updateFontSizeKnown(e.target.value);
-        });
-        fontSizeKnownRangeDesktop.addEventListener('change', (e) => {
-            console.log('fontSizeKnownDesktop CHANGE event fired:', e.target.value);
-            updateFontSizeKnown(e.target.value);
-        });
-        fontSizeKnownRangeDesktop.addEventListener('keyup', (e) => {
-            console.log('fontSizeKnownDesktop KEYUP event fired:', e.target.value);
-            updateFontSizeKnown(e.target.value);
-        });
-    } else {
-        console.error('fontSizeKnownRangeDesktop element not found!');
-    }
-
-    // Leverage color inputs
+    // Leverage color inputs - attach to both mobile and desktop
     const colorInputs = ['colorLongLow', 'colorLongHigh', 'colorShortLow', 'colorShortHigh'];
     colorInputs.forEach(id => {
-        const el = document.getElementById(id);
-        if (el) {
+        const elements = document.querySelectorAll(`#${id}`);
+        elements.forEach(el => {
             el.addEventListener('change', updateLeverageColors);
-        }
+        });
     });
 
     // Chart mode tabs
@@ -467,18 +409,13 @@ function setupEventListeners() {
         setupResizable(liqChartSection, updateLiqChartHeight);
     }
 
-    // Grid spacing control
-    const gridSpacingRange = document.getElementById('gridSpacingRange');
-    if (gridSpacingRange) {
-        gridSpacingRange.addEventListener('input', (e) => {
-            document.getElementById('gridSpacingVal').textContent = e.target.value;
-            // Force chart redraw to update grid
-            const scatterChart = window.getScatterChart ? window.getScatterChart() : null;
-            const liqChart = window.getLiqChartInstance ? window.getLiqChartInstance() : null;
-            if (scatterChart) scatterChart.update('none');
-            if (liqChart) liqChart.update('none');
+    // Grid spacing control - attach to both mobile and desktop
+    const gridSpacingRanges = document.querySelectorAll('#gridSpacingRange');
+    gridSpacingRanges.forEach(range => {
+        range.addEventListener('input', (e) => {
+            updateGridSpacing(e.target.value);
         });
-    }
+    });
 
     // Price filter controls for chart scale
     const minEntryCcy = document.getElementById('minEntryCcy');

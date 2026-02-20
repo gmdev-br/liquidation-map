@@ -7,9 +7,9 @@ import {
     getAggregationFactor, getSelectedCoins, getPriceMode, getPriceUpdateInterval, getActiveWindow,
     getVisibleColumns, getColumnOrder, getRankingLimit, getColorMaxLev,
     getChartHighLevSplit, getChartHeight, getLiqChartHeight, getSavedScatterState,
-    getSavedLiqState, getColumnWidths, getColumnWidth, getActiveCurrency, getActiveEntryCurrency, getDecimalPlaces, getLeverageColors, getFontSize, getFontSizeKnown,
+    getSavedLiqState, getColumnWidths, getColumnWidth, getActiveCurrency, getActiveEntryCurrency, getDecimalPlaces, getLeverageColors, getFontSize, getFontSizeKnown, getGridSpacing,
     setSortKey, setSortDir, setSavedScatterState, setSavedLiqState,
-    setColumnOrder, setVisibleColumns, setSelectedCoins, setRankingLimit, setColorMaxLev, setChartHighLevSplit, setChartMode, setBubbleScale, setBubbleOpacity, setAggregationFactor, setPriceMode, setShowSymbols, setPriceUpdateInterval, setDecimalPlaces, setFontSize, setFontSizeKnown, setLeverageColors, setColumnWidth
+    setColumnOrder, setVisibleColumns, setSelectedCoins, setRankingLimit, setColorMaxLev, setChartHighLevSplit, setChartMode, setBubbleScale, setBubbleOpacity, setAggregationFactor, setPriceMode, setShowSymbols, setPriceUpdateInterval, setDecimalPlaces, setFontSize, setFontSizeKnown, setLeverageColors, setColumnWidth, setGridSpacing
 } from '../state.js';
 import { COLUMN_DEFS } from '../config.js';
 import { cbSetValue, updateCoinSearchLabel } from '../ui/combobox.js';
@@ -82,7 +82,8 @@ export function saveSettings(getChartState = null, savedScatterState = null, sav
         visibleColumns: getVisibleColumns(),
         columnOrder: getColumnOrder(),
         leverageColors: getLeverageColors(),
-        columnWidth: getColumnWidth()
+        columnWidth: getColumnWidth(),
+        gridSpacing: getGridSpacing()
     };
     
     console.log('Saving currency settings:', {
@@ -200,56 +201,52 @@ export function loadSettings() {
         document.querySelectorAll('.tab[data-chart]').forEach(t => {
             t.classList.toggle('active', t.dataset.chart === s.chartMode);
         });
-        const bubbleCtrl = document.getElementById('bubbleSizeCtrl');
-        if (bubbleCtrl) {
-            bubbleCtrl.style.display = (s.chartMode === 'scatter') ? 'block' : 'none';
-        }
-        const aggCtrl = document.getElementById('aggregationCtrl');
-        if (aggCtrl) {
-            aggCtrl.style.display = (s.chartMode === 'column') ? 'block' : 'none';
-        }
+        const bubbleCtrls = document.querySelectorAll('#bubbleSizeCtrl');
+        bubbleCtrls.forEach(ctrl => ctrl.style.display = (s.chartMode === 'scatter') ? 'block' : 'none');
+        const aggCtrls = document.querySelectorAll('#aggregationCtrl');
+        aggCtrls.forEach(ctrl => ctrl.style.display = (s.chartMode === 'column') ? 'block' : 'none');
     }
     if (s.bubbleScale) {
         setBubbleScale(s.bubbleScale);
-        document.getElementById('bubbleSizeVal').textContent = s.bubbleScale.toFixed(1);
-        document.getElementById('bubbleSizeRange').value = s.bubbleScale;
+        const bubbleSizeVals = document.querySelectorAll('#bubbleSizeVal');
+        const bubbleSizeRanges = document.querySelectorAll('#bubbleSizeRange');
+        bubbleSizeVals.forEach(el => el.textContent = s.bubbleScale.toFixed(1));
+        bubbleSizeRanges.forEach(el => el.value = s.bubbleScale);
     }
     if (s.bubbleOpacity) {
         setBubbleOpacity(s.bubbleOpacity);
-        document.getElementById('bubbleOpacityVal').textContent = s.bubbleOpacity.toFixed(2);
-        document.getElementById('bubbleOpacityRange').value = s.bubbleOpacity;
+        const bubbleOpacityVals = document.querySelectorAll('#bubbleOpacityVal');
+        const bubbleOpacityRanges = document.querySelectorAll('#bubbleOpacityRange');
+        bubbleOpacityVals.forEach(el => el.textContent = s.bubbleOpacity.toFixed(2));
+        bubbleOpacityRanges.forEach(el => el.value = s.bubbleOpacity);
     }
     if (s.aggregationFactor) {
         setAggregationFactor(s.aggregationFactor);
-        document.getElementById('aggregationVal').textContent = s.aggregationFactor;
-        document.getElementById('aggregationRange').value = s.aggregationFactor;
+        const aggregationVals = document.querySelectorAll('#aggregationVal');
+        const aggregationRanges = document.querySelectorAll('#aggregationRange');
+        aggregationVals.forEach(el => el.textContent = s.aggregationFactor);
+        aggregationRanges.forEach(el => el.value = s.aggregationFactor);
     }
     if (s.decimalPlaces !== undefined) {
         setDecimalPlaces(s.decimalPlaces);
-        document.getElementById('decimalPlacesVal').textContent = s.decimalPlaces;
-        document.getElementById('decimalPlacesRange').value = s.decimalPlaces;
+        const decimalPlacesVals = document.querySelectorAll('#decimalPlacesVal');
+        const decimalPlacesRanges = document.querySelectorAll('#decimalPlacesRange');
+        decimalPlacesVals.forEach(el => el.textContent = s.decimalPlaces);
+        decimalPlacesRanges.forEach(el => el.value = s.decimalPlaces);
     }
     if (s.fontSize !== undefined) {
         setFontSize(s.fontSize);
-        const fontSizeValMobile = document.getElementById('fontSizeVal');
-        const fontSizeValDesktop = document.getElementById('fontSizeValDesktop');
-        const fontSizeRangeMobile = document.getElementById('fontSizeRange');
-        const fontSizeRangeDesktop = document.getElementById('fontSizeRangeDesktop');
-        if (fontSizeValMobile) fontSizeValMobile.textContent = s.fontSize;
-        if (fontSizeValDesktop) fontSizeValDesktop.textContent = s.fontSize;
-        if (fontSizeRangeMobile) fontSizeRangeMobile.value = s.fontSize;
-        if (fontSizeRangeDesktop) fontSizeRangeDesktop.value = s.fontSize;
+        const fontSizeVals = document.querySelectorAll('#fontSizeVal, #fontSizeValDesktop');
+        const fontSizeRanges = document.querySelectorAll('#fontSizeRange, #fontSizeRangeDesktop');
+        fontSizeVals.forEach(el => el.textContent = s.fontSize);
+        fontSizeRanges.forEach(el => el.value = s.fontSize);
     }
     if (s.fontSizeKnown !== undefined) {
         setFontSizeKnown(s.fontSizeKnown);
-        const fontSizeKnownValMobile = document.getElementById('fontSizeKnownVal');
-        const fontSizeKnownValDesktop = document.getElementById('fontSizeKnownValDesktop');
-        const fontSizeKnownRangeMobile = document.getElementById('fontSizeKnownRange');
-        const fontSizeKnownRangeDesktop = document.getElementById('fontSizeKnownRangeDesktop');
-        if (fontSizeKnownValMobile) fontSizeKnownValMobile.textContent = s.fontSizeKnown;
-        if (fontSizeKnownValDesktop) fontSizeKnownValDesktop.textContent = s.fontSizeKnown;
-        if (fontSizeKnownRangeMobile) fontSizeKnownRangeMobile.value = s.fontSizeKnown;
-        if (fontSizeKnownRangeDesktop) fontSizeKnownRangeDesktop.value = s.fontSizeKnown;
+        const fontSizeKnownVals = document.querySelectorAll('#fontSizeKnownVal, #fontSizeKnownValDesktop');
+        const fontSizeKnownRanges = document.querySelectorAll('#fontSizeKnownRange, #fontSizeKnownRangeDesktop');
+        fontSizeKnownVals.forEach(el => el.textContent = s.fontSizeKnown);
+        fontSizeKnownRanges.forEach(el => el.value = s.fontSizeKnown);
     }
     if (s.minValue) document.getElementById('minValue').value = s.minValue;
     if (s.coinFilter) {
@@ -310,33 +307,29 @@ export function loadSettings() {
     }
     if (s.priceUpdateInterval) {
         setPriceUpdateInterval(s.priceUpdateInterval);
-        const priceIntervalVal = document.getElementById('priceIntervalVal');
-        if (priceIntervalVal) {
-            priceIntervalVal.textContent = (s.priceUpdateInterval / 1000) + 's';
-        }
-        const priceIntervalRange = document.getElementById('priceIntervalRange');
-        if (priceIntervalRange) {
-            priceIntervalRange.value = s.priceUpdateInterval / 1000;
-        }
+        const priceIntervalVals = document.querySelectorAll('#priceIntervalVal');
+        const priceIntervalRanges = document.querySelectorAll('#priceIntervalRange');
+        priceIntervalVals.forEach(el => el.textContent = (s.priceUpdateInterval / 1000) + 's');
+        priceIntervalRanges.forEach(el => el.value = s.priceUpdateInterval / 1000);
     }
     if (s.columnWidths) {
         // columnWidths = s.columnWidths;
         // applyColumnWidths();
     }
     if (s.rankingLimit) {
-        document.getElementById('rankingLimit').value = s.rankingLimit;
+        const rankingLimits = document.querySelectorAll('#rankingLimit');
+        rankingLimits.forEach(el => el.value = s.rankingLimit);
         setRankingLimit(s.rankingLimit);
     }
     if (s.colorMaxLev) {
-        document.getElementById('colorMaxLev').value = s.colorMaxLev;
+        const colorMaxLevs = document.querySelectorAll('#colorMaxLev');
+        colorMaxLevs.forEach(el => el.value = s.colorMaxLev);
         setColorMaxLev(s.colorMaxLev);
     }
     if (s.chartHighLevSplit !== undefined) {
-        const el = document.getElementById('chartHighLevSplit');
-        if(el) {
-            el.value = s.chartHighLevSplit;
-            setChartHighLevSplit(s.chartHighLevSplit);
-        }
+        const chartHighLevSplits = document.querySelectorAll('#chartHighLevSplit');
+        chartHighLevSplits.forEach(el => el.value = s.chartHighLevSplit);
+        setChartHighLevSplit(s.chartHighLevSplit);
     }
     if (s.activeWindow) {
         document.querySelectorAll('.tab').forEach(t => {
@@ -361,14 +354,14 @@ export function loadSettings() {
     if (s.liqChartState) setSavedLiqState(s.liqChartState);
     if (s.leverageColors) {
         setLeverageColors(s.leverageColors);
-        const colorLongLow = document.getElementById('colorLongLow');
-        const colorLongHigh = document.getElementById('colorLongHigh');
-        const colorShortLow = document.getElementById('colorShortLow');
-        const colorShortHigh = document.getElementById('colorShortHigh');
-        if (colorLongLow) colorLongLow.value = s.leverageColors.longLow || '#22c55e';
-        if (colorLongHigh) colorLongHigh.value = s.leverageColors.longHigh || '#16a34a';
-        if (colorShortLow) colorShortLow.value = s.leverageColors.shortLow || '#ef4444';
-        if (colorShortHigh) colorShortHigh.value = s.leverageColors.shortHigh || '#dc2626';
+        const colorLongLow = document.querySelectorAll('#colorLongLow');
+        const colorLongHigh = document.querySelectorAll('#colorLongHigh');
+        const colorShortLow = document.querySelectorAll('#colorShortLow');
+        const colorShortHigh = document.querySelectorAll('#colorShortHigh');
+        colorLongLow.forEach(el => el.value = s.leverageColors.longLow || '#22c55e');
+        colorLongHigh.forEach(el => el.value = s.leverageColors.longHigh || '#16a34a');
+        colorShortLow.forEach(el => el.value = s.leverageColors.shortLow || '#ef4444');
+        colorShortHigh.forEach(el => el.value = s.leverageColors.shortHigh || '#dc2626');
         
         // Update CSS variables with loaded colors
         document.documentElement.style.setProperty('--long-low-color', s.leverageColors.longLow || '#22c55e');
@@ -384,11 +377,18 @@ export function loadSettings() {
     }
     if (s.columnWidth !== undefined) {
         setColumnWidth(s.columnWidth);
-        const columnWidthRange = document.getElementById('columnWidthRange');
-        const columnWidthVal = document.getElementById('columnWidthVal');
-        if (columnWidthRange && columnWidthVal) {
-            columnWidthRange.value = s.columnWidth;
-            columnWidthVal.textContent = s.columnWidth;
-        }
+        // Sync both mobile and desktop controls
+        const columnWidthInputs = document.querySelectorAll('#columnWidthInput');
+        const columnWidthVals = document.querySelectorAll('#columnWidthVal');
+        columnWidthInputs.forEach(el => el.value = s.columnWidth);
+        columnWidthVals.forEach(el => el.textContent = s.columnWidth);
+    }
+    if (s.gridSpacing !== undefined) {
+        setGridSpacing(s.gridSpacing);
+        // Sync both mobile and desktop controls
+        const gridSpacingRanges = document.querySelectorAll('#gridSpacingRange');
+        const gridSpacingVals = document.querySelectorAll('#gridSpacingVal');
+        gridSpacingRanges.forEach(el => el.value = s.gridSpacing);
+        gridSpacingVals.forEach(el => el.textContent = s.gridSpacing);
     }
 }

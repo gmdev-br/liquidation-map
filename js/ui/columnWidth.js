@@ -5,42 +5,57 @@
 import { getColumnWidth, setColumnWidth } from '../state.js';
 import { saveSettings } from '../storage/settings.js';
 
-export function initColumnWidthControl() {
-    const columnWidthInput = document.getElementById('columnWidthInput');
-    const columnWidthVal = document.getElementById('columnWidthVal');
+// Helper function to synchronize controls with same value
+function syncControls(valueSelectors, value) {
+    valueSelectors.forEach(selector => {
+        const elements = document.querySelectorAll(selector);
+        elements.forEach(el => {
+            el.value = value;
+            el.textContent = value;
+        });
+    });
+}
 
-    if (!columnWidthInput || !columnWidthVal) {
+export function initColumnWidthControl() {
+    const columnWidthInputs = document.querySelectorAll('#columnWidthInput');
+    const columnWidthVals = document.querySelectorAll('#columnWidthVal');
+
+    if (columnWidthInputs.length === 0 || columnWidthVals.length === 0) {
         console.error('Column width input elements not found');
         return;
     }
 
     // Initialize with saved value or default
     const initialWidth = getColumnWidth();
-    columnWidthInput.value = initialWidth;
-    columnWidthVal.textContent = initialWidth;
+    
+    // Sync both mobile and desktop controls
+    syncControls(['#columnWidthInput', '#columnWidthVal'], initialWidth);
 
     console.log('Column width control initialized with width:', initialWidth);
 
     // Apply initial column width after a delay to ensure table is rendered
     setTimeout(() => applyColumnWidth(initialWidth), 500);
 
-    // Event listener for column width changes
-    columnWidthInput.addEventListener('input', (e) => {
-        let width = parseInt(e.target.value, 10);
+    // Event listeners for column width changes (both mobile and desktop)
+    columnWidthInputs.forEach(input => {
+        input.addEventListener('input', (e) => {
+            let width = parseInt(e.target.value, 10);
 
-        // Validate and clamp the value
-        if (isNaN(width)) width = 100;
-        if (width < 60) width = 60;
-        if (width > 500) width = 500;
+            // Validate and clamp the value
+            if (isNaN(width)) width = 100;
+            if (width < 60) width = 60;
+            if (width > 500) width = 500;
 
-        columnWidthVal.textContent = width;
-        setColumnWidth(width);
-        applyColumnWidth(width);
-    });
+            // Sync all controls
+            syncControls(['#columnWidthInput', '#columnWidthVal'], width);
+            setColumnWidth(width);
+            applyColumnWidth(width);
+        });
 
-    // Save settings when user stops typing
-    columnWidthInput.addEventListener('change', () => {
-        saveSettings();
+        // Save settings when user stops typing
+        input.addEventListener('change', () => {
+            saveSettings();
+        });
     });
 }
 

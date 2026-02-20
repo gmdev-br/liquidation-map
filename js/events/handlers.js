@@ -2,6 +2,17 @@
 // LIQUID GLASS — Events Handlers
 // ═══════════════════════════════════════════════════════════
 
+// Helper function to synchronize controls with same value
+function syncControls(valueSelectors, value) {
+    valueSelectors.forEach(selector => {
+        const elements = document.querySelectorAll(selector);
+        elements.forEach(el => {
+            el.value = value;
+            el.textContent = value;
+        });
+    });
+}
+
 import {
     setShowSymbols, setChartMode, setBubbleScale, setBubbleOpacity, setAggregationFactor,
     setRankingLimit, setColorMaxLev, setChartHighLevSplit, setChartHeight,
@@ -10,7 +21,7 @@ import {
     getRankingLimit, getColorMaxLev, getChartHighLevSplit, getChartHeight,
     getLiqChartHeight, getActiveWindow, setColumnOrder, setVisibleColumns,
     getColumnOrder, getVisibleColumns, setPriceUpdateInterval, setActiveCurrency,
-    setActiveEntryCurrency, setDecimalPlaces, setFontSize, setFontSizeKnown, setLeverageColors
+    setActiveEntryCurrency, setDecimalPlaces, setFontSize, setFontSizeKnown, setLeverageColors, setGridSpacing
 } from '../state.js';
 import { renderTable, updateStats } from '../ui/table.js';
 import { renderQuotesPanel, updateRankingPanel } from '../ui/panels.js';
@@ -39,7 +50,7 @@ export function toggleShowSymbols() {
 export function updateSpeed(val) {
     const v = parseInt(val, 10);
     if (v >= 1 && v <= 20) {
-        document.getElementById('speedVal').textContent = v;
+        syncControls(['#speedVal'], v);
         saveSettings();
     }
 }
@@ -47,7 +58,7 @@ export function updateSpeed(val) {
 export function updatePriceInterval(val) {
     const v = parseInt(val, 10);
     if (v >= 1 && v <= 30) {
-        document.getElementById('priceIntervalVal').textContent = v + 's';
+        syncControls(['#priceIntervalVal'], v + 's');
         setPriceUpdateInterval(v * 1000); // Convert seconds to milliseconds
         saveSettings();
         // Restart price ticker with new interval
@@ -57,24 +68,33 @@ export function updatePriceInterval(val) {
 }
 
 export function updateRankingLimit() {
-    const val = document.getElementById('rankingLimit').value;
+    const rankingLimits = document.querySelectorAll('#rankingLimit');
+    const val = rankingLimits[0]?.value || 10;
     setRankingLimit(parseInt(val, 10));
+    // Sync all ranking limit inputs
+    rankingLimits.forEach(el => el.value = val);
     saveSettings();
     // Trigger ranking panel update
     updateRankingPanel();
 }
 
 export function updateColorSettings() {
-    const val = document.getElementById('colorMaxLev').value;
+    const colorMaxLevs = document.querySelectorAll('#colorMaxLev');
+    const val = colorMaxLevs[0]?.value || 50;
     setColorMaxLev(parseInt(val, 10));
+    // Sync all color max lev inputs
+    colorMaxLevs.forEach(el => el.value = val);
     saveSettings();
     // Trigger chart update by re-rendering the table
     renderTable();
 }
 
 export function updateChartFilters() {
-    const val = document.getElementById('chartHighLevSplit').value;
+    const chartHighLevSplits = document.querySelectorAll('#chartHighLevSplit');
+    const val = chartHighLevSplits[0]?.value || 50;
     setChartHighLevSplit(parseInt(val, 10));
+    // Sync all chart high lev split inputs
+    chartHighLevSplits.forEach(el => el.value = val);
     saveSettings();
     // Trigger chart update by re-rendering table
     renderTable();
@@ -82,7 +102,7 @@ export function updateChartFilters() {
 
 export function updateBubbleSize(val) {
     setBubbleScale(parseFloat(val));
-    document.getElementById('bubbleSizeVal').textContent = val;
+    syncControls(['#bubbleSizeVal'], val);
     saveSettings();
     // Trigger chart update by re-rendering table
     renderTable();
@@ -90,7 +110,7 @@ export function updateBubbleSize(val) {
 
 export function updateBubbleOpacity(val) {
     setBubbleOpacity(parseFloat(val));
-    document.getElementById('bubbleOpacityVal').textContent = val;
+    syncControls(['#bubbleOpacityVal'], val);
     saveSettings();
     // Trigger chart update by re-rendering table
     renderTable();
@@ -98,7 +118,7 @@ export function updateBubbleOpacity(val) {
 
 export function updateAggregation(val) {
     setAggregationFactor(parseInt(val, 10));
-    document.getElementById('aggregationVal').textContent = val;
+    syncControls(['#aggregationVal'], val);
     saveSettings();
     // Trigger chart update by re-rendering table
     renderTable();
@@ -108,7 +128,7 @@ export function updateDecimalPlaces(val) {
     const v = parseInt(val, 10);
     if (v >= 0 && v <= 8) {
         setDecimalPlaces(v);
-        document.getElementById('decimalPlacesVal').textContent = v;
+        syncControls(['#decimalPlacesVal'], v);
         saveSettings();
         // Trigger table re-render to apply new formatting
         renderTable();
@@ -120,10 +140,7 @@ export function updateFontSize(val) {
     console.log('updateFontSize called with:', val, 'parsed:', v);
     if (v >= 10 && v <= 20) {
         setFontSize(v);
-        const fontSizeValMobile = document.getElementById('fontSizeVal');
-        const fontSizeValDesktop = document.getElementById('fontSizeValDesktop');
-        if (fontSizeValMobile) fontSizeValMobile.textContent = v;
-        if (fontSizeValDesktop) fontSizeValDesktop.textContent = v;
+        syncControls(['#fontSizeVal', '#fontSizeValDesktop'], v);
         saveSettings();
         // Trigger table re-render to apply new font size
         console.log('Calling renderTable for fontSize update');
@@ -136,10 +153,7 @@ export function updateFontSizeKnown(val) {
     console.log('updateFontSizeKnown called with:', val, 'parsed:', v);
     if (v >= 10 && v <= 24) {
         setFontSizeKnown(v);
-        const fontSizeKnownValMobile = document.getElementById('fontSizeKnownVal');
-        const fontSizeKnownValDesktop = document.getElementById('fontSizeKnownValDesktop');
-        if (fontSizeKnownValMobile) fontSizeKnownValMobile.textContent = v;
-        if (fontSizeKnownValDesktop) fontSizeKnownValDesktop.textContent = v;
+        syncControls(['#fontSizeKnownVal', '#fontSizeKnownValDesktop'], v);
         saveSettings();
         // Trigger table re-render to apply new font size
         console.log('Calling renderTable for fontSizeKnown update');
@@ -148,10 +162,10 @@ export function updateFontSizeKnown(val) {
 }
 
 export function updateLeverageColors() {
-    const longLow = document.getElementById('colorLongLow').value;
-    const longHigh = document.getElementById('colorLongHigh').value;
-    const shortLow = document.getElementById('colorShortLow').value;
-    const shortHigh = document.getElementById('colorShortHigh').value;
+    const longLow = document.querySelector('#colorLongLow')?.value || '#22c55e';
+    const longHigh = document.querySelector('#colorLongHigh')?.value || '#16a34a';
+    const shortLow = document.querySelector('#colorShortLow')?.value || '#ef4444';
+    const shortHigh = document.querySelector('#colorShortHigh')?.value || '#dc2626';
     
     setLeverageColors({
         longLow,
@@ -160,7 +174,12 @@ export function updateLeverageColors() {
         shortHigh
     });
 
-    // Update CSS variables
+    // Sync all color inputs and update CSS variables
+    document.querySelectorAll('#colorLongLow').forEach(el => el.value = longLow);
+    document.querySelectorAll('#colorLongHigh').forEach(el => el.value = longHigh);
+    document.querySelectorAll('#colorShortLow').forEach(el => el.value = shortLow);
+    document.querySelectorAll('#colorShortHigh').forEach(el => el.value = shortHigh);
+
     document.documentElement.style.setProperty('--long-low-color', longLow);
     document.documentElement.style.setProperty('--long-high-color', longHigh);
     document.documentElement.style.setProperty('--short-low-color', shortLow);
@@ -169,6 +188,21 @@ export function updateLeverageColors() {
     saveSettings();
     // Trigger chart update by re-rendering table
     renderTable();
+}
+
+export function updateGridSpacing(val) {
+    const v = parseInt(val, 10);
+    if (v >= 100 && v <= 5000) {
+        setGridSpacing(v);
+        // Sync both mobile and desktop controls
+        syncControls(['#gridSpacingVal', '#gridSpacingRange'], v);
+        saveSettings();
+        // Force chart redraw to update grid
+        const scatterChart = window.getScatterChart ? window.getScatterChart() : null;
+        const liqChart = window.getLiqChartInstance ? window.getLiqChartInstance() : null;
+        if (scatterChart) scatterChart.update('none');
+        if (liqChart) liqChart.update('none');
+    }
 }
 
 export function setChartModeHandler(mode) {
@@ -243,21 +277,22 @@ export function onCurrencyChange() {
 }
 
 export function openColumnCombobox() {
-    const cb = document.getElementById('columnCombobox');
-    if (cb) cb.classList.add('open');
-    renderColumnDropdown(document.getElementById('columnSelectDisplay').value);
+    const cbs = document.querySelectorAll('#columnCombobox');
+    cbs.forEach(cb => cb.classList.add('open'));
+    const display = document.querySelector('#columnSelectDisplay');
+    if (display) renderColumnDropdown(display.value);
 }
 
 export function closeColumnComboboxDelayed() {
     setTimeout(() => {
-        const cb = document.getElementById('columnCombobox');
-        if (cb) cb.classList.remove('open');
+        const cbs = document.querySelectorAll('#columnCombobox');
+        cbs.forEach(cb => cb.classList.remove('open'));
     }, 180);
 }
 
 export function renderColumnDropdown(query = '') {
-    const dd = document.getElementById('columnDropdown');
-    if (!dd) return;
+    const dds = document.querySelectorAll('#columnDropdown');
+    if (dds.length === 0) return;
     
     const columns = [
         { key: 'col-num', label: '#' },
@@ -297,7 +332,8 @@ export function renderColumnDropdown(query = '') {
         </div>`;
     }).join('');
 
-    dd.innerHTML = html || `<div class="combobox-empty">No match</div>`;
+    // Update all dropdowns with the same content
+    dds.forEach(d => d.innerHTML = html || `<div class="combobox-empty">No match</div>`);
 }
 
 export function toggleColumn(key) {
@@ -375,14 +411,14 @@ export function updateColumnSelectDisplay() {
         'col-unrealizedPnl', 'col-funding', 'col-liqPx', 'col-distToLiq', 'col-accountValue'
     ];
     
-    const display = document.getElementById('columnSelectDisplay');
-    if (!display) return;
+    const displays = document.querySelectorAll('#columnSelectDisplay');
+    if (!displays.length) return;
     
     if (visibleColumns.length === 0) {
-        display.value = `All ${allColumns.length} columns`;
+        displays.forEach(d => d.value = `All ${allColumns.length} columns`);
     } else {
         const hiddenCount = allColumns.length - visibleColumns.length;
-        display.value = `${visibleColumns.length} visible, ${hiddenCount} hidden`;
+        displays.forEach(d => d.value = `${visibleColumns.length} visible, ${hiddenCount} hidden`);
     }
 }
 
