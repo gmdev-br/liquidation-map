@@ -293,7 +293,8 @@ export function handlePriceModeClick(el) {
 
 export function updatePriceModeUI() {
     const priceMode = getPriceMode();
-    const tabs = document.querySelectorAll('#priceModeToggle .tab');
+    // Select all tabs with data-mode attribute (handles duplicate IDs for priceModeToggle)
+    const tabs = document.querySelectorAll('.tab[data-mode]');
     tabs.forEach(t => {
         if (t.dataset.mode === priceMode) t.classList.add('active');
         else t.classList.remove('active');

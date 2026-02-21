@@ -67,9 +67,10 @@ export function updatePriceInterval(val) {
     }
 }
 
-export function updateRankingLimit() {
+export function updateRankingLimit(e) {
     const rankingLimits = document.querySelectorAll('#rankingLimit');
-    const val = rankingLimits[0]?.value || 10;
+    // Use event target value if available, otherwise fallback to first element
+    const val = (e?.target?.value) || rankingLimits[0]?.value || 10;
     setRankingLimit(parseInt(val, 10));
     // Sync all ranking limit inputs
     rankingLimits.forEach(el => el.value = val);
@@ -78,9 +79,10 @@ export function updateRankingLimit() {
     updateRankingPanel();
 }
 
-export function updateColorSettings() {
+export function updateColorSettings(e) {
     const colorMaxLevs = document.querySelectorAll('#colorMaxLev');
-    const val = colorMaxLevs[0]?.value || 50;
+    // Use event target value if available, otherwise fallback to first element
+    const val = (e?.target?.value) || colorMaxLevs[0]?.value || 50;
     setColorMaxLev(parseInt(val, 10));
     // Sync all color max lev inputs
     colorMaxLevs.forEach(el => el.value = val);
@@ -89,9 +91,10 @@ export function updateColorSettings() {
     renderTable();
 }
 
-export function updateChartFilters() {
+export function updateChartFilters(e) {
     const chartHighLevSplits = document.querySelectorAll('#chartHighLevSplit');
-    const val = chartHighLevSplits[0]?.value || 50;
+    // Use event target value if available, otherwise fallback to first element
+    const val = (e?.target?.value) || chartHighLevSplits[0]?.value || 50;
     setChartHighLevSplit(parseInt(val, 10));
     // Sync all chart high lev split inputs
     chartHighLevSplits.forEach(el => el.value = val);
@@ -169,11 +172,15 @@ export function updateFontSizeKnown(val) {
     }
 }
 
-export function updateLeverageColors() {
-    const longLow = document.querySelector('#colorLongLow')?.value || '#22c55e';
-    const longHigh = document.querySelector('#colorLongHigh')?.value || '#16a34a';
-    const shortLow = document.querySelector('#colorShortLow')?.value || '#ef4444';
-    const shortHigh = document.querySelector('#colorShortHigh')?.value || '#dc2626';
+export function updateLeverageColors(e) {
+    // Get values from event target if available to handle duplicate IDs
+    const targetId = e?.target?.id;
+    const targetValue = e?.target?.value;
+
+    const longLow = (targetId === 'colorLongLow' ? targetValue : document.querySelector('#colorLongLow')?.value) || '#22c55e';
+    const longHigh = (targetId === 'colorLongHigh' ? targetValue : document.querySelector('#colorLongHigh')?.value) || '#16a34a';
+    const shortLow = (targetId === 'colorShortLow' ? targetValue : document.querySelector('#colorShortLow')?.value) || '#ef4444';
+    const shortHigh = (targetId === 'colorShortHigh' ? targetValue : document.querySelector('#colorShortHigh')?.value) || '#dc2626';
 
     setLeverageColors({
         longLow,
@@ -234,24 +241,27 @@ export function setChartModeHandler(mode) {
         tab.classList.toggle('active', tab.dataset.chart === mode);
     });
 
-    // Update control visibility
-    const bubbleCtrl = document.getElementById('bubbleSizeCtrl');
-    const bubbleOpacityCtrl = document.getElementById('bubbleOpacityCtrl');
-    const lineThicknessCtrl = document.getElementById('lineThicknessCtrl');
-    const aggCtrl = document.getElementById('aggregationCtrl');
+    // Update control visibility - handle duplicate IDs (desktop/mobile)
+    const bubbleCtrls = document.querySelectorAll('#bubbleSizeCtrl');
+    const bubbleOpacityCtrls = document.querySelectorAll('#bubbleOpacityCtrl');
+    const lineThicknessCtrls = document.querySelectorAll('#lineThicknessCtrl');
+    const aggCtrls = document.querySelectorAll('#aggregationCtrl');
 
-    if (bubbleCtrl) {
-        bubbleCtrl.style.display = (mode === 'scatter') ? 'block' : 'none';
-    }
-    if (bubbleOpacityCtrl) {
-        bubbleOpacityCtrl.style.display = (mode === 'scatter') ? 'block' : 'none';
-    }
-    if (lineThicknessCtrl) {
-        lineThicknessCtrl.style.display = (mode === 'lines') ? 'block' : 'none';
-    }
-    if (aggCtrl) {
-        aggCtrl.style.display = (mode === 'column') ? 'block' : 'none';
-    }
+    bubbleCtrls.forEach(ctrl => {
+        ctrl.style.display = (mode === 'scatter') ? 'block' : 'none';
+    });
+
+    bubbleOpacityCtrls.forEach(ctrl => {
+        ctrl.style.display = (mode === 'scatter') ? 'block' : 'none';
+    });
+
+    lineThicknessCtrls.forEach(ctrl => {
+        ctrl.style.display = (mode === 'lines') ? 'block' : 'none';
+    });
+
+    aggCtrls.forEach(ctrl => {
+        ctrl.style.display = (mode === 'column') ? 'block' : 'none';
+    });
 
     // Trigger chart update
     renderTable();

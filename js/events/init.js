@@ -258,8 +258,8 @@ function setupEventListeners() {
         });
     });
 
-    // Price mode tabs
-    document.querySelectorAll('#priceModeToggle .tab').forEach(tab => {
+    // Price mode tabs - handle duplicate IDs (desktop/mobile)
+    document.querySelectorAll('.tab[data-mode]').forEach(tab => {
         tab.addEventListener('click', (e) => {
             handlePriceModeClick(e.target);
         });
