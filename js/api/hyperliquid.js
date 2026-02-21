@@ -128,7 +128,7 @@ export async function streamPositions(whaleList, minVal, maxConcurrency, callbac
     const { updateStats, updateCoinFilter, renderTable, saveTableData, setStatus, setProgress, finishScan, setLastSaveTime, setRenderPending } = callbacks;
     const lastSaveTime = getLastSaveTime();
     let localLastSaveTime = lastSaveTime;
-    const allRows = getAllRows();
+    let allRows = getAllRows();
     const lastSeenAccountValues = getLastSeenAccountValues();
     const newSeenAccountValues = { ...lastSeenAccountValues };
 
@@ -161,13 +161,10 @@ export async function streamPositions(whaleList, minVal, maxConcurrency, callbac
 
         return fetchWithRetry(whale).then(state => {
             if (state) {
-                // Remove old rows for this address before adding new ones
-                const rowsBefore = allRows.length;
-                for (let i = allRows.length - 1; i >= 0; i--) {
-                    if (allRows[i].address === whale.ethAddress) {
-                        allRows.splice(i, 1);
-                    }
-                }
+                // Remove old rows for this address using O(N) filter instead of O(N^2) reverse splice loop
+                allRows = allRows.filter(r => r.address !== whale.ethAddress);
+                setAllRows(allRows); // Update global state reference immediately
+
                 processState(whale, state, allRows);
                 newSeenAccountValues[whale.ethAddress] = currentVal;
             }

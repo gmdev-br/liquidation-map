@@ -8,7 +8,7 @@
  */
 export class VirtualScroll {
     constructor(options = {}) {
-        this.rowHeight = options.rowHeight || 40;
+        this.rowHeight = options.rowHeight || 52;
         this.bufferSize = options.bufferSize || 5;
         this.tbody = options.tbody;
         this.data = [];
@@ -152,7 +152,7 @@ export function enableVirtualScroll(threshold = 100) {
                 if (!virtualScroll) {
                     virtualScroll = new VirtualScroll({
                         tbody,
-                        rowHeight: 40,
+                        rowHeight: 52,
                         bufferSize: 5
                     });
                 }

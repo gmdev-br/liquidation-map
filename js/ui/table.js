@@ -76,50 +76,61 @@ function reorderTableHeadersAndFilters(columnOrder) {
 }
 
 export function updateStats(showSymbols, allRows) {
-    // Basic sums
-    const whalesWithPos = new Set(allRows.map(r => r.address)).size;
     const whaleMeta = getWhaleMeta();
-    const totalCap = [...new Set(allRows.map(r => r.address))].reduce((s, addr) => {
+
+    const whalesWithPos = new Set();
+    const whalesLong = new Set();
+    const whalesShort = new Set();
+    let totalUpnl = 0;
+    let upnlLong = 0;
+    let upnlShort = 0;
+    let positionsLongCount = 0;
+    let positionsShortCount = 0;
+
+    for (let i = 0; i < allRows.length; i++) {
+        const r = allRows[i];
+        whalesWithPos.add(r.address);
+        totalUpnl += r.unrealizedPnl;
+        if (r.side === 'long') {
+            whalesLong.add(r.address);
+            upnlLong += r.unrealizedPnl;
+            positionsLongCount++;
+        } else if (r.side === 'short') {
+            whalesShort.add(r.address);
+            upnlShort += r.unrealizedPnl;
+            positionsShortCount++;
+        }
+    }
+
+    let totalCap = 0;
+    let capLong = 0;
+    let capShort = 0;
+    let largest = 0;
+
+    whalesWithPos.forEach(addr => {
         const meta = whaleMeta[addr];
-        return s + (meta?.accountValue || 0);
-    }, 0);
-    const totalUpnl = allRows.reduce((s, r) => s + r.unrealizedPnl, 0);
-
-    // Long/Short breakdowns
-    const longRows = allRows.filter(r => r.side === 'long');
-    const shortRows = allRows.filter(r => r.side === 'short');
-
-    const whalesLong = new Set(longRows.map(r => r.address)).size;
-    const whalesShort = new Set(shortRows.map(r => r.address)).size;
-
-    const capLong = [...new Set(longRows.map(r => r.address))].reduce((s, addr) => {
-        const meta = whaleMeta[addr];
-        return s + (meta?.accountValue || 0);
-    }, 0);
-    const capShort = [...new Set(shortRows.map(r => r.address))].reduce((s, addr) => {
-        const meta = whaleMeta[addr];
-        return s + (meta?.accountValue || 0);
-    }, 0);
-
-    const upnlLong = longRows.reduce((s, r) => s + r.unrealizedPnl, 0);
-    const upnlShort = shortRows.reduce((s, r) => s + r.unrealizedPnl, 0);
+        const val = meta?.accountValue || 0;
+        totalCap += val;
+        if (val > largest) largest = val;
+        if (whalesLong.has(addr)) capLong += val;
+        if (whalesShort.has(addr)) capShort += val;
+    });
 
     // Update Overall Stats
-    document.getElementById('sWhales').textContent = new Intl.NumberFormat('en-US').format(whalesWithPos);
+    document.getElementById('sWhales').textContent = new Intl.NumberFormat('en-US').format(whalesWithPos.size);
     document.getElementById('sPositions').textContent = new Intl.NumberFormat('en-US').format(allRows.length);
     const sym = showSymbols ? '$' : '';
     document.getElementById('sCapital').textContent = sym + fmt(totalCap);
     const upnlEl = document.getElementById('sUpnl');
     upnlEl.textContent = fmtUSD(totalUpnl);
     upnlEl.className = 'stat-value ' + (totalUpnl >= 0 ? 'green' : 'red');
-    const largest = Object.values(whaleMeta).reduce((max, m) => Math.max(max, m.accountValue || 0), 0);
     document.getElementById('sLargest').textContent = sym + fmt(largest);
 
     // Update Long/Short Breakdowns
-    document.getElementById('sWhalesLong').textContent = `L: ${whalesLong}`;
-    document.getElementById('sWhalesShort').textContent = `S: ${whalesShort}`;
-    document.getElementById('sPositionsLong').textContent = `L: ${longRows.length}`;
-    document.getElementById('sPositionsShort').textContent = `S: ${shortRows.length}`;
+    document.getElementById('sWhalesLong').textContent = `L: ${whalesLong.size}`;
+    document.getElementById('sWhalesShort').textContent = `S: ${whalesShort.size}`;
+    document.getElementById('sPositionsLong').textContent = `L: ${positionsLongCount}`;
+    document.getElementById('sPositionsShort').textContent = `S: ${positionsShortCount}`;
     document.getElementById('sCapitalLong').textContent = `L: ${sym}${fmt(capLong)}`;
     document.getElementById('sCapitalShort').textContent = `S: ${sym}${fmt(capShort)}`;
     document.getElementById('sUpnlLong').textContent = `L: ${fmtUSD(upnlLong)}`;

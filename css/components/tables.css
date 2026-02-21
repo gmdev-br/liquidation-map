@@ -236,6 +236,8 @@ td {
     padding: 10px 14px;
     vertical-align: middle;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 /* Mobile table cell adjustments */
