@@ -339,14 +339,6 @@
         </div>
         <div class="section-content" id="tableSectionContent">
             <div class="table-controls-bar">
-                <div class="table-search">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                        stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="11" cy="11" r="8"></circle>
-                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                    </svg>
-                    <input type="text" id="addressFilter" placeholder="Search address or name..." class="search-input">
-                </div>
                 <button class="settings-toggle filter-toggle" id="toggleFiltersBtn" aria-label="Filters">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                         stroke-linecap="round" stroke-linejoin="round">
@@ -356,106 +348,7 @@
                 </button>
             </div>
 
-            <div class="advanced-filters-panel" id="advancedFiltersPanel" style="display: none;">
-                <div class="filter-group">
-                    <label>Position</label>
-                    <div class="filter-row-flex">
-                        <div class="combobox col-filter" id="coinCombobox">
-                            <div class="combobox-input-wrap">
-                                <input type="text" id="coinSearch" class="col-filter combobox-input"
-                                    placeholder="Coins..." autocomplete="off">
-                                <span class="combobox-arrow">▾</span>
-                            </div>
-                            <div class="combobox-dropdown" id="coinDropdown"></div>
-                        </div>
-                        <input type="hidden" id="coinFilter" value="">
 
-                        <div class="combobox col-filter" id="cb-sideFilter">
-                            <div class="combobox-input-wrap">
-                                <input type="text" id="cb-sideFilter-search" class="combobox-input col-filter"
-                                    placeholder="L + S" autocomplete="off" readonly>
-                                <span class="combobox-arrow">▾</span>
-                            </div>
-                            <div class="combobox-dropdown" id="cb-sideFilter-dropdown"></div>
-                        </div>
-                        <input type="hidden" id="sideFilter" value="">
-                    </div>
-                </div>
-
-                <div class="filter-group">
-                    <label>Size & Leverage</label>
-                    <div class="filter-row-flex">
-                        <input type="number" id="minSzi" placeholder="Min Size" class="col-filter">
-                        <input type="number" id="maxSzi" placeholder="Max Size" class="col-filter">
-                        <input type="number" id="minLev" step="1" min="1" placeholder="Min Lev x" class="col-filter">
-                        <input type="number" id="maxLev" step="1" min="1" placeholder="Max Lev x" class="col-filter">
-
-                        <div class="combobox col-filter" id="cb-levTypeFilter">
-                            <div class="combobox-input-wrap">
-                                <input type="text" id="cb-levTypeFilter-search" class="combobox-input col-filter"
-                                    placeholder="All Lev Types" autocomplete="off" readonly>
-                                <span class="combobox-arrow">▾</span>
-                            </div>
-                            <div class="combobox-dropdown" id="cb-levTypeFilter-dropdown"></div>
-                        </div>
-                        <input type="hidden" id="levTypeFilter" value="">
-                    </div>
-                </div>
-
-                <div class="filter-group">
-                    <label>Value ($)</label>
-                    <div class="filter-row-flex">
-                        <input type="number" id="minSize" step="100000" min="0" placeholder="Min Value"
-                            class="col-filter">
-                        <input type="number" id="minValue" step="500000" min="0" placeholder="Min Acct Val"
-                            class="col-filter">
-                    </div>
-                </div>
-
-                <div class="filter-group">
-                    <label>Currency Values</label>
-                    <div class="filter-row-flex">
-                        <div class="combobox col-filter" id="cb-currencySelect">
-                            <div class="combobox-input-wrap">
-                                <input type="text" id="cb-currencySelect-search" class="combobox-input col-filter"
-                                    placeholder="USD $" autocomplete="off" readonly>
-                                <span class="combobox-arrow">▾</span>
-                            </div>
-                            <div class="combobox-dropdown" id="cb-currencySelect-dropdown"></div>
-                        </div>
-                        <input type="hidden" id="currencySelect" value="USD">
-                        <input type="number" id="minValueCcy" placeholder="Min CCY" class="col-filter">
-                        <input type="number" id="maxValueCcy" placeholder="Max CCY" class="col-filter">
-                    </div>
-                </div>
-
-                <div class="filter-group">
-                    <label>Entry Currency</label>
-                    <div class="filter-row-flex">
-                        <div class="combobox col-filter" id="cb-entryCurrencySelect">
-                            <div class="combobox-input-wrap">
-                                <input type="text" id="cb-entryCurrencySelect-search" class="combobox-input col-filter"
-                                    placeholder="USD $" autocomplete="off" readonly>
-                                <span class="combobox-arrow">▾</span>
-                            </div>
-                            <div class="combobox-dropdown" id="cb-entryCurrencySelect-dropdown"></div>
-                        </div>
-                        <input type="hidden" id="entryCurrencySelect" value="USD">
-                        <input type="number" id="minEntryCcy" placeholder="Min Entry" class="col-filter">
-                        <input type="number" id="maxEntryCcy" placeholder="Max Entry" class="col-filter">
-                    </div>
-                </div>
-
-                <div class="filter-group">
-                    <label>PnL & Funding</label>
-                    <div class="filter-row-flex">
-                        <input type="number" id="minUpnl" placeholder="Min UPNL" class="col-filter">
-                        <input type="number" id="maxUpnl" placeholder="Max UPNL" class="col-filter">
-                        <input type="number" id="minFunding" step="1000" min="0" placeholder="Min Funding |$|"
-                            class="col-filter">
-                    </div>
-                </div>
-            </div>
 
             <div class="table-wrap">
 
@@ -524,6 +417,113 @@
                                 title="Total Account Value of the given address">
                                 <span class="th-label">Acct. Value</span>
                                 <div class="resizer"></div>
+                            </th>
+                        </tr>
+                        <tr class="filter-row" id="advancedFiltersRow" style="display: none;">
+                            <th class="col-num filter-cell"></th>
+                            <th class="col-address filter-cell">
+                                <div class="table-search" style="min-width: unset; width: 100%;">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                                        style="left: 8px;">
+                                        <circle cx="11" cy="11" r="8"></circle>
+                                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                                    </svg>
+                                    <input type="text" id="addressFilter" placeholder="Search..."
+                                        class="search-input col-filter" style="padding-left: 28px;">
+                                </div>
+                            </th>
+                            <th class="col-coin filter-cell">
+                                <div class="combobox col-filter" id="coinCombobox" style="margin-bottom: 4px;">
+                                    <div class="combobox-input-wrap">
+                                        <input type="text" id="coinSearch" class="col-filter combobox-input"
+                                            placeholder="Coins..." autocomplete="off">
+                                        <span class="combobox-arrow">▾</span>
+                                    </div>
+                                    <div class="combobox-dropdown" id="coinDropdown"></div>
+                                </div>
+                                <input type="hidden" id="coinFilter" value="">
+                                <div class="combobox col-filter" id="cb-sideFilter">
+                                    <div class="combobox-input-wrap">
+                                        <input type="text" id="cb-sideFilter-search" class="combobox-input col-filter"
+                                            placeholder="L+S" autocomplete="off" readonly>
+                                        <span class="combobox-arrow">▾</span>
+                                    </div>
+                                    <div class="combobox-dropdown" id="cb-sideFilter-dropdown"></div>
+                                </div>
+                                <input type="hidden" id="sideFilter" value="">
+                            </th>
+                            <th class="col-szi filter-cell">
+                                <input type="number" id="minSzi" placeholder="Min Size" class="col-filter"
+                                    style="margin-bottom: 4px;">
+                                <input type="number" id="maxSzi" placeholder="Max Size" class="col-filter">
+                            </th>
+                            <th class="col-leverage filter-cell">
+                                <input type="number" id="minLev" step="1" min="1" placeholder="Min x" class="col-filter"
+                                    style="margin-bottom: 4px;">
+                                <input type="number" id="maxLev" step="1" min="1" placeholder="Max x" class="col-filter"
+                                    style="margin-bottom: 4px;">
+                                <div class="combobox col-filter" id="cb-levTypeFilter">
+                                    <div class="combobox-input-wrap">
+                                        <input type="text" id="cb-levTypeFilter-search"
+                                            class="combobox-input col-filter" placeholder="Types" autocomplete="off"
+                                            readonly>
+                                        <span class="combobox-arrow">▾</span>
+                                    </div>
+                                    <div class="combobox-dropdown" id="cb-levTypeFilter-dropdown"></div>
+                                </div>
+                                <input type="hidden" id="levTypeFilter" value="">
+                            </th>
+                            <th class="col-positionValue filter-cell">
+                                <input type="number" id="minSize" step="100000" min="0" placeholder="Min Value"
+                                    class="col-filter">
+                            </th>
+                            <th class="col-valueCcy filter-cell">
+                                <div class="combobox col-filter" id="cb-currencySelect" style="margin-bottom: 4px;">
+                                    <div class="combobox-input-wrap">
+                                        <input type="text" id="cb-currencySelect-search"
+                                            class="combobox-input col-filter" placeholder="CCY" autocomplete="off"
+                                            readonly>
+                                        <span class="combobox-arrow">▾</span>
+                                    </div>
+                                    <div class="combobox-dropdown" id="cb-currencySelect-dropdown"></div>
+                                </div>
+                                <input type="hidden" id="currencySelect" value="USD">
+                                <input type="number" id="minValueCcy" placeholder="Min CCY" class="col-filter"
+                                    style="margin-bottom: 4px;">
+                                <input type="number" id="maxValueCcy" placeholder="Max CCY" class="col-filter">
+                            </th>
+                            <th class="col-entryPx filter-cell"></th>
+                            <th class="col-entryCcy filter-cell">
+                                <div class="combobox col-filter" id="cb-entryCurrencySelect"
+                                    style="margin-bottom: 4px;">
+                                    <div class="combobox-input-wrap">
+                                        <input type="text" id="cb-entryCurrencySelect-search"
+                                            class="combobox-input col-filter" placeholder="CCY" autocomplete="off"
+                                            readonly>
+                                        <span class="combobox-arrow">▾</span>
+                                    </div>
+                                    <div class="combobox-dropdown" id="cb-entryCurrencySelect-dropdown"></div>
+                                </div>
+                                <input type="hidden" id="entryCurrencySelect" value="USD">
+                                <input type="number" id="minEntryCcy" placeholder="Min Entry" class="col-filter"
+                                    style="margin-bottom: 4px;">
+                                <input type="number" id="maxEntryCcy" placeholder="Max Entry" class="col-filter">
+                            </th>
+                            <th class="col-unrealizedPnl filter-cell">
+                                <input type="number" id="minUpnl" placeholder="Min PnL" class="col-filter"
+                                    style="margin-bottom: 4px;">
+                                <input type="number" id="maxUpnl" placeholder="Max PnL" class="col-filter">
+                            </th>
+                            <th class="col-funding filter-cell">
+                                <input type="number" id="minFunding" step="1000" min="0" placeholder="Min |$|"
+                                    class="col-filter">
+                            </th>
+                            <th class="col-liqPx filter-cell"></th>
+                            <th class="col-distToLiq filter-cell"></th>
+                            <th class="col-accountValue filter-cell">
+                                <input type="number" id="minValue" step="500000" min="0" placeholder="Min Value"
+                                    class="col-filter">
                             </th>
                         </tr>
                     </thead>

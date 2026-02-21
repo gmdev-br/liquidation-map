@@ -232,12 +232,16 @@ function setupEventListeners() {
     if (settingsOverlay) settingsOverlay.addEventListener('click', closeSettings);
 
     const toggleFiltersBtn = document.getElementById('toggleFiltersBtn');
-    const advancedFiltersPanel = document.getElementById('advancedFiltersPanel');
-    if (toggleFiltersBtn && advancedFiltersPanel) {
+    const advancedFiltersRow = document.getElementById('advancedFiltersRow');
+    if (toggleFiltersBtn && advancedFiltersRow) {
         toggleFiltersBtn.addEventListener('click', () => {
-            const isHidden = advancedFiltersPanel.style.display === 'none';
-            advancedFiltersPanel.style.display = isHidden ? 'block' : 'none';
+            const isHidden = advancedFiltersRow.style.display === 'none';
+            advancedFiltersRow.style.display = isHidden ? 'table-row' : 'none';
             toggleFiltersBtn.classList.toggle('active', isHidden);
+            // Optionally trigger resize or update handlers if adjusting headers
+            if (typeof updateHeaderWidths === 'function') {
+                updateHeaderWidths();
+            }
         });
     }
 
