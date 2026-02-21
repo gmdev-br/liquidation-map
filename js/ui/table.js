@@ -74,6 +74,7 @@ function reorderTableHeadersAndFilters(columnOrder) {
 }
 
 export function updateStats(showSymbols, allRows) {
+    // Basic sums
     const whalesWithPos = new Set(allRows.map(r => r.address)).size;
     const totalCap = [...new Set(allRows.map(r => r.address))].reduce((s, addr) => {
         const row = allRows.find(r => r.address === addr);
@@ -81,6 +82,26 @@ export function updateStats(showSymbols, allRows) {
     }, 0);
     const totalUpnl = allRows.reduce((s, r) => s + r.unrealizedPnl, 0);
 
+    // Long/Short breakdowns
+    const longRows = allRows.filter(r => r.side === 'long');
+    const shortRows = allRows.filter(r => r.side === 'short');
+
+    const whalesLong = new Set(longRows.map(r => r.address)).size;
+    const whalesShort = new Set(shortRows.map(r => r.address)).size;
+
+    const capLong = [...new Set(longRows.map(r => r.address))].reduce((s, addr) => {
+        const row = longRows.find(r => r.address === addr);
+        return s + (row?.accountValue || 0);
+    }, 0);
+    const capShort = [...new Set(shortRows.map(r => r.address))].reduce((s, addr) => {
+        const row = shortRows.find(r => r.address === addr);
+        return s + (row?.accountValue || 0);
+    }, 0);
+
+    const upnlLong = longRows.reduce((s, r) => s + r.unrealizedPnl, 0);
+    const upnlShort = shortRows.reduce((s, r) => s + r.unrealizedPnl, 0);
+
+    // Update Overall Stats
     document.getElementById('sWhales').textContent = new Intl.NumberFormat('en-US').format(whalesWithPos);
     document.getElementById('sPositions').textContent = new Intl.NumberFormat('en-US').format(allRows.length);
     const sym = showSymbols ? '$' : '';
@@ -90,6 +111,16 @@ export function updateStats(showSymbols, allRows) {
     upnlEl.className = 'stat-value ' + (totalUpnl >= 0 ? 'green' : 'red');
     const largest = Math.max(...allRows.map(r => r.accountValue), 0);
     document.getElementById('sLargest').textContent = sym + fmt(largest);
+
+    // Update Long/Short Breakdowns
+    document.getElementById('sWhalesLong').textContent = `L: ${whalesLong}`;
+    document.getElementById('sWhalesShort').textContent = `S: ${whalesShort}`;
+    document.getElementById('sPositionsLong').textContent = `L: ${longRows.length}`;
+    document.getElementById('sPositionsShort').textContent = `S: ${shortRows.length}`;
+    document.getElementById('sCapitalLong').textContent = `L: ${sym}${fmt(capLong)}`;
+    document.getElementById('sCapitalShort').textContent = `S: ${sym}${fmt(capShort)}`;
+    document.getElementById('sUpnlLong').textContent = `L: ${fmtUSD(upnlLong)}`;
+    document.getElementById('sUpnlShort').textContent = `S: ${fmtUSD(upnlShort)}`;
 }
 
 // Internal render function - does the actual work
