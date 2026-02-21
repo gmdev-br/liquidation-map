@@ -7,6 +7,7 @@ import { saveSettings } from '../storage/settings.js';
 import { fmtCcy } from '../utils/formatters.js';
 import { updateCoinSearchLabel } from './combobox.js';
 import { renderTable } from './table.js';
+import { renderAggregationTable } from './aggregation.js';
 
 // Cache for market cap data
 let marketCapCache = null;
@@ -20,24 +21,24 @@ const RANKING_PANEL_DEBOUNCE_MS = 1000; // 1 second debounce
 // Fetch real market cap data
 export async function fetchMarketCapRanking() {
     const now = Date.now();
-    
+
     // Return cached data if still valid
     if (marketCapCache && (now - marketCapCacheTime) < CACHE_DURATION) {
         return marketCapCache;
     }
-    
+
     try {
         // Using CoinGecko API for market cap data
         const response = await fetch('https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=50&page=1&sparkline=false', {
             timeout: 10000
         });
-        
+
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}`);
         }
-        
+
         const data = await response.json();
-        
+
         // Transform to our format
         marketCapCache = data.map(coin => ({
             id: coin.id,
@@ -48,12 +49,12 @@ export async function fetchMarketCapRanking() {
             priceChange24h: coin.price_change_percentage_24h,
             volume24h: coin.total_volume
         }));
-        
+
         marketCapCacheTime = now;
         console.log('Market cap data fetched and cached:', marketCapCache.length, 'coins');
-        
+
         return marketCapCache;
-        
+
     } catch (error) {
         console.warn('Failed to fetch market cap data:', error);
         // Fallback to empty array
@@ -136,21 +137,21 @@ export async function updateRankingPanel() {
                 <span>Global Market Cap Ranking</span>
             </div>
             ${combinedData.map((coin, i) => {
-                const rank = i + 1;
-                const marketCapStr = fmtCcy(coin.marketCap, null, 'USD', true);
-                const change = coin.priceChange24h ? `${coin.priceChange24h.toFixed(2)}%` : '0%';
-                const changeClass = coin.priceChange24h >= 0 ? 'green' : 'red';
-                const isSelected = selectedCoins.includes(coin.symbol);
+            const rank = i + 1;
+            const marketCapStr = fmtCcy(coin.marketCap, null, 'USD', true);
+            const change = coin.priceChange24h ? `${coin.priceChange24h.toFixed(2)}%` : '0%';
+            const changeClass = coin.priceChange24h >= 0 ? 'green' : 'red';
+            const isSelected = selectedCoins.includes(coin.symbol);
 
-                // Whale position data (secondary information)
-                const whalePositionValue = coin.whalePositionValue || 0;
-                const whaleCount = coin.whaleCount || 0;
-                const whaleMarketCapStr = whalePositionValue > 0 ? fmtCcy(whalePositionValue, null, 'USD', true) : '—';
-                const whaleInfo = whaleCount > 0 ?
-                    `Whale Market Cap: ${whaleMarketCapStr}\n${whaleCount} whales • $${(whalePositionValue / 1000000).toFixed(1)}M positions` :
-                    'No whale positions';
+            // Whale position data (secondary information)
+            const whalePositionValue = coin.whalePositionValue || 0;
+            const whaleCount = coin.whaleCount || 0;
+            const whaleMarketCapStr = whalePositionValue > 0 ? fmtCcy(whalePositionValue, null, 'USD', true) : '—';
+            const whaleInfo = whaleCount > 0 ?
+                `Whale Market Cap: ${whaleMarketCapStr}\n${whaleCount} whales • $${(whalePositionValue / 1000000).toFixed(1)}M positions` :
+                'No whale positions';
 
-                return `
+            return `
                     <div class="ranking-card ${isSelected ? 'selected' : ''}"
                          onclick="selectCoin('${coin.symbol}')"
                          title="${coin.name} (${coin.symbol})\nGlobal Market Cap: ${marketCapStr}\n24h Change: ${change}\n${whaleInfo}">
@@ -163,7 +164,7 @@ export async function updateRankingPanel() {
                         ${isSelected ? '<div class="ranking-selected-indicator">✓</div>' : ''}
                     </div>
                 `;
-            }).join('')}
+        }).join('')}
         `;
 
         console.log('Market cap ranking panel updated with', combinedData.length, 'coins');
@@ -178,7 +179,7 @@ function updateWhalePositionRanking() {
     const allRows = getAllRows();
     const rankingLimit = getRankingLimit();
     const selectedCoins = getSelectedCoins();
-    
+
     // Calculate top coins by total whale position value
     const coinStats = {};
     allRows.forEach(row => {
@@ -204,14 +205,14 @@ function updateWhalePositionRanking() {
             <span>Whale Market Cap Ranking (Fallback)</span>
         </div>
         ${sortedCoins.map(([coin, stats], i) => {
-            const rank = i + 1;
-            const totalPositionValue = stats.totalPositionValue;
-            const whaleMarketCapStr = fmtCcy(totalPositionValue, null, 'USD', true);
-            const change = '0%';
-            const isSelected = selectedCoins.includes(coin);
-            const whaleInfo = `${stats.count} whales • $${(totalPositionValue / 1000000).toFixed(1)}M positions`;
-            
-            return `
+        const rank = i + 1;
+        const totalPositionValue = stats.totalPositionValue;
+        const whaleMarketCapStr = fmtCcy(totalPositionValue, null, 'USD', true);
+        const change = '0%';
+        const isSelected = selectedCoins.includes(coin);
+        const whaleInfo = `${stats.count} whales • $${(totalPositionValue / 1000000).toFixed(1)}M positions`;
+
+        return `
                 <div class="ranking-card ${isSelected ? 'selected' : ''}" 
                      onclick="selectCoin('${coin}')" 
                      title="${coin}\nWhale Market Cap: ${whaleMarketCapStr}\n${whaleInfo}">
@@ -224,7 +225,7 @@ function updateWhalePositionRanking() {
                     ${isSelected ? '<div class="ranking-selected-indicator">✓</div>' : ''}
                 </div>
             `;
-        }).join('')}
+    }).join('')}
     `;
 }
 
@@ -258,17 +259,17 @@ export function updateQuotesHTML() {
     panel.innerHTML = selectedCoins.map(coin => {
         const currentPrice = parseFloat(currentPrices[coin] || 0);
         const prevPrice = parseFloat(window[`prevPrice_${coin}`] || currentPrice);
-        
+
         let direction = 'neutral';
         if (currentPrice > prevPrice) direction = 'up';
         else if (currentPrice < prevPrice) direction = 'down';
 
-        const priceStr = currentPrice.toLocaleString('en-US', { 
-            minimumFractionDigits: 2, 
-            maximumFractionDigits: 4 
+        const priceStr = currentPrice.toLocaleString('en-US', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 4
         });
 
-        const changePct = prevPrice > 0 ? 
+        const changePct = prevPrice > 0 ?
             ((currentPrice - prevPrice) / prevPrice * 100).toFixed(2) : '0.00';
 
         return `
@@ -305,7 +306,7 @@ let priceTicker = null;
 
 export function startPriceTicker() {
     stopPriceTicker();
-    
+
     priceTicker = setInterval(async () => {
         try {
             const response = await fetch('https://api.hyperliquid.xyz/info', {
@@ -313,13 +314,13 @@ export function startPriceTicker() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ type: 'allMids' })
             });
-            
+
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}`);
             }
-            
+
             const data = await response.json();
-            
+
             // Update current prices with the fetched data
             if (data && typeof data === 'object') {
                 const selectedCoins = getSelectedCoins();
@@ -330,17 +331,17 @@ export function startPriceTicker() {
                         // Store previous price for comparison
                         const prevPrice = parseFloat(window[`prevPrice_${coin}`] || newPrice);
                         window[`prevPrice_${coin}`] = prevPrice;
-                        
+
                         // Update current price in state
                         currentPrices[coin] = newPrice;
                     }
                 });
-                
+
                 setCurrentPrices(currentPrices);
             }
-            
+
             updateQuotesHTML();
-            
+
             // Update charts to reflect new price line position
             const scatterChart = window.getScatterChart ? window.getScatterChart() : null;
             const liqChart = window.getLiqChartInstance ? window.getLiqChartInstance() : null;
@@ -352,7 +353,7 @@ export function startPriceTicker() {
                 const fxRates = window.getFxRates ? window.getFxRates() : { USD: 1 };
                 const rate = fxRates[activeCurrency] || 1;
                 const refPrice = btcPrice * rate;
-                
+
                 // Update annotation
                 if (scatterChart.options.plugins.annotation && scatterChart.options.plugins.annotation.annotations.currentPriceLine) {
                     scatterChart.options.plugins.annotation.annotations.currentPriceLine.xMin = refPrice;
@@ -360,7 +361,7 @@ export function startPriceTicker() {
                     scatterChart.options.plugins.annotation.annotations.currentPriceLine.yMin = undefined;
                     scatterChart.options.plugins.annotation.annotations.currentPriceLine.yMax = undefined;
                 }
-                
+
                 // Update BTC price label
                 if (scatterChart.options.plugins.btcPriceLabel) {
                     scatterChart.options.plugins.btcPriceLabel.price = refPrice;
@@ -369,10 +370,10 @@ export function startPriceTicker() {
                     const sym = showSymbols ? currencyMeta.symbol : '';
                     scatterChart.options.plugins.btcPriceLabel.text = `BTC: ${sym}${refPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
                 }
-                
+
                 scatterChart.update('none');
             }
-            
+
             if (liqChart) {
                 // Update liquidation chart price line
                 const currentPrices = getCurrentPrices();
@@ -386,7 +387,7 @@ export function startPriceTicker() {
                     const rate = fxRates[activeEntryCurrency] || 1;
                     refPrice = btcPrice * rate;
                 }
-                
+
                 // Update annotation
                 if (liqChart.options.plugins.annotation && liqChart.options.plugins.annotation.annotations.currentPriceLine) {
                     liqChart.options.plugins.annotation.annotations.currentPriceLine.xMin = refPrice;
@@ -394,7 +395,7 @@ export function startPriceTicker() {
                     liqChart.options.plugins.annotation.annotations.currentPriceLine.yMin = undefined;
                     liqChart.options.plugins.annotation.annotations.currentPriceLine.yMax = undefined;
                 }
-                
+
                 // Update BTC price label
                 if (liqChart.options.plugins.btcPriceLabel) {
                     liqChart.options.plugins.btcPriceLabel.price = refPrice;
@@ -403,9 +404,12 @@ export function startPriceTicker() {
                     const sym = showSymbols ? currencyMeta.symbol : '';
                     liqChart.options.plugins.btcPriceLabel.text = `BTC: ${sym}${refPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
                 }
-                
+
                 liqChart.update('none');
             }
+
+            // Update aggregation table highlight if active
+            renderAggregationTable();
         } catch (e) {
             console.warn('Failed to fetch prices', e);
         }

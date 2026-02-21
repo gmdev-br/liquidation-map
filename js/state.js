@@ -56,6 +56,7 @@ let gridSpacing = 500; // Grid spacing in px
 let minBtcVolume = 0; // Volume BTC minimum for highlighting
 let aggInterval = 50; // BTC price interval for aggregation (e.g. 50, 100)
 let aggTableHeight = 450; // default height for the aggregation table container
+let aggVolumeUnit = 'USD'; // 'USD' or 'BTC'
 
 // Custom colors for leverage categories
 let leverageColors = {
@@ -128,6 +129,7 @@ export const getState = () => ({
     minBtcVolume,
     aggInterval,
     aggTableHeight,
+    aggVolumeUnit,
     lastSeenAccountValues,
     whaleMeta,
     isZenMode
@@ -180,6 +182,7 @@ export const setState = (updates) => {
         minBtcVolume,
         aggInterval,
         aggTableHeight,
+        aggVolumeUnit,
         lastSeenAccountValues,
         whaleMeta,
         isZenMode
@@ -230,6 +233,7 @@ export const setGridSpacing = (value) => { gridSpacing = value; };
 export const setMinBtcVolume = (value) => { minBtcVolume = value; };
 export const setAggInterval = (value) => { aggInterval = value; };
 export const setAggTableHeight = (value) => { aggTableHeight = value; };
+export const setAggVolumeUnit = (value) => { aggVolumeUnit = value; };
 export const setIsZenMode = (value) => { isZenMode = value; };
 export const setWhaleMeta = (value) => { whaleMeta = value; };
 export const setLastSeenAccountValues = (value) => { lastSeenAccountValues = value; };
@@ -276,9 +280,10 @@ export const getLeverageColors = () => leverageColors;
 export const getColumnWidth = () => columnWidth;
 export const getGridSpacing = () => gridSpacing;
 export const getMinBtcVolume = () => minBtcVolume;
-export const getAggInterval = () => aggInterval;
-export const getAggTableHeight = () => aggTableHeight;
-export const getIsZenMode = () => isZenMode;
+export const getAggInterval = (value) => aggInterval;
+export const getAggTableHeight = (value) => aggTableHeight;
+export const getAggVolumeUnit = () => aggVolumeUnit;
+export const getIsZenMode = (value) => isZenMode;
 export const getWhaleMeta = () => whaleMeta;
 export const getLastSeenAccountValues = () => lastSeenAccountValues;
 export const setPriceMode = (mode) => {

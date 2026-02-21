@@ -8,9 +8,9 @@ import {
     getColumnOrder, getVisibleColumns, getRankingLimit, getColorMaxLev,
     getChartHighLevSplit, getChartHeight, getLiqChartHeight, getSavedScatterState,
     getSavedLiqState, getColumnWidths, getColumnWidth, getActiveCurrency, getActiveEntryCurrency, getDecimalPlaces, getLeverageColors, getFontSize, getFontSizeKnown, getGridSpacing, getMinBtcVolume,
-    getAggInterval, getAggTableHeight, getIsZenMode, getLastSeenAccountValues,
+    getAggInterval, getAggTableHeight, getAggVolumeUnit, getIsZenMode, getLastSeenAccountValues,
     setSortKey, setSortDir, setSavedScatterState, setSavedLiqState,
-    setColumnOrder, setVisibleColumns, setSelectedCoins, setRankingLimit, setColorMaxLev, setChartHighLevSplit, setChartMode, setBubbleScale, setBubbleOpacity, setLineThickness, setAggregationFactor, setPriceMode, setShowSymbols, setPriceUpdateInterval, setDecimalPlaces, setFontSize, setFontSizeKnown, setLeverageColors, setColumnWidth, setGridSpacing, setMinBtcVolume, setAggInterval, setAggTableHeight, setIsZenMode, setLastSeenAccountValues
+    setColumnOrder, setVisibleColumns, setSelectedCoins, setRankingLimit, setColorMaxLev, setChartHighLevSplit, setChartMode, setBubbleScale, setBubbleOpacity, setLineThickness, setAggregationFactor, setPriceMode, setShowSymbols, setPriceUpdateInterval, setDecimalPlaces, setFontSize, setFontSizeKnown, setLeverageColors, setColumnWidth, setGridSpacing, setMinBtcVolume, setAggInterval, setAggTableHeight, setAggVolumeUnit, setIsZenMode, setLastSeenAccountValues
 } from '../state.js';
 import { COLUMN_DEFS } from '../config.js';
 import { cbSetValue, updateCoinSearchLabel } from '../ui/combobox.js';
@@ -97,6 +97,7 @@ export function saveSettings(getChartState = null, savedScatterState = null, sav
         minBtcVolume: getMinBtcVolume(),
         aggInterval: getAggInterval(),
         aggTableHeight: getAggTableHeight(),
+        aggVolumeUnit: getAggVolumeUnit(),
         isZenMode: getIsZenMode(),
         lastSeenAccountValues: getLastSeenAccountValues()
     };
@@ -436,6 +437,10 @@ export function loadSettings() {
             if (wrap) wrap.style.maxHeight = s.aggTableHeight + 'px';
         }
     }
+    if (s.aggVolumeUnit !== undefined) {
+        setAggVolumeUnit(s.aggVolumeUnit);
+        updateAggVolumeUI(s.aggVolumeUnit);
+    }
     if (s.isZenMode !== undefined) {
         setIsZenMode(s.isZenMode);
         // We will trigger the UI update for Zen Mode in init.js after settings are loaded
@@ -443,4 +448,9 @@ export function loadSettings() {
     if (s.lastSeenAccountValues) {
         setLastSeenAccountValues(s.lastSeenAccountValues);
     }
+}
+
+function updateAggVolumeUI(unit) {
+    const tabs = document.querySelectorAll('.js-agg-volume-unit-tab');
+    tabs.forEach(t => t.classList.toggle('active', t.dataset.unit === unit));
 }

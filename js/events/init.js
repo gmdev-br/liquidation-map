@@ -25,7 +25,7 @@ import {
     updateBubbleSize, updateBubbleOpacity, updateLineThickness, updateAggregation, setChartModeHandler, updateChartHeight,
     updateLiqChartHeight, onCurrencyChange, openColumnCombobox, closeColumnComboboxDelayed,
     renderColumnDropdown as renderColumnDropdownFn, toggleColumn as toggleColumnFn, showAllColumns as showAllColumnsFn, hideAllColumns as hideAllColumnsFn, updateColumnSelectDisplay, applyColumnOrder,
-    applyColumnWidths, applyColumnVisibility, toggleShowSymbols, updatePriceInterval, updateDecimalPlaces, updateFontSize, updateFontSizeKnown, updateLeverageColors, updateGridSpacing, updateMinBtcVolume, updateAggInterval, updateAggTableHeight,
+    applyColumnWidths, applyColumnVisibility, toggleShowSymbols, updatePriceInterval, updateDecimalPlaces, updateFontSize, updateFontSizeKnown, updateLeverageColors, updateGridSpacing, updateMinBtcVolume, updateAggInterval, updateAggTableHeight, updateAggVolumeUnit, scrollToCurrentPrice,
     toggleZenMode
 } from './handlers.js';
 import { initColumnWidthControl, applyColumnWidth } from '../ui/columnWidth.js';
@@ -631,6 +631,18 @@ function setupEventListeners() {
     const exitZenBtn = document.getElementById('exitZenBtn');
     if (exitZenBtn) {
         exitZenBtn.addEventListener('click', toggleZenMode);
+    }
+
+    // Aggregation Volume Unit tabs
+    document.querySelectorAll('.js-agg-volume-unit-tab').forEach(tab => {
+        tab.addEventListener('click', (e) => {
+            updateAggVolumeUnit(e.target.dataset.unit);
+        });
+    });
+
+    const scrollToCurrentBtn = document.getElementById('scrollToCurrentBtn');
+    if (scrollToCurrentBtn) {
+        scrollToCurrentBtn.addEventListener('click', scrollToCurrentPrice);
     }
 
     // Make cbSelect, selectCoin, and toggleColumn globally accessible for inline onmousedown handlers

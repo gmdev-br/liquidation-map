@@ -21,7 +21,7 @@ import {
     getRankingLimit, getColorMaxLev, getChartHighLevSplit, getChartHeight,
     getLiqChartHeight, getActiveWindow, setColumnOrder, setVisibleColumns,
     getColumnOrder, getVisibleColumns, setPriceUpdateInterval, setActiveCurrency,
-    setActiveEntryCurrency, setDecimalPlaces, setFontSize, setFontSizeKnown, setLeverageColors, setGridSpacing, setMinBtcVolume, getMinBtcVolume, setAggInterval, setAggTableHeight, setIsZenMode, getIsZenMode
+    setActiveEntryCurrency, setDecimalPlaces, setFontSize, setFontSizeKnown, setLeverageColors, setGridSpacing, setMinBtcVolume, getMinBtcVolume, setAggInterval, setAggTableHeight, setAggVolumeUnit, getAggVolumeUnit, setIsZenMode, getIsZenMode
 } from '../state.js';
 import { renderTable, updateStats } from '../ui/table.js';
 import { renderQuotesPanel, updateRankingPanel } from '../ui/panels.js';
@@ -316,6 +316,28 @@ export function updateAggTableHeight(height) {
     if (section) {
         const wrap = section.querySelector('.table-wrap');
         if (wrap) wrap.style.maxHeight = height + 'px';
+    }
+}
+
+export function updateAggVolumeUnit(unit) {
+    setAggVolumeUnit(unit);
+    // Sync all unit tabs
+    const tabs = document.querySelectorAll('.js-agg-volume-unit-tab');
+    tabs.forEach(t => t.classList.toggle('active', t.dataset.unit === unit));
+    saveSettings();
+    // Re-render aggregation table (triggered via renderTable)
+    renderTable();
+}
+
+export function scrollToCurrentPrice() {
+    const tableWrap = document.querySelector('#agg-table-section .table-wrap');
+    const activeRow = tableWrap?.querySelector('.active-price-range');
+    if (tableWrap && activeRow) {
+        const topPos = activeRow.offsetTop - (tableWrap.offsetHeight / 2) + (activeRow.offsetHeight / 2);
+        tableWrap.scrollTo({
+            top: topPos,
+            behavior: 'smooth'
+        });
     }
 }
 

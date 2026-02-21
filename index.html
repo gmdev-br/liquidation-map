@@ -174,6 +174,55 @@
             color: #000;
             border-color: var(--accent);
         }
+
+        .floating-agg-btn {
+            position: absolute;
+            bottom: 40px;
+            right: 24px;
+            z-index: 20000;
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.95), rgba(217, 119, 6, 0.95));
+            color: #000;
+            border: 1px solid rgba(251, 191, 36, 0.35);
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            cursor: pointer;
+            box-shadow: var(--glow-gold), 0 8px 32px rgba(0, 0, 0, 0.5);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            backdrop-filter: var(--glass-blur-sm);
+            -webkit-backdrop-filter: var(--glass-blur-sm);
+            overflow: hidden;
+        }
+
+        .floating-agg-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: var(--glass-shimmer);
+            transition: left 0.6s ease;
+            pointer-events: none;
+        }
+
+        .floating-agg-btn:hover::before {
+            left: 100%;
+        }
+
+        .floating-agg-btn:hover {
+            transform: translateY(-4px) scale(1.05);
+            box-shadow: var(--glow-gold), 0 12px 40px rgba(0, 0, 0, 0.6);
+            filter: brightness(1.1);
+        }
+
+        .floating-agg-btn:active {
+            transform: translateY(0) scale(0.95);
+        }
     </style>
 </head>
 
@@ -266,6 +315,13 @@
                     <label title="Intervalo de preço BTC para agregar">Intervalo BTC ($)</label>
                     <input type="number" id="aggIntervalDrawer" class="js-agg-interval" value="50" min="10" step="10"
                         title="Tamanho da faixa de agregação em dólares para o preço do BTC">
+                </div>
+                <div class="ctrl">
+                    <label>Volume Unit (Range Table)</label>
+                    <div class="tabs">
+                        <button class="tab active js-agg-volume-unit-tab" data-unit="USD">USD</button>
+                        <button class="tab js-agg-volume-unit-tab" data-unit="BTC">BTC</button>
+                    </div>
                 </div>
                 <div class="ctrl" style="flex-direction: row; justify-content: space-between; align-items: center;">
                     <label>Zen Mode</label>
@@ -528,12 +584,22 @@
                 <polyline points="6 9 12 15 18 9"></polyline>
             </svg>
         </div>
-        <div class="section-content" id="aggSectionContent">
-            <div class="agg-stats-bar" id="aggStatsBar"
-                style="display:flex; gap:12px; padding:8px 16px; background:var(--panel-bg); border-bottom:1px solid var(--border-color); font-size:12px; flex-wrap:wrap; align-items:center;">
-                <!-- Filled by JS -->
+        <div class="section-content" id="aggSectionContent" style="position:relative;">
+            <button id="scrollToCurrentBtn" class="floating-agg-btn" title="Ir para Preço Atual">🎯</button>
+            <div class="agg-stats-bar"
+                style="display:flex; gap:12px; padding:8px 16px; background:var(--panel-bg); border-bottom:1px solid var(--border-color); font-size:12px; flex-wrap:wrap; align-items:center; justify-content: space-between;">
+                <div id="aggStatsBar" style="display:flex; gap:12px; flex-wrap:wrap; align-items:center;">
+                    <!-- Filled by JS -->
+                </div>
+                <div class="agg-unit-toggle"
+                    style="display:flex; gap:4px; align-items:center; background:rgba(255,255,255,0.05); padding:2px; border-radius:6px; border:1px solid rgba(255,255,255,0.1)">
+                    <button class="tab active js-agg-volume-unit-tab" data-unit="USD"
+                        style="padding:4px 8px; font-size:10px; height:24px; border-radius:4px">USD</button>
+                    <button class="tab js-agg-volume-unit-tab" data-unit="BTC"
+                        style="padding:4px 8px; font-size:10px; height:24px; border-radius:4px">BTC</button>
+                </div>
             </div>
-            <div id="agg-table-section" style="position:relative;">
+            <div id="agg-table-section">
                 <div class="table-wrap" style="max-height: 450px; overflow-y: auto;">
                     <table class="agg-table" id="aggTable">
                         <thead>

@@ -2,24 +2,58 @@
 // LIQUID GLASS — Aggregation Table
 // ═══════════════════════════════════════════════════════════
 
-import { getDisplayedRows, getCurrentPrices, getFxRates, getActiveEntryCurrency, getAggInterval } from '../state.js';
+import { getDisplayedRows, getCurrentPrices, getFxRates, getActiveEntryCurrency, getAggInterval, getAggVolumeUnit } from '../state.js';
 import { getCorrelatedEntry } from '../utils/currency.js';
-import { fmtUSD } from '../utils/formatters.js';
+import { fmtUSD, fmtCcy } from '../utils/formatters.js';
 
-export function renderAggregationTable() {
-    console.log('Rendering Aggregation Table...');
+let lastRenderedBand = null;
+let lastRenderedUnit = null;
+let lastRenderedInterval = null;
+let lastRenderedRowCount = 0;
+
+export function renderAggregationTable(force = false) {
+    const aggSection = document.getElementById('aggSectionWrapper');
+    const isCollapsed = aggSection?.classList.contains('collapsed');
+
+    // Optimization: Skip rendering if collapsed, unless forced (e.g. initial load or search)
+    if (isCollapsed && !force) {
+        return;
+    }
+
     const rows = getDisplayedRows();
     const currentPrices = getCurrentPrices();
     const fxRates = getFxRates();
     const activeEntryCurrency = getActiveEntryCurrency();
+    const aggVolumeUnit = getAggVolumeUnit();
+    const bandSize = getAggInterval();
+    const btcPrice = currentPrices['BTC'] ? parseFloat(currentPrices['BTC']) : 0;
+
+    // Build current band identity
+    const currentBand = btcPrice > 0 ? Math.floor(btcPrice / bandSize) * bandSize : 0;
+
+    // Optimization: Skip rendering if data hasn't significantly changed
+    if (!force &&
+        lastRenderedBand === currentBand &&
+        lastRenderedUnit === aggVolumeUnit &&
+        lastRenderedInterval === bandSize &&
+        lastRenderedRowCount === rows.length) {
+        return;
+    }
+
+    console.log('Rendering Aggregation Table (Optimized)...');
 
     if (!rows || rows.length === 0) {
         document.getElementById('aggTableBody').innerHTML = '<tr><td colspan="13" class="empty-cell">Sem dados disponíveis.</td></tr>';
         document.getElementById('aggStatsBar').innerHTML = '';
+        lastRenderedRowCount = 0;
         return;
     }
 
-    const bandSize = getAggInterval();
+    // Update state tracking
+    lastRenderedBand = currentBand;
+    lastRenderedUnit = aggVolumeUnit;
+    lastRenderedInterval = bandSize;
+    lastRenderedRowCount = rows.length;
     const bands = {};
 
     let totalLongNotional = 0;
@@ -109,9 +143,13 @@ export function renderAggregationTable() {
 
         // Render rows
         let html = '';
+        const currentBtcPos = btcPrice > 0 ? btcPrice : 0;
+
         for (const b of fullBandArray) {
             const totalNotional = b.notionalLong + b.notionalShort;
             const isEmpty = b.isEmpty;
+
+            const isCurrentPriceRange = currentBtcPos >= b.faixaDe && currentBtcPos < b.faixaAte;
 
             let domType = 'VACUO';
             let domPct = 0;
@@ -163,7 +201,14 @@ export function renderAggregationTable() {
                 }
             }
 
-            const formatVal = (v) => v > 0 ? fmtUsdCompact(v) : '—';
+            const formatVal = (v) => {
+                if (v === 0) return '—';
+                if (aggVolumeUnit === 'BTC' && btcPrice > 0) {
+                    const btcVal = v / btcPrice;
+                    return '₿' + (btcVal >= 1000 ? (btcVal / 1000).toFixed(1) + 'K' : btcVal.toFixed(2));
+                }
+                return fmtUsdCompact(v);
+            };
             const formatQty = (v) => v > 0 ? v : '—';
 
             const longCol = b.notionalLong > 0 ? '#4ade80' : '#4b5563';
@@ -172,9 +217,14 @@ export function renderAggregationTable() {
             const trStyle = isEmpty ? 'opacity:0.6;background:transparent' : '';
             const valBg = totalNotional >= 10_000_000 ? 'background:rgba(59,130,246,0.1)' : '';
 
+            let highlightStyle = '';
+            if (isCurrentPriceRange) {
+                highlightStyle = 'background:rgba(250,204,21,0.2); border:1px solid #facc15; box-shadow:inset 0 0 10px rgba(250,204,21,0.2)';
+            }
+
             html += `
-            <tr style="${trStyle}">
-                <td style="font-family:monospace; font-weight:700; color:#d1d5db">$${b.faixaDe.toLocaleString()}</td>
+            <tr style="${trStyle}; ${highlightStyle}" class="${isCurrentPriceRange ? 'active-price-range' : ''}">
+                <td style="font-family:monospace; font-weight:700; color:${isCurrentPriceRange ? '#fff' : '#d1d5db'}">$${b.faixaDe.toLocaleString()}</td>
                 <td style="font-family:monospace; color:#9ca3af">$${b.faixaAte.toLocaleString()}</td>
                 <td style="color:${longCol}; text-align:center">${formatQty(b.qtdLong)}</td>
                 <td style="color:${b.notionalLong > 0 ? '#22c55e' : '#4b5563'}; font-family:monospace; font-weight:${b.notionalLong > 30_000_000 ? '700' : '400'}">${formatVal(b.notionalLong)}</td>

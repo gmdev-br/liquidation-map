@@ -435,7 +435,7 @@ function _renderTableInternal() {
     updateRankingPanel();
 
     // Render aggregation table based on filtered rows
-    renderAggregationTable();
+    renderAggregationTable(true);
 
     // Apply column widths after table is rendered
     applyColumnWidthAfterRender();
