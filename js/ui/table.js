@@ -5,7 +5,8 @@
 import {
     getAllRows, getDisplayedRows, getSelectedCoins, getActiveCurrency,
     getActiveEntryCurrency, getShowSymbols, getSortKey, getSortDir,
-    getVisibleColumns, getColumnOrder, setDisplayedRows, getCurrentPrices, getFxRates, getChartHighLevSplit, getFontSize, getFontSizeKnown, getDecimalPlaces, getMinBtcVolume, getScanning
+    getVisibleColumns, getColumnOrder, setDisplayedRows, getCurrentPrices, getFxRates, getChartHighLevSplit, getFontSize, getFontSizeKnown, getDecimalPlaces, getMinBtcVolume, getScanning,
+    getWhaleMeta
 } from '../state.js';
 import { convertToActiveCcy } from '../utils/currency.js';
 import { fmt, fmtUSD, fmtAddr, fmtCcy } from '../utils/formatters.js';
@@ -18,6 +19,7 @@ import { setupColumnDragAndDrop } from '../events/handlers.js';
 import { updateRankingPanel } from './panels.js';
 import { debounce, Cache } from '../utils/performance.js';
 import { enableVirtualScroll } from '../utils/virtualScroll.js';
+import { renderAggregationTable } from './aggregation.js';
 
 // Cache for filtered data to avoid recomputing
 const filterCache = new Cache(5000);
@@ -76,9 +78,10 @@ function reorderTableHeadersAndFilters(columnOrder) {
 export function updateStats(showSymbols, allRows) {
     // Basic sums
     const whalesWithPos = new Set(allRows.map(r => r.address)).size;
+    const whaleMeta = getWhaleMeta();
     const totalCap = [...new Set(allRows.map(r => r.address))].reduce((s, addr) => {
-        const row = allRows.find(r => r.address === addr);
-        return s + (row?.accountValue || 0);
+        const meta = whaleMeta[addr];
+        return s + (meta?.accountValue || 0);
     }, 0);
     const totalUpnl = allRows.reduce((s, r) => s + r.unrealizedPnl, 0);
 
@@ -90,12 +93,12 @@ export function updateStats(showSymbols, allRows) {
     const whalesShort = new Set(shortRows.map(r => r.address)).size;
 
     const capLong = [...new Set(longRows.map(r => r.address))].reduce((s, addr) => {
-        const row = longRows.find(r => r.address === addr);
-        return s + (row?.accountValue || 0);
+        const meta = whaleMeta[addr];
+        return s + (meta?.accountValue || 0);
     }, 0);
     const capShort = [...new Set(shortRows.map(r => r.address))].reduce((s, addr) => {
-        const row = shortRows.find(r => r.address === addr);
-        return s + (row?.accountValue || 0);
+        const meta = whaleMeta[addr];
+        return s + (meta?.accountValue || 0);
     }, 0);
 
     const upnlLong = longRows.reduce((s, r) => s + r.unrealizedPnl, 0);
@@ -109,7 +112,7 @@ export function updateStats(showSymbols, allRows) {
     const upnlEl = document.getElementById('sUpnl');
     upnlEl.textContent = fmtUSD(totalUpnl);
     upnlEl.className = 'stat-value ' + (totalUpnl >= 0 ? 'green' : 'red');
-    const largest = Math.max(...allRows.map(r => r.accountValue), 0);
+    const largest = Object.values(whaleMeta).reduce((max, m) => Math.max(max, m.accountValue || 0), 0);
     document.getElementById('sLargest').textContent = sym + fmt(largest);
 
     // Update Long/Short Breakdowns
@@ -131,6 +134,7 @@ function _renderTableInternal() {
         renderLiqScatterPlot();
     }
     const allRows = getAllRows();
+    const whaleMeta = getWhaleMeta();
     console.log('renderTable: allRows count:', allRows.length);
     const selectedCoins = getSelectedCoins();
     console.log('renderTable: selectedCoins:', selectedCoins);
@@ -167,7 +171,10 @@ function _renderTableInternal() {
     const maxUpnl = parseFloat(document.getElementById('maxUpnl').value);
 
     // Create cache key for filter state
+    // NOTE: allRows.length is included so the cache is invalidated when data loads after an
+    // initial empty render (e.g., loadSettings triggering renderTable before loadTableData).
     const cacheKey = JSON.stringify({
+        dataLen: allRows.length,
         selectedCoins,
         addressFilter,
         sideFilter,
@@ -199,7 +206,8 @@ function _renderTableInternal() {
             if (selectedCoins.length > 0 && !selectedCoins.includes(r.coin)) return false;
             if (addressFilterRegex) {
                 const addr = r.address;
-                const disp = r.displayName || '';
+                const meta = whaleMeta[addr];
+                const disp = meta?.displayName || '';
                 if (!addressFilterRegex.test(addr) && !addressFilterRegex.test(disp)) return false;
             }
             if (sideFilter && r.side !== sideFilter) return false;
@@ -259,11 +267,19 @@ function _renderTableInternal() {
 
     // Only update charts if not scanning
     if (!getScanning()) {
-        renderCharts(); // Update chart with filtered rows
+        try {
+            renderCharts(); // Update chart with filtered rows
+        } catch (err) {
+            console.error('renderCharts error (non-fatal):', err);
+        }
     }
 
     // Update statistics with filtered rows
-    updateStats(showSymbols, rows);
+    try {
+        updateStats(showSymbols, rows);
+    } catch (err) {
+        console.error('updateStats error (non-fatal):', err);
+    }
 
     const tbody = document.getElementById('tableBody');
 
@@ -279,6 +295,7 @@ function _renderTableInternal() {
 
     // Row renderer function
     const rowRenderer = (r, i) => {
+        const meta = whaleMeta[r.address] || {};
         const side = r.side;
         const pnlClass = r.unrealizedPnl >= 0 ? 'green' : 'red';
         const fundClass = r.funding >= 0 ? 'green' : 'red';
@@ -291,7 +308,7 @@ function _renderTableInternal() {
         const minBtcVolume = getMinBtcVolume();
 
         // Check if wallet should be highlighted (either displayName or high BTC volume)
-        const isHighlighted = r.displayName || (minBtcVolume > 0 && volBTC >= minBtcVolume);
+        const isHighlighted = meta.displayName || (minBtcVolume > 0 && volBTC >= minBtcVolume);
 
         // Get font sizes
         const fontSize = getFontSize();
@@ -354,12 +371,12 @@ function _renderTableInternal() {
             'col-num': `<td class="muted col-num" style="font-size:11px">${i + 1}</td>`,
             'col-address': `<td class="col-address ${levClass}" style="${rowFontStyle}">
                 <div class="addr-cell">
-                    ${isHighlighted ? `<span class="addr-avatar-star ${levClass}">★</span>` : `<div class="addr-avatar">${(r.displayName || r.address).slice(0, 2).toUpperCase()}</div>`}
+                    ${isHighlighted ? `<span class="addr-avatar-star ${levClass}">★</span>` : `<div class="addr-avatar">${(meta.displayName || r.address).slice(0, 2).toUpperCase()}</div>`}
                     <div>
                         <a class="addr-link" href="https://app.hyperliquid.xyz/explorer/address/${r.address}" target="_blank">
                             <div class="addr-text">${fmtAddr(r.address)}</div>
                         </a>
-                        ${r.displayName ? `<div class="addr-name">${r.displayName}</div>` : ''}
+                        ${meta.displayName ? `<div class="addr-name">${meta.displayName}</div>` : ''}
                     </div>
                 </div>
             </td>`,
@@ -376,7 +393,7 @@ function _renderTableInternal() {
             'col-funding': `<td class="mono col-funding ${fundClass}" style="${rowFontStyle}">${fmtUSD(r.funding)}</td>`,
             'col-liqPx': `<td class="mono col-liqPx ${levClass}" style="${isHighlighted ? 'font-weight:600;' : ''}${rowFontStyle}">${liqPriceFormatted}</td>`,
             'col-distToLiq': `<td class="col-distToLiq ${levClass}" style="${rowFontStyle}">${distHtml}</td>`,
-            'col-accountValue': `<td class="mono col-accountValue ${levClass}" style="${rowFontStyle}">${usdSym}${fmt(r.accountValue)}</td>`
+            'col-accountValue': `<td class="mono col-accountValue ${levClass}" style="${rowFontStyle}">${usdSym}${fmt(meta.accountValue || 0)}</td>`
         };
 
         // Filter cells based on visible columns
@@ -395,7 +412,7 @@ function _renderTableInternal() {
             });
         }
 
-        return `<tr class="${r.displayName ? 'row-known-address' : ''}">
+        return `<tr class="${meta.displayName ? 'row-known-address' : ''}">
             ${columnOrder.filter(Key => filteredCells[Key]).map(Key => filteredCells[Key]).join('')}
         </tr>`;
     };
@@ -405,6 +422,9 @@ function _renderTableInternal() {
 
     // Update ranking panel after rendering table (async)
     updateRankingPanel();
+
+    // Render aggregation table based on filtered rows
+    renderAggregationTable();
 
     // Apply column widths after table is rendered
     applyColumnWidthAfterRender();

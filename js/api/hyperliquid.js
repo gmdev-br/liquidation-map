@@ -1,8 +1,10 @@
 import { INFO_URL, RETRY_DELAY_MS } from '../config.js';
 import {
     setAllRows, getAllRows, setLoadedCount, setScanning, getCurrentPrices, getScanning,
-    getIsPaused, getRenderPending, getLastSaveTime, getLastSeenAccountValues, setLastSeenAccountValues
+    getIsPaused, getRenderPending, getLastSaveTime, getLastSeenAccountValues, setLastSeenAccountValues,
+    getWhaleMeta, setWhaleMeta
 } from '../state.js';
+import { saveSettings } from '../storage/settings.js';
 
 // ── Rate Limiter ──────────────────────────────────────────────────────
 class RateLimiter {
@@ -85,6 +87,14 @@ export function processState(whale, state, allRows) {
         }
     }
 
+    // Update global whaleMeta
+    const whaleMeta = getWhaleMeta();
+    whaleMeta[whale.ethAddress] = {
+        displayName: whale.displayName || '',
+        accountValue: accountValue,
+        windowPerformances: whale.windowPerformances || {}
+    };
+
     positions.forEach(p => {
         const pos = p.position;
         const size = parseFloat(pos.szi);
@@ -97,9 +107,6 @@ export function processState(whale, state, allRows) {
         }
         allRows.push({
             address: whale.ethAddress,
-            displayName: whale.displayName,
-            accountValue: accountValue, // Use validated account value
-            windowPerformances: whale.windowPerformances, // Store directly to save space
             coin: pos.coin,
             szi: size,
             side: size > 0 ? 'long' : 'short',
@@ -241,5 +248,6 @@ export async function streamPositions(whaleList, minVal, maxConcurrency, callbac
     renderTable();
     saveTableData(); // Save final data
     setLastSeenAccountValues(newSeenAccountValues);
+    saveSettings(); // Save delta scanning values
     finishScan(setStatus, setProgress);
 }

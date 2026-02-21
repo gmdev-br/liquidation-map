@@ -14,7 +14,7 @@ import {
     getDisplayedRows, getCurrentPrices, getActiveEntryCurrency, getShowSymbols,
     getLiqChartHeight, getChartMode, getAggregationFactor, getSavedLiqState,
     getFxRates, getChartHighLevSplit, getColorMaxLev, getDecimalPlaces, getLeverageColors,
-    getBubbleScale, getBubbleOpacity, getMinBtcVolume
+    getBubbleScale, getBubbleOpacity, getMinBtcVolume, getWhaleMeta
 } from '../state.js';
 import { CURRENCY_META } from '../config.js';
 import { chartPlugins, chartOptions } from './config.js';
@@ -228,7 +228,7 @@ export function renderLiqScatterPlot() {
     }
 
     const isLinesMode = getChartMode() === 'lines';
-    
+
     // Configure chart based on mode
     let datasets = [];
     let chartType = 'bubble';
@@ -244,8 +244,8 @@ export function renderLiqScatterPlot() {
 
         // Create bins
         const xValues = data.map(d => d.x);
-        const minX = Math.min(...xValues, refPrice);
-        const maxX = Math.max(...xValues, refPrice);
+        const minX = xValues.reduce((min, val) => Math.min(min, val), refPrice);
+        const maxX = xValues.reduce((max, val) => Math.max(max, val), refPrice);
 
         const numBins = getAggregationFactor();
         const range = maxX - minX || 1;
@@ -324,8 +324,8 @@ export function renderLiqScatterPlot() {
 
         // Calculate volume min/max for proper X scale
         const volumes = data.map(d => d.y); // d.y = BTC size (volume)
-        const minVolume = Math.min(...volumes);
-        const maxVolume = Math.max(...volumes);
+        const minVolume = volumes.length > 0 ? volumes.reduce((min, val) => Math.min(min, val), Infinity) : 0;
+        const maxVolume = volumes.length > 0 ? volumes.reduce((max, val) => Math.max(max, val), -Infinity) : 0;
         const volumePadding = (maxVolume - minVolume) * 0.1; // 10% padding
 
         localScales = {
@@ -386,9 +386,9 @@ export function renderLiqScatterPlot() {
                 hoverBorderColor: customColors.longLow,
                 pointStyle: (context) => {
                     const raw = context.raw?._raw;
-                    const displayName = raw?.displayName;
+                    const meta = getWhaleMeta()[raw?.address] || {};
                     const volBTC = context.raw?.y || 0;
-                    return (displayName || (minBtcVolume > 0 && volBTC >= minBtcVolume)) ? 'star' : 'circle';
+                    return (meta.displayName || (minBtcVolume > 0 && volBTC >= minBtcVolume)) ? 'star' : 'circle';
                 }
             });
         }
@@ -404,9 +404,9 @@ export function renderLiqScatterPlot() {
                 hoverBorderColor: customColors.longHigh,
                 pointStyle: (context) => {
                     const raw = context.raw?._raw;
-                    const displayName = raw?.displayName;
+                    const meta = getWhaleMeta()[raw?.address] || {};
                     const volBTC = context.raw?.y || 0;
-                    return (displayName || (minBtcVolume > 0 && volBTC >= minBtcVolume)) ? 'star' : 'circle';
+                    return (meta.displayName || (minBtcVolume > 0 && volBTC >= minBtcVolume)) ? 'star' : 'circle';
                 }
             });
         }
@@ -422,9 +422,9 @@ export function renderLiqScatterPlot() {
                 hoverBorderColor: customColors.shortLow,
                 pointStyle: (context) => {
                     const raw = context.raw?._raw;
-                    const displayName = raw?.displayName;
+                    const meta = getWhaleMeta()[raw?.address] || {};
                     const volBTC = context.raw?.y || 0;
-                    return (displayName || (minBtcVolume > 0 && volBTC >= minBtcVolume)) ? 'star' : 'circle';
+                    return (meta.displayName || (minBtcVolume > 0 && volBTC >= minBtcVolume)) ? 'star' : 'circle';
                 }
             });
         }
@@ -440,9 +440,9 @@ export function renderLiqScatterPlot() {
                 hoverBorderColor: customColors.shortHigh,
                 pointStyle: (context) => {
                     const raw = context.raw?._raw;
-                    const displayName = raw?.displayName;
+                    const meta = getWhaleMeta()[raw?.address] || {};
                     const volBTC = context.raw?.y || 0;
-                    return (displayName || (minBtcVolume > 0 && volBTC >= minBtcVolume)) ? 'star' : 'circle';
+                    return (meta.displayName || (minBtcVolume > 0 && volBTC >= minBtcVolume)) ? 'star' : 'circle';
                 }
             });
         }
@@ -506,7 +506,7 @@ export function renderLiqScatterPlot() {
                                 return 'Liquidation Count';
                             }
                             let r = null;
-                            
+
                             // Try different ways to get raw data
                             if (context[0] && context[0].dataset && context[0].dataset._raw) {
                                 r = context[0].dataset._raw;
@@ -515,7 +515,7 @@ export function renderLiqScatterPlot() {
                             } else if (context[0] && context[0].raw) {
                                 r = context[0].raw;
                             }
-                            
+
                             if (!r || !r.coin) {
                                 // Fallback: try to get from dataset label
                                 if (context[0] && context[0].dataset && context[0].dataset.label) {
@@ -523,7 +523,9 @@ export function renderLiqScatterPlot() {
                                 }
                                 return 'Unknown';
                             }
-                            return `${r.coin} ${r.side === 'long' ? '▲' : '▼'}`;
+                            const meta = getWhaleMeta()[r.address] || {};
+                            const nameStr = meta.displayName ? ` (${meta.displayName})` : '';
+                            return `${r.coin} ${r.side === 'long' ? '▲' : '▼'}${nameStr}`;
                         },
                         titleColor: function (context) {
                             return context[0].dataset.borderColor;

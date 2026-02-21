@@ -33,11 +33,158 @@
     <link rel="stylesheet" href="css/utilities.css">
     <link rel="stylesheet" href="css/animations.css">
     <link rel="stylesheet" href="css/mobile.css">
+    <style>
+        .agg-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+            table-layout: auto;
+            text-align: right;
+        }
+
+        .agg-table th,
+        .agg-table td {
+            padding: 6px 8px;
+            border-bottom: 1px solid var(--border-color);
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .agg-table th {
+            background: var(--header-bg);
+            color: #9ca3af;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .agg-table td {
+            vertical-align: middle;
+        }
+
+        .agg-table tr:hover {
+            background: rgba(255, 255, 255, 0.05) !important;
+        }
+
+        .col-agg-range {
+            width: 90px;
+        }
+
+        .col-agg-qty {
+            width: 60px;
+            text-align: center;
+        }
+
+        .col-agg-val {
+            width: 100px;
+        }
+
+        .col-agg-dom {
+            width: 90px;
+            text-align: center;
+        }
+
+        .col-agg-pct {
+            width: 70px;
+            text-align: center;
+        }
+
+        .col-agg-int {
+            width: 110px;
+            text-align: center;
+        }
+
+        .col-agg-zone {
+            width: 110px;
+            text-align: center;
+        }
+
+        .col-agg-assets {
+            width: auto;
+            text-align: left;
+        }
+
+        /* Zen Mode Styles */
+        body.zen-mode .header,
+        body.zen-mode .controls,
+        body.zen-mode .progress-bar,
+        body.zen-mode .stats-row {
+            display: none !important;
+        }
+
+        body.zen-mode .section-wrapper {
+            border-top: none;
+        }
+
+        .zen-toggle-floating {
+            display: none;
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            z-index: 2000;
+            background: var(--accent);
+            color: #000;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 30px;
+            font-weight: 700;
+            font-size: 13px;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            transition: all 0.2s;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .zen-toggle-floating:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 24px rgba(0, 0, 0, 0.6);
+            filter: brightness(1.1);
+        }
+
+        body.zen-mode .zen-toggle-floating {
+            display: flex;
+        }
+
+        .btn-zen {
+            background: rgba(156, 163, 175, 0.1);
+            border: 1px solid rgba(156, 163, 175, 0.2);
+            color: #9ca3af;
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-zen:hover {
+            background: rgba(156, 163, 175, 0.2);
+            color: #fff;
+        }
+
+        .btn-zen.active {
+            background: var(--accent);
+            color: #000;
+            border-color: var(--accent);
+        }
+    </style>
 </head>
 
 <body>
 
-    <!-- Splash Screen -->
+    <!-- Floating Exit Zen Button -->
+    <button class="zen-toggle-floating" id="exitZenBtn">
+        <span>Exit Zen Mode 🪟</span>
+    </button>
+
+    <!-- App Scripts -->
     <div class="splash-screen" id="splashScreen">
         <div class="splash-screen-content">
             <div class="splash-screen-logo">🐋</div>
@@ -79,6 +226,9 @@
                 </svg>
                 Settings
             </button>
+            <button class="btn-zen" id="zenToggleHeader" title="Zen Mode (Área Inteira)">
+                <span>🪟 Zen</span>
+            </button>
             <button class="menu-toggle" id="menuToggle" aria-label="Menu">☰</button>
             <div class="status-badge">
                 <div class="dot" id="dot"></div>
@@ -111,6 +261,16 @@
                             class="js-price-interval-val">3</span>s</label>
                     <input type="number" id="priceIntervalRangeDesktop" class="js-price-interval-range" min="1" max="30"
                         value="3" style="width: 80px">
+                </div>
+                <div class="ctrl">
+                    <label title="Intervalo de preço BTC para agregar">Intervalo BTC ($)</label>
+                    <input type="number" id="aggIntervalDrawer" class="js-agg-interval" value="50" min="10" step="10"
+                        title="Tamanho da faixa de agregação em dólares para o preço do BTC">
+                </div>
+                <div class="ctrl" style="flex-direction: row; justify-content: space-between; align-items: center;">
+                    <label>Zen Mode</label>
+                    <input type="checkbox" id="zenToggleDrawer" class="js-zen-toggle"
+                        style="width: 20px; min-height: 20px;">
                 </div>
                 <div class="ctrl">
                     <label>Sort PnL window</label>
@@ -263,6 +423,11 @@
                     <input type="number" id="minBtcVolumeDesktop" class="js-min-btc-volume" value="0" min="0" step="0.1"
                         style="width:80px" title="Volume BTC mínimo para destacar carteiras com estrela">
                 </div>
+                <div class="ctrl">
+                    <label title="Intervalo de preço BTC para agregar">Intervalo BTC ($)</label>
+                    <input type="number" id="aggIntervalDesktop" class="js-agg-interval" value="50" min="10" step="10"
+                        style="width:80px" title="Tamanho da faixa de agregação em dólares para o preço do BTC">
+                </div>
             </div>
         </div>
 
@@ -348,6 +513,55 @@
             <div id="liq-chart-section">
                 <canvas id="liqChart" style="width: 100%; height: 100%;"></canvas>
                 <div class="chart-resizer">
+                    <div class="chart-resizer-handle"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Collapsible Aggregation Section -->
+    <div class="section-wrapper" id="aggSectionWrapper">
+        <div class="section-header js-collapse-toggle" data-target="aggSectionContent">
+            <h2 class="section-title">TODAS AS CRIPTOS — FAIXAS BTC DE $50</h2>
+            <svg class="chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+        </div>
+        <div class="section-content" id="aggSectionContent">
+            <div class="agg-stats-bar" id="aggStatsBar"
+                style="display:flex; gap:12px; padding:8px 16px; background:var(--panel-bg); border-bottom:1px solid var(--border-color); font-size:12px; flex-wrap:wrap; align-items:center;">
+                <!-- Filled by JS -->
+            </div>
+            <div id="agg-table-section" style="position:relative;">
+                <div class="table-wrap" style="max-height: 450px; overflow-y: auto;">
+                    <table class="agg-table" id="aggTable">
+                        <thead>
+                            <tr>
+                                <th class="col-agg-range">Faixa De ($)</th>
+                                <th class="col-agg-range">Faixa Até ($)</th>
+                                <th class="col-agg-qty">Qtd Long</th>
+                                <th class="col-agg-val">Notional Long</th>
+                                <th class="col-agg-qty">Qtd Short</th>
+                                <th class="col-agg-val">Notional Short</th>
+                                <th class="col-agg-val">Total Notional</th>
+                                <th class="col-agg-dom">Dominancia</th>
+                                <th class="col-agg-pct">% Dom</th>
+                                <th class="col-agg-int">Intensidade</th>
+                                <th class="col-agg-zone">Tipo de Zona</th>
+                                <th class="col-agg-assets">Ativos Long</th>
+                                <th class="col-agg-assets">Ativos Short</th>
+                            </tr>
+                        </thead>
+                        <tbody id="aggTableBody">
+                            <tr>
+                                <td colspan="13" class="empty-cell">Carregando...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <!-- Resizer for the table height -->
+                <div class="chart-resizer" style="bottom:-1px;">
                     <div class="chart-resizer-handle"></div>
                 </div>
             </div>

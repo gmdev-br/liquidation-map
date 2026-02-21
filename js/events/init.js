@@ -6,7 +6,7 @@ console.log('init.js loaded (v2)');
 
 import {
     getShowSymbols, getRankingLimit, getColorMaxLev, getChartHighLevSplit,
-    getBubbleScale, getAggregationFactor, getDecimalPlaces, setAllRows, setActiveWindow, getActiveWindow, getChartMode
+    getBubbleScale, getAggregationFactor, getDecimalPlaces, setAllRows, setActiveWindow, getActiveWindow, getChartMode, getIsZenMode
 } from '../state.js';
 import { loadTableData } from '../storage/data.js';
 import { chartPlugins, chartOptions, chartMechanics } from '../charts/config.js';
@@ -14,7 +14,7 @@ import { saveSettings, loadSettings } from '../storage/settings.js';
 import { updateRankingPanel, renderQuotesPanel, removeCoin as removeCoinFn, handlePriceModeClick, updatePriceModeUI } from '../ui/panels.js';
 import { renderScatterPlot, getScatterChart } from '../charts/scatter.js';
 import { renderLiqScatterPlot, getLiqChartInstance } from '../charts/liquidation.js';
-import { updateStats, renderTable } from '../ui/table.js';
+import { updateStats, renderTable, renderTableImmediate } from '../ui/table.js';
 import { startScan, stopScan, togglePause, finishScan } from '../api/leaderboard.js';
 import { updateCoinFilter, cbOpen, openCombobox, cbSelect as cbSelectFn, selectCoin as selectCoinFn, cbInit, setupClickOutsideHandler } from '../ui/combobox.js';
 import { saveTableData } from '../storage/data.js';
@@ -25,7 +25,8 @@ import {
     updateBubbleSize, updateBubbleOpacity, updateLineThickness, updateAggregation, setChartModeHandler, updateChartHeight,
     updateLiqChartHeight, onCurrencyChange, openColumnCombobox, closeColumnComboboxDelayed,
     renderColumnDropdown as renderColumnDropdownFn, toggleColumn as toggleColumnFn, showAllColumns as showAllColumnsFn, hideAllColumns as hideAllColumnsFn, updateColumnSelectDisplay, applyColumnOrder,
-    applyColumnWidths, applyColumnVisibility, toggleShowSymbols, updatePriceInterval, updateDecimalPlaces, updateFontSize, updateFontSizeKnown, updateLeverageColors, updateGridSpacing, updateMinBtcVolume
+    applyColumnWidths, applyColumnVisibility, toggleShowSymbols, updatePriceInterval, updateDecimalPlaces, updateFontSize, updateFontSizeKnown, updateLeverageColors, updateGridSpacing, updateMinBtcVolume, updateAggInterval, updateAggTableHeight,
+    toggleZenMode
 } from './handlers.js';
 import { initColumnWidthControl, applyColumnWidth } from '../ui/columnWidth.js';
 import { setWindow, setStatus, setProgress } from '../ui/status.js';
@@ -414,11 +415,19 @@ function setupEventListeners() {
         });
     });
 
-    // Aggregation - attach to both mobile and desktop
+    // Aggregation mode - attach to both mobile and desktop
     const aggregationRanges = document.querySelectorAll('.js-aggregation-range');
     aggregationRanges.forEach(range => {
         range.addEventListener('input', (e) => {
             updateAggregation(e.target.value);
+        });
+    });
+
+    // Aggregation Table Interval - attach to both mobile and desktop
+    const aggIntervalInputs = document.querySelectorAll('.js-agg-interval');
+    aggIntervalInputs.forEach(input => {
+        input.addEventListener('input', (e) => {
+            updateAggInterval(e.target.value);
         });
     });
 
@@ -488,6 +497,11 @@ function setupEventListeners() {
     const liqChartSection = document.getElementById('liq-chart-section');
     if (liqChartSection) {
         setupResizable(liqChartSection, updateLiqChartHeight);
+    }
+
+    const aggTableSection = document.getElementById('agg-table-section');
+    if (aggTableSection) {
+        setupResizable(aggTableSection, updateAggTableHeight);
     }
 
     // Grid spacing control - attach to both mobile and desktop
@@ -601,6 +615,22 @@ function setupEventListeners() {
     const coinSearch = document.getElementById('coinSearch');
     if (coinSearch) {
         coinSearch.addEventListener('click', openCombobox);
+    }
+
+    // Zen Mode toggles
+    const zenToggleHeader = document.getElementById('zenToggleHeader');
+    if (zenToggleHeader) {
+        zenToggleHeader.addEventListener('click', toggleZenMode);
+    }
+
+    const zenToggleDrawer = document.getElementById('zenToggleDrawer');
+    if (zenToggleDrawer) {
+        zenToggleDrawer.addEventListener('change', toggleZenMode);
+    }
+
+    const exitZenBtn = document.getElementById('exitZenBtn');
+    if (exitZenBtn) {
+        exitZenBtn.addEventListener('click', toggleZenMode);
     }
 
     // Make cbSelect, selectCoin, and toggleColumn globally accessible for inline onmousedown handlers
@@ -731,7 +761,26 @@ async function loadInitialState() {
     });
 
     console.log('loadInitialState: Rendering table...');
-    renderTable();
+    renderTableImmediate(); // Use immediate render to bypass debounce on page load
+
+    // Safety net: loadSettings triggers async onCurrencyChange which may call renderTable
+    // and reset the filter cache with a different cache key, causing a blank table.
+    // After 350ms, all async effects from loadSettings will have settled, so we force a final render.
+    setTimeout(() => {
+        console.log('loadInitialState: Safety net render after async effects...');
+        renderTableImmediate();
+    }, 350);
+
+    // Apply initial Zen Mode state
+    if (getIsZenMode()) {
+        document.body.classList.add('zen-mode');
+        // Update toggles UI
+        const zenToggles = document.querySelectorAll('.js-zen-toggle');
+        zenToggles.forEach(t => {
+            if (t.type === 'checkbox') t.checked = true;
+            else t.classList.add('active');
+        });
+    }
 
     // Apply column width after table is rendered
     setTimeout(applyColumnWidthAfterRender, 100);

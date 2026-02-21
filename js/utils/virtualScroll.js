@@ -47,7 +47,7 @@ export class VirtualScroll {
         const tableContainer = this.tbody.closest('.table-wrap');
         const scrollTop = tableContainer ? tableContainer.scrollTop : 0;
         this.scrollTop = scrollTop;
-        
+
         const oldStart = this.visibleStart;
         const oldEnd = this.visibleEnd;
 
@@ -60,7 +60,9 @@ export class VirtualScroll {
     }
 
     updateVisibleRange() {
-        const containerHeight = this.tbody.closest('.table-wrap')?.offsetHeight || 0;
+        const containerEl = this.tbody.closest('.table-wrap');
+        // Use a fallback height (800px ≈ 20 rows) when the container hasn't been laid out yet
+        const containerHeight = (containerEl?.offsetHeight) || 800;
         const startRow = Math.max(0, Math.floor(this.scrollTop / this.rowHeight) - this.bufferSize);
         const endRow = Math.min(
             this.data.length,
@@ -76,6 +78,11 @@ export class VirtualScroll {
         this.totalHeight = data.length * this.rowHeight;
         this.updateVisibleRange();
         this.render();
+        // Re-render after layout is complete in case containerHeight was 0 initially
+        requestAnimationFrame(() => {
+            this.updateVisibleRange();
+            this.render();
+        });
     }
 
     render() {

@@ -5,11 +5,12 @@
 import {
     getSortKey, getSortDir, getShowSymbols, getChartMode, getBubbleScale, getBubbleOpacity, getLineThickness,
     getAggregationFactor, getSelectedCoins, getPriceMode, getPriceUpdateInterval, getActiveWindow,
-    getVisibleColumns, getColumnOrder, getRankingLimit, getColorMaxLev,
+    getColumnOrder, getVisibleColumns, getRankingLimit, getColorMaxLev,
     getChartHighLevSplit, getChartHeight, getLiqChartHeight, getSavedScatterState,
     getSavedLiqState, getColumnWidths, getColumnWidth, getActiveCurrency, getActiveEntryCurrency, getDecimalPlaces, getLeverageColors, getFontSize, getFontSizeKnown, getGridSpacing, getMinBtcVolume,
+    getAggInterval, getAggTableHeight, getIsZenMode, getLastSeenAccountValues,
     setSortKey, setSortDir, setSavedScatterState, setSavedLiqState,
-    setColumnOrder, setVisibleColumns, setSelectedCoins, setRankingLimit, setColorMaxLev, setChartHighLevSplit, setChartMode, setBubbleScale, setBubbleOpacity, setLineThickness, setAggregationFactor, setPriceMode, setShowSymbols, setPriceUpdateInterval, setDecimalPlaces, setFontSize, setFontSizeKnown, setLeverageColors, setColumnWidth, setGridSpacing, setMinBtcVolume
+    setColumnOrder, setVisibleColumns, setSelectedCoins, setRankingLimit, setColorMaxLev, setChartHighLevSplit, setChartMode, setBubbleScale, setBubbleOpacity, setLineThickness, setAggregationFactor, setPriceMode, setShowSymbols, setPriceUpdateInterval, setDecimalPlaces, setFontSize, setFontSizeKnown, setLeverageColors, setColumnWidth, setGridSpacing, setMinBtcVolume, setAggInterval, setAggTableHeight, setIsZenMode, setLastSeenAccountValues
 } from '../state.js';
 import { COLUMN_DEFS } from '../config.js';
 import { cbSetValue, updateCoinSearchLabel } from '../ui/combobox.js';
@@ -93,7 +94,11 @@ export function saveSettings(getChartState = null, savedScatterState = null, sav
         leverageColors: getLeverageColors(),
         columnWidth: getColumnWidth(),
         gridSpacing: getGridSpacing(),
-        minBtcVolume: getMinBtcVolume()
+        minBtcVolume: getMinBtcVolume(),
+        aggInterval: getAggInterval(),
+        aggTableHeight: getAggTableHeight(),
+        isZenMode: getIsZenMode(),
+        lastSeenAccountValues: getLastSeenAccountValues()
     };
 
     console.log('Saving currency settings:', {
@@ -417,5 +422,25 @@ export function loadSettings() {
         setMinBtcVolume(s.minBtcVolume);
         const minBtcVolumeEls = document.querySelectorAll('.js-min-btc-volume');
         minBtcVolumeEls.forEach(el => el.value = s.minBtcVolume);
+    }
+    if (s.aggInterval !== undefined) {
+        setAggInterval(s.aggInterval);
+        const aggIntervalEls = document.querySelectorAll('.js-agg-interval');
+        aggIntervalEls.forEach(el => el.value = s.aggInterval);
+    }
+    if (s.aggTableHeight !== undefined) {
+        setAggTableHeight(s.aggTableHeight);
+        const section = document.getElementById('aggSectionContent');
+        if (section) {
+            const wrap = section.querySelector('.table-wrap');
+            if (wrap) wrap.style.maxHeight = s.aggTableHeight + 'px';
+        }
+    }
+    if (s.isZenMode !== undefined) {
+        setIsZenMode(s.isZenMode);
+        // We will trigger the UI update for Zen Mode in init.js after settings are loaded
+    }
+    if (s.lastSeenAccountValues) {
+        setLastSeenAccountValues(s.lastSeenAccountValues);
     }
 }

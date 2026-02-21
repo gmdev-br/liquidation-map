@@ -6,6 +6,7 @@
 let whaleList = [];       // from leaderboard
 let allRows = [];         // flat: one row per position
 let displayedRows = [];   // after filters
+let whaleMeta = {};       // { address: { displayName, accountValue, windowPerformances } }
 let lastSeenAccountValues = {}; // for Delta Scanning
 
 // Column state
@@ -53,6 +54,8 @@ let savedScatterState = null;
 let savedLiqState = null;
 let gridSpacing = 500; // Grid spacing in px
 let minBtcVolume = 0; // Volume BTC minimum for highlighting
+let aggInterval = 50; // BTC price interval for aggregation (e.g. 50, 100)
+let aggTableHeight = 450; // default height for the aggregation table container
 
 // Custom colors for leverage categories
 let leverageColors = {
@@ -80,6 +83,7 @@ let maxConcurrency = 8;
 // UI state
 let renderPending = false;
 let lastSaveTime = 0;
+let isZenMode = false;
 
 // Getters
 export const getState = () => ({
@@ -122,7 +126,11 @@ export const getState = () => ({
     leverageColors,
     columnWidth,
     minBtcVolume,
-    lastSeenAccountValues
+    aggInterval,
+    aggTableHeight,
+    lastSeenAccountValues,
+    whaleMeta,
+    isZenMode
 });
 
 // Setters
@@ -170,7 +178,11 @@ export const setState = (updates) => {
         columnWidth,
         gridSpacing,
         minBtcVolume,
-        lastSeenAccountValues
+        aggInterval,
+        aggTableHeight,
+        lastSeenAccountValues,
+        whaleMeta,
+        isZenMode
     }, updates);
 };
 
@@ -216,6 +228,10 @@ export const setLastSaveTime = (value) => { lastSaveTime = value; };
 export const setLeverageColors = (value) => { leverageColors = value; };
 export const setGridSpacing = (value) => { gridSpacing = value; };
 export const setMinBtcVolume = (value) => { minBtcVolume = value; };
+export const setAggInterval = (value) => { aggInterval = value; };
+export const setAggTableHeight = (value) => { aggTableHeight = value; };
+export const setIsZenMode = (value) => { isZenMode = value; };
+export const setWhaleMeta = (value) => { whaleMeta = value; };
 export const setLastSeenAccountValues = (value) => { lastSeenAccountValues = value; };
 
 // Getters for common state access
@@ -260,6 +276,10 @@ export const getLeverageColors = () => leverageColors;
 export const getColumnWidth = () => columnWidth;
 export const getGridSpacing = () => gridSpacing;
 export const getMinBtcVolume = () => minBtcVolume;
+export const getAggInterval = () => aggInterval;
+export const getAggTableHeight = () => aggTableHeight;
+export const getIsZenMode = () => isZenMode;
+export const getWhaleMeta = () => whaleMeta;
 export const getLastSeenAccountValues = () => lastSeenAccountValues;
 export const setPriceMode = (mode) => {
     priceMode = mode;

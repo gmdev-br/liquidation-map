@@ -21,7 +21,7 @@ import {
     getRankingLimit, getColorMaxLev, getChartHighLevSplit, getChartHeight,
     getLiqChartHeight, getActiveWindow, setColumnOrder, setVisibleColumns,
     getColumnOrder, getVisibleColumns, setPriceUpdateInterval, setActiveCurrency,
-    setActiveEntryCurrency, setDecimalPlaces, setFontSize, setFontSizeKnown, setLeverageColors, setGridSpacing, setMinBtcVolume, getMinBtcVolume
+    setActiveEntryCurrency, setDecimalPlaces, setFontSize, setFontSizeKnown, setLeverageColors, setGridSpacing, setMinBtcVolume, getMinBtcVolume, setAggInterval, setAggTableHeight, setIsZenMode, getIsZenMode
 } from '../state.js';
 import { renderTable, updateStats } from '../ui/table.js';
 import { renderQuotesPanel, updateRankingPanel } from '../ui/panels.js';
@@ -245,6 +245,17 @@ export function updateMinBtcVolume(val) {
     }
 }
 
+export function updateAggInterval(val) {
+    const v = parseInt(val, 10);
+    if (!isNaN(v) && v >= 10) {
+        setAggInterval(v);
+        syncControls(['.js-agg-interval'], v);
+        saveSettings();
+        // Table depends on interval
+        renderTable();
+    }
+}
+
 export function setChartModeHandler(mode) {
     setChartMode(mode);
     saveSettings();
@@ -296,6 +307,36 @@ export function updateLiqChartHeight(height) {
     if (section) {
         section.style.height = height + 'px';
     }
+}
+
+export function updateAggTableHeight(height) {
+    setAggTableHeight(height);
+    saveSettings();
+    const section = document.getElementById('aggSectionContent');
+    if (section) {
+        const wrap = section.querySelector('.table-wrap');
+        if (wrap) wrap.style.maxHeight = height + 'px';
+    }
+}
+
+export function toggleZenMode() {
+    const isZen = !getIsZenMode();
+    setIsZenMode(isZen);
+
+    if (isZen) {
+        document.body.classList.add('zen-mode');
+    } else {
+        document.body.classList.remove('zen-mode');
+    }
+
+    // Update toggles UI if they exist (mobile/drawer)
+    const zenToggles = document.querySelectorAll('.js-zen-toggle');
+    zenToggles.forEach(t => {
+        if (t.type === 'checkbox') t.checked = isZen;
+        else t.classList.toggle('active', isZen);
+    });
+
+    saveSettings();
 }
 
 export function onCurrencyChange() {
