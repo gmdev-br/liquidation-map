@@ -12,6 +12,8 @@ import { streamPositions } from './hyperliquid.js';
 export async function startScan(callbacks) {
     const { setStatus, setProgress, fetchAllMids, updateStats, updateCoinFilter, renderTable, saveTableData, finishScan, setLastSaveTime, setRenderPending } = callbacks;
     const minVal = parseFloat(document.getElementById('minValue').value) || 2500000;
+    const scanStartTime = Date.now();
+    
     document.getElementById('scanBtn').disabled = true;
     document.getElementById('pauseBtn').style.display = 'inline-block';
     document.getElementById('pauseBtn').textContent = '⏸ Pause';
@@ -32,6 +34,9 @@ export async function startScan(callbacks) {
         const lbData = await lbResp.json();
         const rows = lbData.leaderboardRows || [];
 
+        setStatus(`Found ${rows.length} whales. Validating data…`, 'scanning');
+        setProgress(10);
+
         // Filter whales by account value with validation
         const whaleList = rows
             .filter(r => {
@@ -47,25 +52,64 @@ export async function startScan(callbacks) {
                 return true;
             })
             .sort((a, b) => parseFloat(b.accountValue) - parseFloat(a.accountValue));
+        
         setWhaleList(whaleList);
-
         setProgress(15);
+        
         const fxRates = getFxRates();
         const activeCurrency = getActiveCurrency();
         const fxReady = getFxReady();
         const fxStatus = fxReady ? `FX: 1 USD = ${(fxRates[activeCurrency] ?? 1).toFixed(2)} ${activeCurrency}` : '';
         setStatus(`Found ${whaleList.length} whales. Loading positions… ${fxStatus}`, 'scanning');
 
-        // Start the concurrency-limited streaming loader
+        // Start the concurrency-limited streaming loader with enhanced progress tracking
         setScanning(true);
         const maxConcurrency = getMaxConcurrency();
-        await streamPositions(whaleList, minVal, maxConcurrency, callbacks);
+        
+        // Enhanced progress tracking
+        const totalWhales = whaleList.length;
+        let processedCount = 0;
+        let lastProgressUpdate = Date.now();
+        
+        const enhancedCallbacks = {
+            ...callbacks,
+            // Add progress tracking to existing callbacks
+            updateStats: (showSymbols, allRows) => {
+                processedCount++;
+                const now = Date.now();
+                
+                // Update progress every 2 seconds during scanning
+                if (now - lastProgressUpdate > 2000) {
+                    const progress = 15 + (processedCount / totalWhales) * 75; // 15% initial + 75% for processing
+                    setProgress(Math.min(progress, 95));
+                    setStatus(`Loading ${processedCount}/${totalWhales} whales… (${Math.round(progress)}%)`, 'scanning');
+                    lastProgressUpdate = now;
+                }
+                
+                // Call original updateStats
+                updateStats(showSymbols, allRows);
+            }
+        };
+        
+        await streamPositions(whaleList, minVal, maxConcurrency, enhancedCallbacks);
+        
+        // Show scan completion time
+        const scanDuration = Date.now() - scanStartTime;
+        const durationSeconds = Math.round(scanDuration / 1000);
+        console.log(`Scan completed in ${durationSeconds}s`);
 
     } catch (e) {
-        console.error(e);
-        document.getElementById('tableBody').innerHTML = `<tr><td colspan="13" class="empty-cell" style="color:var(--red)">Error: ${e.message}</td></tr>`;
-        setStatus('Error', 'error');
+        console.error('Scan error:', e);
+        document.getElementById('tableBody').innerHTML = `<tr><td colspan="13" class="empty-cell" style="color:var(--red)">
+            <div class="empty-icon">⚠️</div>
+            <div>
+                <strong>Scan Failed:</strong> ${e.message}<br>
+                <small>Please check your internet connection and try again.</small>
+            </div>
+        </td></tr>`;
+        setStatus('Scan failed', 'error');
         document.getElementById('scanBtn').disabled = false;
+        document.getElementById('pauseBtn').style.display = 'none';
     }
 }
 
@@ -81,8 +125,21 @@ export function togglePause(setStatus) {
     const isPaused = getIsPaused();
     setIsPaused(!isPaused);
     const btn = document.getElementById('pauseBtn');
-    btn.textContent = !isPaused ? '▶ Continue' : '⏸ Pause';
-    setStatus(!isPaused ? 'Paused' : 'Resuming...', 'scanning');
+    const scanBtn = document.getElementById('scanBtn');
+    
+    if (!isPaused) {
+        // Resuming scan
+        btn.textContent = '⏸ Pause';
+        btn.style.background = '';
+        setStatus('Resuming scan...', 'scanning');
+        scanBtn.disabled = true;
+    } else {
+        // Pausing scan
+        btn.textContent = '▶ Continue';
+        btn.style.background = 'rgba(255, 193, 7, 0.2)';
+        setStatus('Scan paused', 'paused');
+        scanBtn.disabled = false;
+    }
 }
 
 export function finishScan(setStatus, setProgress) {
