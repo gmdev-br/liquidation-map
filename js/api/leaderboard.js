@@ -146,6 +146,10 @@ export function finishScan(setStatus, setProgress) {
     setProgress(100);
     const scanning = getScanning();
     const stoppedEarly = !scanning;
+    
+    // Ensure scanning state is reset
+    setScanning(false);
+
     const label = stoppedEarly ? '⏹ Stopped' : '✓ Done';
     setStatus(label, 'done');
     document.getElementById('scanBtn').disabled = false;

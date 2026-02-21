@@ -50,7 +50,7 @@ export function toggleShowSymbols() {
 export function updateSpeed(val) {
     const v = parseInt(val, 10);
     if (v >= 1 && v <= 20) {
-        syncControls(['#speedVal'], v);
+        syncControls(['.js-speed-val', '.js-speed-range'], v);
         saveSettings();
     }
 }
@@ -58,7 +58,8 @@ export function updateSpeed(val) {
 export function updatePriceInterval(val) {
     const v = parseInt(val, 10);
     if (v >= 1 && v <= 30) {
-        syncControls(['#priceIntervalVal'], v + 's');
+        syncControls(['.js-price-interval-val'], v + 's');
+        syncControls(['.js-price-interval-range'], v);
         setPriceUpdateInterval(v * 1000); // Convert seconds to milliseconds
         saveSettings();
         // Restart price ticker with new interval
@@ -68,7 +69,7 @@ export function updatePriceInterval(val) {
 }
 
 export function updateRankingLimit(e) {
-    const rankingLimits = document.querySelectorAll('#rankingLimit');
+    const rankingLimits = document.querySelectorAll('.js-ranking-limit');
     // Use event target value if available, otherwise fallback to first element
     const val = (e?.target?.value) || rankingLimits[0]?.value || 10;
     setRankingLimit(parseInt(val, 10));
@@ -80,7 +81,7 @@ export function updateRankingLimit(e) {
 }
 
 export function updateColorSettings(e) {
-    const colorMaxLevs = document.querySelectorAll('#colorMaxLev');
+    const colorMaxLevs = document.querySelectorAll('.js-color-max-lev');
     // Use event target value if available, otherwise fallback to first element
     const val = (e?.target?.value) || colorMaxLevs[0]?.value || 50;
     setColorMaxLev(parseInt(val, 10));
@@ -92,7 +93,7 @@ export function updateColorSettings(e) {
 }
 
 export function updateChartFilters(e) {
-    const chartHighLevSplits = document.querySelectorAll('#chartHighLevSplit');
+    const chartHighLevSplits = document.querySelectorAll('.js-chart-high-lev-split');
     // Use event target value if available, otherwise fallback to first element
     const val = (e?.target?.value) || chartHighLevSplits[0]?.value || 50;
     setChartHighLevSplit(parseInt(val, 10));
@@ -105,7 +106,7 @@ export function updateChartFilters(e) {
 
 export function updateBubbleSize(val) {
     setBubbleScale(parseFloat(val));
-    syncControls(['#bubbleSizeVal'], val);
+    syncControls(['.js-bubble-size-val', '.js-bubble-size-range'], val);
     saveSettings();
     // Trigger chart update by re-rendering table
     renderTable();
@@ -113,7 +114,7 @@ export function updateBubbleSize(val) {
 
 export function updateBubbleOpacity(val) {
     setBubbleOpacity(parseFloat(val));
-    syncControls(['#bubbleOpacityVal'], val);
+    syncControls(['.js-bubble-opacity-val', '.js-bubble-opacity-range'], val);
     saveSettings();
     // Trigger chart update by re-rendering table
     renderTable();
@@ -121,7 +122,7 @@ export function updateBubbleOpacity(val) {
 
 export function updateLineThickness(val) {
     setLineThickness(parseInt(val, 10));
-    syncControls(['#lineThicknessVal'], val);
+    syncControls(['.js-line-thickness-val', '.js-line-thickness-range'], val);
     saveSettings();
     // Trigger chart update by re-rendering table
     renderTable();
@@ -129,7 +130,7 @@ export function updateLineThickness(val) {
 
 export function updateAggregation(val) {
     setAggregationFactor(parseInt(val, 10));
-    syncControls(['#aggregationVal'], val);
+    syncControls(['.js-aggregation-val', '.js-aggregation-range'], val);
     saveSettings();
     // Trigger chart update by re-rendering table
     renderTable();
@@ -139,7 +140,7 @@ export function updateDecimalPlaces(val) {
     const v = parseInt(val, 10);
     if (v >= 0 && v <= 8) {
         setDecimalPlaces(v);
-        syncControls(['#decimalPlacesVal'], v);
+        syncControls(['.js-decimal-places-val', '.js-decimal-places-range'], v);
         saveSettings();
         // Trigger table re-render to apply new formatting
         renderTable();
@@ -151,7 +152,7 @@ export function updateFontSize(val) {
     console.log('updateFontSize called with:', val, 'parsed:', v);
     if (v >= 10 && v <= 20) {
         setFontSize(v);
-        syncControls(['#fontSizeVal', '#fontSizeValDesktop'], v);
+        syncControls(['.js-font-size-val', '.js-font-size-range'], v);
         saveSettings();
         // Trigger table re-render to apply new font size
         console.log('Calling renderTable for fontSize update');
@@ -164,7 +165,7 @@ export function updateFontSizeKnown(val) {
     console.log('updateFontSizeKnown called with:', val, 'parsed:', v);
     if (v >= 10 && v <= 24) {
         setFontSizeKnown(v);
-        syncControls(['#fontSizeKnownVal', '#fontSizeKnownValDesktop'], v);
+        syncControls(['.js-font-size-known-val', '.js-font-size-known-range'], v);
         saveSettings();
         // Trigger table re-render to apply new font size
         console.log('Calling renderTable for fontSizeKnown update');
@@ -176,11 +177,23 @@ export function updateLeverageColors(e) {
     // Get values from event target if available to handle duplicate IDs
     const targetId = e?.target?.id;
     const targetValue = e?.target?.value;
+    const targetClass = e?.target?.className; // Check class too if needed
 
-    const longLow = (targetId === 'colorLongLow' ? targetValue : document.querySelector('#colorLongLow')?.value) || '#22c55e';
-    const longHigh = (targetId === 'colorLongHigh' ? targetValue : document.querySelector('#colorLongHigh')?.value) || '#16a34a';
-    const shortLow = (targetId === 'colorShortLow' ? targetValue : document.querySelector('#colorShortLow')?.value) || '#ef4444';
-    const shortHigh = (targetId === 'colorShortHigh' ? targetValue : document.querySelector('#colorShortHigh')?.value) || '#dc2626';
+    // Helper to get value from any of the inputs for a specific color
+    const getValue = (selector, defaultVal) => {
+        // If the event target matches the selector (by class), use its value
+        // Note: selector passed here is like '.js-color-long-low'
+        if (e?.target && e.target.matches(selector)) {
+            return e.target.value;
+        }
+        // Otherwise try to find one
+        return document.querySelector(selector)?.value || defaultVal;
+    };
+
+    const longLow = getValue('.js-color-long-low', '#22c55e');
+    const longHigh = getValue('.js-color-long-high', '#16a34a');
+    const shortLow = getValue('.js-color-short-low', '#ef4444');
+    const shortHigh = getValue('.js-color-short-high', '#dc2626');
 
     setLeverageColors({
         longLow,
@@ -190,10 +203,10 @@ export function updateLeverageColors(e) {
     });
 
     // Sync all color inputs and update CSS variables
-    document.querySelectorAll('#colorLongLow').forEach(el => el.value = longLow);
-    document.querySelectorAll('#colorLongHigh').forEach(el => el.value = longHigh);
-    document.querySelectorAll('#colorShortLow').forEach(el => el.value = shortLow);
-    document.querySelectorAll('#colorShortHigh').forEach(el => el.value = shortHigh);
+    document.querySelectorAll('.js-color-long-low').forEach(el => el.value = longLow);
+    document.querySelectorAll('.js-color-long-high').forEach(el => el.value = longHigh);
+    document.querySelectorAll('.js-color-short-low').forEach(el => el.value = shortLow);
+    document.querySelectorAll('.js-color-short-high').forEach(el => el.value = shortHigh);
 
     document.documentElement.style.setProperty('--long-low-color', longLow);
     document.documentElement.style.setProperty('--long-high-color', longHigh);
@@ -210,7 +223,7 @@ export function updateGridSpacing(val) {
     if (v >= 100 && v <= 5000) {
         setGridSpacing(v);
         // Sync both mobile and desktop controls
-        syncControls(['#gridSpacingVal', '#gridSpacingRange'], v);
+        syncControls(['.js-grid-spacing-val', '.js-grid-spacing-range'], v);
         saveSettings();
         // Force chart redraw to update grid
         const scatterChart = window.getScatterChart ? window.getScatterChart() : null;
@@ -225,7 +238,7 @@ export function updateMinBtcVolume(val) {
     if (!isNaN(v) && v >= 0) {
         setMinBtcVolume(v);
         // Sync both mobile and desktop controls
-        syncControls(['#minBtcVolume'], v);
+        syncControls(['.js-min-btc-volume'], v);
         saveSettings();
         // Trigger table re-render to apply new highlighting
         renderTable();
@@ -242,10 +255,10 @@ export function setChartModeHandler(mode) {
     });
 
     // Update control visibility - handle duplicate IDs (desktop/mobile)
-    const bubbleCtrls = document.querySelectorAll('#bubbleSizeCtrl');
-    const bubbleOpacityCtrls = document.querySelectorAll('#bubbleOpacityCtrl');
-    const lineThicknessCtrls = document.querySelectorAll('#lineThicknessCtrl');
-    const aggCtrls = document.querySelectorAll('#aggregationCtrl');
+    const bubbleCtrls = document.querySelectorAll('.js-bubble-size-ctrl');
+    const bubbleOpacityCtrls = document.querySelectorAll('.js-bubble-opacity-ctrl');
+    const lineThicknessCtrls = document.querySelectorAll('.js-line-thickness-ctrl');
+    const aggCtrls = document.querySelectorAll('.js-aggregation-ctrl');
 
     bubbleCtrls.forEach(ctrl => {
         ctrl.style.display = (mode === 'scatter') ? 'block' : 'none';
@@ -324,21 +337,21 @@ export function onCurrencyChange() {
 }
 
 export function openColumnCombobox() {
-    const cbs = document.querySelectorAll('#columnCombobox');
+    const cbs = document.querySelectorAll('.js-column-combobox');
     cbs.forEach(cb => cb.classList.add('open'));
-    const display = document.querySelector('#columnSelectDisplay');
-    if (display) renderColumnDropdown(display.value);
+    const displays = document.querySelectorAll('.js-column-select-display');
+    if (displays.length > 0) renderColumnDropdown(displays[0].value);
 }
 
 export function closeColumnComboboxDelayed() {
     setTimeout(() => {
-        const cbs = document.querySelectorAll('#columnCombobox');
+        const cbs = document.querySelectorAll('.js-column-combobox');
         cbs.forEach(cb => cb.classList.remove('open'));
     }, 180);
 }
 
 export function renderColumnDropdown(query = '') {
-    const dds = document.querySelectorAll('#columnDropdown');
+    const dds = document.querySelectorAll('.js-column-dropdown');
     if (dds.length === 0) return;
 
     const columns = [
@@ -419,9 +432,10 @@ export function toggleColumn(key) {
     updateColumnSelectDisplay();
 
     // Keep dropdown open to show updated state
-    const cb = document.getElementById('columnCombobox');
-    if (cb) cb.classList.add('open');
-    renderColumnDropdown(document.getElementById('columnSelectDisplay').value);
+    const cbs = document.querySelectorAll('.js-column-combobox');
+    cbs.forEach(cb => cb.classList.add('open'));
+    const display = document.querySelector('.js-column-select-display');
+    if (display) renderColumnDropdown(display.value);
 }
 
 export function showAllColumns() {
@@ -432,9 +446,10 @@ export function showAllColumns() {
     updateColumnSelectDisplay();
 
     // Keep dropdown open to show updated state
-    const cb = document.getElementById('columnCombobox');
-    if (cb) cb.classList.add('open');
-    renderColumnDropdown(document.getElementById('columnSelectDisplay').value);
+    const cbs = document.querySelectorAll('.js-column-combobox');
+    cbs.forEach(cb => cb.classList.add('open'));
+    const display = document.querySelector('.js-column-select-display');
+    if (display) renderColumnDropdown(display.value);
 }
 
 export function hideAllColumns() {
@@ -445,9 +460,10 @@ export function hideAllColumns() {
     updateColumnSelectDisplay();
 
     // Keep dropdown open to show updated state
-    const cb = document.getElementById('columnCombobox');
-    if (cb) cb.classList.add('open');
-    renderColumnDropdown(document.getElementById('columnSelectDisplay').value);
+    const cbs = document.querySelectorAll('.js-column-combobox');
+    cbs.forEach(cb => cb.classList.add('open'));
+    const display = document.querySelector('.js-column-select-display');
+    if (display) renderColumnDropdown(display.value);
 }
 
 export function updateColumnSelectDisplay() {
@@ -458,7 +474,7 @@ export function updateColumnSelectDisplay() {
         'col-unrealizedPnl', 'col-funding', 'col-liqPx', 'col-distToLiq', 'col-accountValue'
     ];
 
-    const displays = document.querySelectorAll('#columnSelectDisplay');
+    const displays = document.querySelectorAll('.js-column-select-display');
     if (!displays.length) return;
 
     if (visibleColumns.length === 0) {

@@ -210,61 +210,61 @@ export function loadSettings() {
         document.querySelectorAll('.tab[data-chart]').forEach(t => {
             t.classList.toggle('active', t.dataset.chart === s.chartMode);
         });
-        const bubbleCtrls = document.querySelectorAll('#bubbleSizeCtrl');
+        const bubbleCtrls = document.querySelectorAll('.js-bubble-size-ctrl');
         bubbleCtrls.forEach(ctrl => ctrl.style.display = (s.chartMode === 'scatter') ? 'block' : 'none');
-        const bubbleOpacityCtrls = document.querySelectorAll('#bubbleOpacityCtrl');
+        const bubbleOpacityCtrls = document.querySelectorAll('.js-bubble-opacity-ctrl');
         bubbleOpacityCtrls.forEach(ctrl => ctrl.style.display = (s.chartMode === 'scatter') ? 'block' : 'none');
-        const lineThicknessCtrls = document.querySelectorAll('#lineThicknessCtrl');
+        const lineThicknessCtrls = document.querySelectorAll('.js-line-thickness-ctrl');
         lineThicknessCtrls.forEach(ctrl => ctrl.style.display = (s.chartMode === 'lines') ? 'block' : 'none');
-        const aggCtrls = document.querySelectorAll('#aggregationCtrl');
+        const aggCtrls = document.querySelectorAll('.js-aggregation-ctrl');
         aggCtrls.forEach(ctrl => ctrl.style.display = (s.chartMode === 'column') ? 'block' : 'none');
     }
     if (s.bubbleScale) {
         setBubbleScale(s.bubbleScale);
-        const bubbleSizeVals = document.querySelectorAll('#bubbleSizeVal');
-        const bubbleSizeRanges = document.querySelectorAll('#bubbleSizeRange');
+        const bubbleSizeVals = document.querySelectorAll('.js-bubble-size-val');
+        const bubbleSizeRanges = document.querySelectorAll('.js-bubble-size-range');
         bubbleSizeVals.forEach(el => el.textContent = s.bubbleScale.toFixed(1));
         bubbleSizeRanges.forEach(el => el.value = s.bubbleScale);
     }
     if (s.bubbleOpacity) {
         setBubbleOpacity(s.bubbleOpacity);
-        const bubbleOpacityVals = document.querySelectorAll('#bubbleOpacityVal');
-        const bubbleOpacityRanges = document.querySelectorAll('#bubbleOpacityRange');
+        const bubbleOpacityVals = document.querySelectorAll('.js-bubble-opacity-val');
+        const bubbleOpacityRanges = document.querySelectorAll('.js-bubble-opacity-range');
         bubbleOpacityVals.forEach(el => el.textContent = s.bubbleOpacity.toFixed(2));
         bubbleOpacityRanges.forEach(el => el.value = s.bubbleOpacity);
     }
     if (s.lineThickness) {
         setLineThickness(s.lineThickness);
-        const lineThicknessVals = document.querySelectorAll('#lineThicknessVal');
-        const lineThicknessRanges = document.querySelectorAll('#lineThicknessRange');
+        const lineThicknessVals = document.querySelectorAll('.js-line-thickness-val');
+        const lineThicknessRanges = document.querySelectorAll('.js-line-thickness-range');
         lineThicknessVals.forEach(el => el.textContent = s.lineThickness);
         lineThicknessRanges.forEach(el => el.value = s.lineThickness);
     }
     if (s.aggregationFactor) {
         setAggregationFactor(s.aggregationFactor);
-        const aggregationVals = document.querySelectorAll('#aggregationVal');
-        const aggregationRanges = document.querySelectorAll('#aggregationRange');
+        const aggregationVals = document.querySelectorAll('.js-aggregation-val');
+        const aggregationRanges = document.querySelectorAll('.js-aggregation-range');
         aggregationVals.forEach(el => el.textContent = s.aggregationFactor);
         aggregationRanges.forEach(el => el.value = s.aggregationFactor);
     }
     if (s.decimalPlaces !== undefined) {
         setDecimalPlaces(s.decimalPlaces);
-        const decimalPlacesVals = document.querySelectorAll('#decimalPlacesVal');
-        const decimalPlacesRanges = document.querySelectorAll('#decimalPlacesRange');
+        const decimalPlacesVals = document.querySelectorAll('.js-decimal-places-val');
+        const decimalPlacesRanges = document.querySelectorAll('.js-decimal-places-range');
         decimalPlacesVals.forEach(el => el.textContent = s.decimalPlaces);
         decimalPlacesRanges.forEach(el => el.value = s.decimalPlaces);
     }
     if (s.fontSize !== undefined) {
         setFontSize(s.fontSize);
-        const fontSizeVals = document.querySelectorAll('#fontSizeVal, #fontSizeValDesktop');
-        const fontSizeRanges = document.querySelectorAll('#fontSizeRange, #fontSizeRangeDesktop');
+        const fontSizeVals = document.querySelectorAll('.js-font-size-val');
+        const fontSizeRanges = document.querySelectorAll('.js-font-size-range');
         fontSizeVals.forEach(el => el.textContent = s.fontSize);
         fontSizeRanges.forEach(el => el.value = s.fontSize);
     }
     if (s.fontSizeKnown !== undefined) {
         setFontSizeKnown(s.fontSizeKnown);
-        const fontSizeKnownVals = document.querySelectorAll('#fontSizeKnownVal, #fontSizeKnownValDesktop');
-        const fontSizeKnownRanges = document.querySelectorAll('#fontSizeKnownRange, #fontSizeKnownRangeDesktop');
+        const fontSizeKnownVals = document.querySelectorAll('.js-font-size-known-val');
+        const fontSizeKnownRanges = document.querySelectorAll('.js-font-size-known-range');
         fontSizeKnownVals.forEach(el => el.textContent = s.fontSizeKnown);
         fontSizeKnownRanges.forEach(el => el.value = s.fontSizeKnown);
     }
@@ -327,8 +327,8 @@ export function loadSettings() {
     }
     if (s.priceUpdateInterval) {
         setPriceUpdateInterval(s.priceUpdateInterval);
-        const priceIntervalVals = document.querySelectorAll('#priceIntervalVal');
-        const priceIntervalRanges = document.querySelectorAll('#priceIntervalRange');
+        const priceIntervalVals = document.querySelectorAll('.js-price-interval-val');
+        const priceIntervalRanges = document.querySelectorAll('.js-price-interval-range');
         priceIntervalVals.forEach(el => el.textContent = (s.priceUpdateInterval / 1000) + 's');
         priceIntervalRanges.forEach(el => el.value = s.priceUpdateInterval / 1000);
     }
@@ -337,17 +337,17 @@ export function loadSettings() {
         // applyColumnWidths();
     }
     if (s.rankingLimit) {
-        const rankingLimits = document.querySelectorAll('#rankingLimit');
+        const rankingLimits = document.querySelectorAll('.js-ranking-limit');
         rankingLimits.forEach(el => el.value = s.rankingLimit);
         setRankingLimit(s.rankingLimit);
     }
     if (s.colorMaxLev) {
-        const colorMaxLevs = document.querySelectorAll('#colorMaxLev');
+        const colorMaxLevs = document.querySelectorAll('.js-color-max-lev');
         colorMaxLevs.forEach(el => el.value = s.colorMaxLev);
         setColorMaxLev(s.colorMaxLev);
     }
     if (s.chartHighLevSplit !== undefined) {
-        const chartHighLevSplits = document.querySelectorAll('#chartHighLevSplit');
+        const chartHighLevSplits = document.querySelectorAll('.js-chart-high-lev-split');
         chartHighLevSplits.forEach(el => el.value = s.chartHighLevSplit);
         setChartHighLevSplit(s.chartHighLevSplit);
     }
@@ -374,10 +374,10 @@ export function loadSettings() {
     if (s.liqChartState) setSavedLiqState(s.liqChartState);
     if (s.leverageColors) {
         setLeverageColors(s.leverageColors);
-        const colorLongLow = document.querySelectorAll('#colorLongLow');
-        const colorLongHigh = document.querySelectorAll('#colorLongHigh');
-        const colorShortLow = document.querySelectorAll('#colorShortLow');
-        const colorShortHigh = document.querySelectorAll('#colorShortHigh');
+        const colorLongLow = document.querySelectorAll('.js-color-long-low');
+        const colorLongHigh = document.querySelectorAll('.js-color-long-high');
+        const colorShortLow = document.querySelectorAll('.js-color-short-low');
+        const colorShortHigh = document.querySelectorAll('.js-color-short-high');
         colorLongLow.forEach(el => el.value = s.leverageColors.longLow || '#22c55e');
         colorLongHigh.forEach(el => el.value = s.leverageColors.longHigh || '#16a34a');
         colorShortLow.forEach(el => el.value = s.leverageColors.shortLow || '#ef4444');
@@ -398,22 +398,22 @@ export function loadSettings() {
     if (s.columnWidth !== undefined) {
         setColumnWidth(s.columnWidth);
         // Sync both mobile and desktop controls
-        const columnWidthInputs = document.querySelectorAll('#columnWidthInput');
-        const columnWidthVals = document.querySelectorAll('#columnWidthVal');
+        const columnWidthInputs = document.querySelectorAll('.js-column-width-input');
+        const columnWidthVals = document.querySelectorAll('.js-column-width-val');
         columnWidthInputs.forEach(el => el.value = s.columnWidth);
         columnWidthVals.forEach(el => el.textContent = s.columnWidth);
     }
     if (s.gridSpacing !== undefined) {
         setGridSpacing(s.gridSpacing);
         // Sync both mobile and desktop controls
-        const gridSpacingRanges = document.querySelectorAll('#gridSpacingRange');
-        const gridSpacingVals = document.querySelectorAll('#gridSpacingVal');
+        const gridSpacingRanges = document.querySelectorAll('.js-grid-spacing-range');
+        const gridSpacingVals = document.querySelectorAll('.js-grid-spacing-val');
         gridSpacingRanges.forEach(el => el.value = s.gridSpacing);
         gridSpacingVals.forEach(el => el.textContent = s.gridSpacing);
     }
     if (s.minBtcVolume !== undefined) {
         setMinBtcVolume(s.minBtcVolume);
-        const minBtcVolumeEls = document.querySelectorAll('#minBtcVolume');
+        const minBtcVolumeEls = document.querySelectorAll('.js-min-btc-volume');
         minBtcVolumeEls.forEach(el => el.value = s.minBtcVolume);
     }
 }

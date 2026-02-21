@@ -2,11 +2,22 @@
 // LIQUID GLASS — Service Worker
 // ═══════════════════════════════════════════════════════════
 
-const CACHE_NAME = 'whale-watcher-v2';
+const CACHE_NAME = 'whale-watcher-v3';
 const urlsToCache = [
     '/',
     '/index.html',
-    '/css/main.css',
+    '/css/variables.css',
+    '/css/base.css',
+    '/css/layout.css',
+    '/css/components/buttons.css',
+    '/css/components/inputs.css',
+    '/css/components/badges.css',
+    '/css/components/panels.css',
+    '/css/components/tables.css',
+    '/css/components/tabs.css',
+    '/css/components/chart.css',
+    '/css/utilities.css',
+    '/css/animations.css',
     '/css/mobile.css',
     '/js/main.js',
     '/js/storage/settings.js',

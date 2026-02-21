@@ -31,14 +31,32 @@ export class VirtualScroll {
         const tableContainer = this.tbody.closest('.table-wrap');
         if (!tableContainer) return;
 
-        tableContainer.addEventListener('scroll', this.handleScroll.bind(this), { passive: true });
+        let ticking = false;
+        tableContainer.addEventListener('scroll', () => {
+            if (!ticking) {
+                window.requestAnimationFrame(() => {
+                    this.handleScroll();
+                    ticking = false;
+                });
+                ticking = true;
+            }
+        }, { passive: true });
     }
 
-    handleScroll(e) {
-        const scrollTop = e.target.scrollTop;
+    handleScroll() {
+        const tableContainer = this.tbody.closest('.table-wrap');
+        const scrollTop = tableContainer ? tableContainer.scrollTop : 0;
         this.scrollTop = scrollTop;
+        
+        const oldStart = this.visibleStart;
+        const oldEnd = this.visibleEnd;
+
         this.updateVisibleRange();
-        this.render();
+
+        // Only render if visible range changed
+        if (this.visibleStart !== oldStart || this.visibleEnd !== oldEnd) {
+            this.render();
+        }
     }
 
     updateVisibleRange() {

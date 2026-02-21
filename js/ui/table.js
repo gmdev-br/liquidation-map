@@ -5,7 +5,7 @@
 import {
     getAllRows, getDisplayedRows, getSelectedCoins, getActiveCurrency,
     getActiveEntryCurrency, getShowSymbols, getSortKey, getSortDir,
-    getVisibleColumns, getColumnOrder, setDisplayedRows, getCurrentPrices, getFxRates, getChartHighLevSplit, getFontSize, getFontSizeKnown, getDecimalPlaces, getMinBtcVolume
+    getVisibleColumns, getColumnOrder, setDisplayedRows, getCurrentPrices, getFxRates, getChartHighLevSplit, getFontSize, getFontSizeKnown, getDecimalPlaces, getMinBtcVolume, getScanning
 } from '../state.js';
 import { convertToActiveCcy } from '../utils/currency.js';
 import { fmt, fmtUSD, fmtAddr, fmtCcy } from '../utils/formatters.js';
@@ -225,7 +225,11 @@ function _renderTableInternal() {
     }
 
     setDisplayedRows(rows);
-    renderCharts(); // Update chart with filtered rows
+    
+    // Only update charts if not scanning
+    if (!getScanning()) {
+        renderCharts(); // Update chart with filtered rows
+    }
 
     // Update statistics with filtered rows
     updateStats(showSymbols, rows);

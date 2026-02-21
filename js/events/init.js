@@ -238,7 +238,7 @@ function setupEventListeners() {
     }
 
     // Speed control - attach to both mobile and desktop
-    const speedRanges = document.querySelectorAll('#speedRange');
+    const speedRanges = document.querySelectorAll('.js-speed-range');
     speedRanges.forEach(range => {
         range.addEventListener('input', (e) => {
             updateSpeed(e.target.value);
@@ -246,7 +246,7 @@ function setupEventListeners() {
     });
 
     // Price update interval control - attach to both mobile and desktop
-    const priceIntervalRanges = document.querySelectorAll('#priceIntervalRange');
+    const priceIntervalRanges = document.querySelectorAll('.js-price-interval-range');
     priceIntervalRanges.forEach(range => {
         range.addEventListener('input', (e) => {
             updatePriceInterval(e.target.value);
@@ -288,7 +288,7 @@ function setupEventListeners() {
     // Filter inputs
     const filterInputs = ['minValue', 'coinFilter', 'sideFilter', 'minLev', 'maxLev', 'minSize',
         'minSzi', 'maxSzi', 'minValueCcy', 'maxValueCcy', 'minEntryCcy', 'maxEntryCcy',
-        'minUpnl', 'maxUpnl', 'minFunding', 'levTypeFilter', 'addressFilter', 'minBtcVolume'];
+        'minUpnl', 'maxUpnl', 'minFunding', 'levTypeFilter', 'addressFilter']; // Removed minBtcVolume as it is handled separately
 
     filterInputs.forEach(id => {
         const el = document.getElementById(id);
@@ -318,24 +318,24 @@ function setupEventListeners() {
     }
 
     // Ranking limit - attach to both mobile and desktop
-    const rankingLimits = document.querySelectorAll('#rankingLimit');
+    const rankingLimits = document.querySelectorAll('.js-ranking-limit');
     rankingLimits.forEach(limit => {
         limit.addEventListener('change', updateRankingLimit);
     });
 
     // Color settings - attach to both mobile and desktop
-    const colorMaxLevs = document.querySelectorAll('#colorMaxLev');
+    const colorMaxLevs = document.querySelectorAll('.js-color-max-lev');
     colorMaxLevs.forEach(el => {
         el.addEventListener('change', updateColorSettings);
     });
 
-    const chartHighLevSplits = document.querySelectorAll('#chartHighLevSplit');
+    const chartHighLevSplits = document.querySelectorAll('.js-chart-high-lev-split');
     chartHighLevSplits.forEach(el => {
         el.addEventListener('change', updateChartFilters);
     });
 
     // Bubble size - attach to both mobile and desktop
-    const bubbleSizeRanges = document.querySelectorAll('#bubbleSizeRange');
+    const bubbleSizeRanges = document.querySelectorAll('.js-bubble-size-range');
     bubbleSizeRanges.forEach(range => {
         range.addEventListener('input', (e) => {
             updateBubbleSize(e.target.value);
@@ -343,7 +343,7 @@ function setupEventListeners() {
     });
 
     // Bubble opacity - attach to both mobile and desktop
-    const bubbleOpacityRanges = document.querySelectorAll('#bubbleOpacityRange');
+    const bubbleOpacityRanges = document.querySelectorAll('.js-bubble-opacity-range');
     bubbleOpacityRanges.forEach(range => {
         range.addEventListener('input', (e) => {
             updateBubbleOpacity(e.target.value);
@@ -351,7 +351,7 @@ function setupEventListeners() {
     });
 
     // Line thickness - attach to both mobile and desktop
-    const lineThicknessRanges = document.querySelectorAll('#lineThicknessRange');
+    const lineThicknessRanges = document.querySelectorAll('.js-line-thickness-range');
     lineThicknessRanges.forEach(range => {
         range.addEventListener('input', (e) => {
             updateLineThickness(e.target.value);
@@ -359,7 +359,7 @@ function setupEventListeners() {
     });
 
     // Aggregation - attach to both mobile and desktop
-    const aggregationRanges = document.querySelectorAll('#aggregationRange');
+    const aggregationRanges = document.querySelectorAll('.js-aggregation-range');
     aggregationRanges.forEach(range => {
         range.addEventListener('input', (e) => {
             updateAggregation(e.target.value);
@@ -367,7 +367,7 @@ function setupEventListeners() {
     });
 
     // Decimal places control - attach to both mobile and desktop
-    const decimalPlacesRanges = document.querySelectorAll('#decimalPlacesRange');
+    const decimalPlacesRanges = document.querySelectorAll('.js-decimal-places-range');
     decimalPlacesRanges.forEach(range => {
         range.addEventListener('input', (e) => {
             updateDecimalPlaces(e.target.value);
@@ -375,7 +375,7 @@ function setupEventListeners() {
     });
 
     // Font size control - attach to both mobile and desktop
-    const fontSizeRanges = document.querySelectorAll('#fontSizeRange, #fontSizeRangeDesktop');
+    const fontSizeRanges = document.querySelectorAll('.js-font-size-range');
     fontSizeRanges.forEach(range => {
         range.addEventListener('input', (e) => {
             updateFontSize(e.target.value);
@@ -389,7 +389,7 @@ function setupEventListeners() {
     });
 
     // Font size for known addresses control - attach to both mobile and desktop
-    const fontSizeKnownRanges = document.querySelectorAll('#fontSizeKnownRange, #fontSizeKnownRangeDesktop');
+    const fontSizeKnownRanges = document.querySelectorAll('.js-font-size-known-range');
     fontSizeKnownRanges.forEach(range => {
         range.addEventListener('input', (e) => {
             updateFontSizeKnown(e.target.value);
@@ -403,9 +403,14 @@ function setupEventListeners() {
     });
 
     // Leverage color inputs - attach to both mobile and desktop
-    const colorInputs = ['colorLongLow', 'colorLongHigh', 'colorShortLow', 'colorShortHigh'];
-    colorInputs.forEach(id => {
-        const elements = document.querySelectorAll(`#${id}`);
+    const colorInputs = [
+        { id: 'colorLongLow', class: 'js-color-long-low' },
+        { id: 'colorLongHigh', class: 'js-color-long-high' },
+        { id: 'colorShortLow', class: 'js-color-short-low' },
+        { id: 'colorShortHigh', class: 'js-color-short-high' }
+    ];
+    colorInputs.forEach(item => {
+        const elements = document.querySelectorAll(`.${item.class}`);
         elements.forEach(el => {
             el.addEventListener('change', updateLeverageColors);
         });
@@ -430,7 +435,7 @@ function setupEventListeners() {
     }
 
     // Grid spacing control - attach to both mobile and desktop
-    const gridSpacingRanges = document.querySelectorAll('#gridSpacingRange');
+    const gridSpacingRanges = document.querySelectorAll('.js-grid-spacing-range');
     gridSpacingRanges.forEach(range => {
         range.addEventListener('input', (e) => {
             updateGridSpacing(e.target.value);
@@ -438,7 +443,7 @@ function setupEventListeners() {
     });
 
     // Min BTC Volume control - attach to both mobile and desktop
-    const minBtcVolumeInputs = document.querySelectorAll('#minBtcVolume');
+    const minBtcVolumeInputs = document.querySelectorAll('.js-min-btc-volume');
     minBtcVolumeInputs.forEach(input => {
         input.addEventListener('input', (e) => {
             updateMinBtcVolume(e.target.value);
@@ -492,20 +497,21 @@ function setupEventListeners() {
     }
 
     // Column combobox
-    const columnSelectDisplay = document.getElementById('columnSelectDisplay');
-    if (columnSelectDisplay) {
-        columnSelectDisplay.addEventListener('focus', openColumnCombobox);
-        columnSelectDisplay.addEventListener('blur', (e) => {
+    const columnSelectDisplays = document.querySelectorAll('.js-column-select-display');
+    columnSelectDisplays.forEach(display => {
+        display.addEventListener('focus', openColumnCombobox);
+        display.addEventListener('blur', (e) => {
             // Only close if the related target is not within the combobox
-            const combobox = document.getElementById('columnCombobox');
+            // Check closest combobox wrapper
+            const combobox = display.closest('.js-column-combobox');
             if (!combobox || !combobox.contains(e.relatedTarget)) {
                 closeColumnComboboxDelayed();
             }
         });
-        columnSelectDisplay.addEventListener('input', (e) => {
+        display.addEventListener('input', (e) => {
             renderColumnDropdown(e.target.value);
         });
-    }
+    });
 
     // Generic comboboxes - click to open
     const comboboxIds = ['cb-sideFilter', 'cb-levTypeFilter', 'cb-currencySelect', 'cb-entryCurrencySelect'];
@@ -606,7 +612,7 @@ function setupResizable(element, callback) {
 }
 
 function applyColumnWidthAfterRender() {
-    const width = document.getElementById('columnWidthInput')?.value || 100;
+    const width = document.querySelector('.js-column-width-input')?.value || 100;
     console.log('applyColumnWidthAfterRender called with width:', width);
     applyColumnWidth(parseInt(width, 10));
 }
@@ -658,15 +664,15 @@ async function loadInitialState() {
 
     // Update chart control visibility based on current mode
     const chartMode = getChartMode();
-    const bubbleCtrl = document.getElementById('bubbleSizeCtrl');
-    const aggCtrl = document.getElementById('aggregationCtrl');
+    const bubbleCtrls = document.querySelectorAll('.js-bubble-size-ctrl');
+    const aggCtrls = document.querySelectorAll('.js-aggregation-ctrl');
 
-    if (bubbleCtrl) {
-        bubbleCtrl.style.display = (chartMode === 'scatter') ? 'block' : 'none';
-    }
-    if (aggCtrl) {
-        aggCtrl.style.display = (chartMode === 'column') ? 'block' : 'none';
-    }
+    bubbleCtrls.forEach(ctrl => {
+        ctrl.style.display = (chartMode === 'scatter') ? 'block' : 'none';
+    });
+    aggCtrls.forEach(ctrl => {
+        ctrl.style.display = (chartMode === 'column') ? 'block' : 'none';
+    });
 
     console.log('loadInitialState: Rendering table...');
     renderTable();
@@ -702,48 +708,45 @@ async function loadInitialState() {
         btnShowSymDesktop.classList.toggle('active', showSymbols);
     }
 
-    const speedVal = document.getElementById('speedVal');
-    if (speedVal) {
-        speedVal.textContent = '8'; // Default value
-    }
+    const speedVals = document.querySelectorAll('.js-speed-val');
+    speedVals.forEach(el => {
+        el.textContent = '8'; // Default value
+    });
 
-    const priceIntervalVal = document.getElementById('priceIntervalVal');
-    if (priceIntervalVal) {
-        priceIntervalVal.textContent = '3s'; // Default value
-    }
+    const priceIntervalVals = document.querySelectorAll('.js-price-interval-val');
+    priceIntervalVals.forEach(el => {
+        el.textContent = '3s'; // Default value
+    });
 
-    const rankingLimit = document.getElementById('rankingLimit');
-    if (rankingLimit) {
-        rankingLimit.value = getRankingLimit();
-    }
+    const rankingLimits = document.querySelectorAll('.js-ranking-limit');
+    rankingLimits.forEach(el => {
+        el.value = getRankingLimit();
+    });
 
-    const colorMaxLev = document.getElementById('colorMaxLev');
-    if (colorMaxLev) {
-        colorMaxLev.value = getColorMaxLev();
-    }
+    const colorMaxLevs = document.querySelectorAll('.js-color-max-lev');
+    colorMaxLevs.forEach(el => {
+        el.value = getColorMaxLev();
+    });
 
-    const chartHighLevSplit = document.getElementById('chartHighLevSplit');
-    if (chartHighLevSplit) {
-        chartHighLevSplit.value = getChartHighLevSplit();
-    }
+    const chartHighLevSplits = document.querySelectorAll('.js-chart-high-lev-split');
+    chartHighLevSplits.forEach(el => {
+        el.value = getChartHighLevSplit();
+    });
 
-    const bubbleSizeRange = document.getElementById('bubbleSizeRange');
-    if (bubbleSizeRange) {
-        bubbleSizeRange.value = getBubbleScale();
-        document.getElementById('bubbleSizeVal').textContent = getBubbleScale().toFixed(1);
-    }
+    const bubbleSizeRanges = document.querySelectorAll('.js-bubble-size-range');
+    const bubbleSizeVals = document.querySelectorAll('.js-bubble-size-val');
+    bubbleSizeRanges.forEach(el => el.value = getBubbleScale());
+    bubbleSizeVals.forEach(el => el.textContent = getBubbleScale().toFixed(1));
 
-    const aggregationRange = document.getElementById('aggregationRange');
-    if (aggregationRange) {
-        aggregationRange.value = getAggregationFactor();
-        document.getElementById('aggregationVal').textContent = getAggregationFactor();
-    }
+    const aggregationRanges = document.querySelectorAll('.js-aggregation-range');
+    const aggregationVals = document.querySelectorAll('.js-aggregation-val');
+    aggregationRanges.forEach(el => el.value = getAggregationFactor());
+    aggregationVals.forEach(el => el.textContent = getAggregationFactor());
 
-    const decimalPlacesRange = document.getElementById('decimalPlacesRange');
-    if (decimalPlacesRange) {
-        decimalPlacesRange.value = getDecimalPlaces();
-        document.getElementById('decimalPlacesVal').textContent = getDecimalPlaces();
-    }
+    const decimalPlacesRanges = document.querySelectorAll('.js-decimal-places-range');
+    const decimalPlacesVals = document.querySelectorAll('.js-decimal-places-val');
+    decimalPlacesRanges.forEach(el => el.value = getDecimalPlaces());
+    decimalPlacesVals.forEach(el => el.textContent = getDecimalPlaces());
 }
 
 export { setupEventListeners, initializeCharts, initializePanels, loadInitialState };

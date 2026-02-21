@@ -17,8 +17,8 @@ function syncControls(valueSelectors, value) {
 }
 
 export function initColumnWidthControl() {
-    const columnWidthInputs = document.querySelectorAll('#columnWidthInput');
-    const columnWidthVals = document.querySelectorAll('#columnWidthVal');
+    const columnWidthInputs = document.querySelectorAll('.js-column-width-input');
+    const columnWidthVals = document.querySelectorAll('.js-column-width-val');
 
     if (columnWidthInputs.length === 0 || columnWidthVals.length === 0) {
         console.error('Column width input elements not found');
@@ -29,7 +29,7 @@ export function initColumnWidthControl() {
     const initialWidth = getColumnWidth();
     
     // Sync both mobile and desktop controls
-    syncControls(['#columnWidthInput', '#columnWidthVal'], initialWidth);
+    syncControls(['.js-column-width-input', '.js-column-width-val'], initialWidth);
 
     console.log('Column width control initialized with width:', initialWidth);
 
@@ -47,7 +47,7 @@ export function initColumnWidthControl() {
             if (width > 500) width = 500;
 
             // Sync all controls
-            syncControls(['#columnWidthInput', '#columnWidthVal'], width);
+            syncControls(['.js-column-width-input', '.js-column-width-val'], width);
             setColumnWidth(width);
             applyColumnWidth(width);
         });
@@ -71,6 +71,7 @@ export function applyColumnWidth(width) {
 
     // Set the CSS variable on the document root or table
     document.documentElement.style.setProperty('--column-width', width + 'px');
+    document.documentElement.style.setProperty('--column-width-mobile', width + 'px');
 
     console.log('Column width variable --column-width set to:', width + 'px');
 }

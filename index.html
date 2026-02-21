@@ -10,16 +10,26 @@
     <meta name="apple-mobile-web-app-title" content="Whale Watcher">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="format-detection" content="telephone=no">
+    <link rel="manifest" href="manifest.json">
     <title>Hyperliquid Whale Watcher</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
-        rel="stylesheet">
-    <link rel="stylesheet" href="css/main.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <!-- CSS - Optimized Loading -->
+    <link rel="stylesheet" href="css/variables.css">
+    <link rel="stylesheet" href="css/base.css">
+    <link rel="stylesheet" href="css/layout.css">
+    <link rel="stylesheet" href="css/components/buttons.css">
+    <link rel="stylesheet" href="css/components/inputs.css">
+    <link rel="stylesheet" href="css/components/badges.css">
+    <link rel="stylesheet" href="css/components/panels.css">
+    <link rel="stylesheet" href="css/components/tables.css">
+    <link rel="stylesheet" href="css/components/tabs.css">
+    <link rel="stylesheet" href="css/components/chart.css">
+    <link rel="stylesheet" href="css/utilities.css">
+    <link rel="stylesheet" href="css/animations.css">
+    <link rel="stylesheet" href="css/mobile.css">
 </head>
 
 <body>
@@ -77,12 +87,12 @@
             <div class="mobile-menu-section">
                 <div class="mobile-menu-section-title">📊 Scan & Dados</div>
                 <div class="ctrl">
-                    <label title="Velocidade de scan de whales (requisições por segundo)">Velocidade de Scan: <span id="speedVal">8</span> req/s</label>
-                    <input type="number" id="speedRange" min="1" max="20" value="8" style="width: 80px">
+                    <label title="Velocidade de scan de whales (requisições por segundo)">Velocidade de Scan: <span id="speedValMobile" class="js-speed-val">8</span> req/s</label>
+                    <input type="number" id="speedRangeMobile" class="js-speed-range" min="1" max="20" value="8" style="width: 80px">
                 </div>
                 <div class="ctrl">
-                    <label title="Intervalo de atualização de preços em segundos">Atualização de Preços: <span id="priceIntervalVal">3</span>s</label>
-                    <input type="number" id="priceIntervalRange" min="1" max="30" value="3" style="width: 80px">
+                    <label title="Intervalo de atualização de preços em segundos">Atualização de Preços: <span id="priceIntervalValMobile" class="js-price-interval-val">3</span>s</label>
+                    <input type="number" id="priceIntervalRangeMobile" class="js-price-interval-range" min="1" max="30" value="3" style="width: 80px">
                 </div>
                 <div class="ctrl">
                     <label title="Período de tempo para cálculo de PnL acumulado">Janela de PnL</label>
@@ -95,7 +105,7 @@
                 </div>
                 <div class="ctrl">
                     <label title="Modo de cálculo de preços">Modo de Preço</label>
-                    <div class="tabs" id="priceModeToggle">
+                    <div class="tabs" id="priceModeToggleMobile">
                         <button class="tab active" data-mode="realtime" title="Preço em tempo real">Tempo Real</button>
                         <button class="tab" data-mode="dailyclose" title="Preço de fechamento diário">Fechamento</button>
                     </div>
@@ -103,24 +113,24 @@
                 <div class="ctrl">
                     <label title="Mostrar símbolos das moedas nos gráficos">Mostrar Símbolos</label>
                     <div class="tabs">
-                        <button class="tab active" id="btnShowSym" title="Mostrar">Sim</button>
+                        <button class="tab active" id="btnShowSymMobile" title="Mostrar">Sim</button>
                     </div>
                 </div>
                 <div class="ctrl">
                     <label title="Número máximo de moedas a mostrar no ranking">Top N Moedas</label>
-                    <input type="number" id="rankingLimit" value="10" min="1" max="100" class="col-filter" style="width:100%">
+                    <input type="number" id="rankingLimitMobile" class="col-filter js-ranking-limit" value="10" min="1" max="100" style="width:100%">
                 </div>
                 <div class="ctrl">
-                    <label title="Casas decimais para exibição de preços e valores">Casas Decimais: <span id="decimalPlacesVal">2</span></label>
-                    <input type="number" id="decimalPlacesRange" min="0" max="8" value="2" style="width: 80px">
+                    <label title="Casas decimais para exibição de preços e valores">Casas Decimais: <span id="decimalPlacesValMobile" class="js-decimal-places-val">2</span></label>
+                    <input type="number" id="decimalPlacesRangeMobile" class="js-decimal-places-range" min="0" max="8" value="2" style="width: 80px">
                 </div>
                 <div class="ctrl">
-                    <label title="Tamanho da fonte para linhas normais">Fonte Normal: <span id="fontSizeVal">12</span>px</label>
-                    <input type="number" id="fontSizeRange" min="10" max="20" value="12" style="width: 80px">
+                    <label title="Tamanho da fonte para linhas normais">Fonte Normal: <span id="fontSizeValMobile" class="js-font-size-val">12</span>px</label>
+                    <input type="number" id="fontSizeRangeMobile" class="js-font-size-range" min="10" max="20" value="12" style="width: 80px">
                 </div>
                 <div class="ctrl">
-                    <label title="Tamanho da fonte para linhas com estrelinha (endereços conhecidos)">Fonte Conhecidos: <span id="fontSizeKnownVal">14</span>px</label>
-                    <input type="number" id="fontSizeKnownRange" min="10" max="24" value="14" style="width: 80px">
+                    <label title="Tamanho da fonte para linhas com estrelinha (endereços conhecidos)">Fonte Conhecidos: <span id="fontSizeKnownValMobile" class="js-font-size-known-val">14</span>px</label>
+                    <input type="number" id="fontSizeKnownRangeMobile" class="js-font-size-known-range" min="10" max="24" value="14" style="width: 80px">
                 </div>
             </div>
 
@@ -135,25 +145,25 @@
                         <button class="tab" data-chart="lines" title="Linhas de Suporte/Resistência">Linhas</button>
                     </div>
                 </div>
-                <div class="ctrl" id="bubbleSizeCtrl">
-                    <label title="Tamanho dos pontos no gráfico">Tamanho dos Pontos: <span id="bubbleSizeVal">1.0</span>x</label>
-                    <input type="number" id="bubbleSizeRange" min="0.1" max="3.0" step="0.1" value="1.0" style="width: 100%">
+                <div class="ctrl js-bubble-size-ctrl" id="bubbleSizeCtrlMobile">
+                    <label title="Tamanho dos pontos no gráfico">Tamanho dos Pontos: <span id="bubbleSizeValMobile" class="js-bubble-size-val">1.0</span>x</label>
+                    <input type="number" id="bubbleSizeRangeMobile" class="js-bubble-size-range" min="0.1" max="3.0" step="0.1" value="1.0" style="width: 100%">
                 </div>
-                <div class="ctrl" id="bubbleOpacityCtrl">
-                    <label title="Transparência dos pontos no gráfico">Transparência: <span id="bubbleOpacityVal">0.6</span></label>
-                    <input type="number" id="bubbleOpacityRange" min="0.1" max="1.0" step="0.05" value="0.6" style="width: 100%">
+                <div class="ctrl js-bubble-opacity-ctrl" id="bubbleOpacityCtrlMobile">
+                    <label title="Transparência dos pontos no gráfico">Transparência: <span id="bubbleOpacityValMobile" class="js-bubble-opacity-val">0.6</span></label>
+                    <input type="number" id="bubbleOpacityRangeMobile" class="js-bubble-opacity-range" min="0.1" max="1.0" step="0.05" value="0.6" style="width: 100%">
                 </div>
-                <div class="ctrl" id="lineThicknessCtrl" style="display:none">
-                    <label title="Espessura das linhas no gráfico">Espessura: <span id="lineThicknessVal">2</span>px</label>
-                    <input type="number" id="lineThicknessRange" min="1" max="10" step="1" value="2" style="width: 100%">
+                <div class="ctrl js-line-thickness-ctrl" id="lineThicknessCtrlMobile" style="display:none">
+                    <label title="Espessura das linhas no gráfico">Espessura: <span id="lineThicknessValMobile" class="js-line-thickness-val">2</span>px</label>
+                    <input type="number" id="lineThicknessRangeMobile" class="js-line-thickness-range" min="1" max="10" step="1" value="2" style="width: 100%">
                 </div>
-                <div class="ctrl" id="aggregationCtrl" style="display:none">
-                    <label title="Número de bins para gráfico de colunas">Bins: <span id="aggregationVal">50</span></label>
-                    <input type="number" id="aggregationRange" min="10" max="1000" step="10" value="50" style="width: 100%">
+                <div class="ctrl js-aggregation-ctrl" id="aggregationCtrlMobile" style="display:none">
+                    <label title="Número de bins para gráfico de colunas">Bins: <span id="aggregationValMobile" class="js-aggregation-val">50</span></label>
+                    <input type="number" id="aggregationRangeMobile" class="js-aggregation-range" min="10" max="1000" step="10" value="50" style="width: 100%">
                 </div>
                 <div class="ctrl">
-                    <label title="Espaçamento entre linhas de grade">Grade: <span id="gridSpacingVal">500</span></label>
-                    <input type="number" id="gridSpacingRange" min="100" max="5000" step="100" value="500" style="width: 100%">
+                    <label title="Espaçamento entre linhas de grade">Grade: <span id="gridSpacingValMobile" class="js-grid-spacing-val">500</span></label>
+                    <input type="number" id="gridSpacingRangeMobile" class="js-grid-spacing-range" min="100" max="5000" step="100" value="500" style="width: 100%">
                 </div>
             </div>
 
@@ -162,32 +172,32 @@
                 <div class="mobile-menu-section-title">🎨 Visualização</div>
                 <div class="ctrl">
                     <label title="Colunas visíveis na tabela">Colunas Visíveis</label>
-                    <div class="combobox" id="columnCombobox" style="width:100%">
+                    <div class="combobox js-column-combobox" id="columnComboboxMobile" style="width:100%">
                         <div class="combobox-input-wrap">
-                            <input type="text" id="columnSelectDisplay" class="combobox-input" placeholder="Select" readonly>
+                            <input type="text" id="columnSelectDisplayMobile" class="combobox-input js-column-select-display" placeholder="Select" readonly>
                             <span class="combobox-arrow">▾</span>
                         </div>
-                        <div class="combobox-dropdown" id="columnDropdown"></div>
+                        <div class="combobox-dropdown js-column-dropdown" id="columnDropdownMobile"></div>
                     </div>
                 </div>
                 <div class="ctrl">
-                    <label title="Largura das colunas na tabela">Largura da Coluna: <span id="columnWidthVal">100</span>px</label>
-                    <input type="number" id="columnWidthInput" min="60" max="500" step="5" value="100" style="width: 100%">
+                    <label title="Largura das colunas na tabela">Largura da Coluna: <span id="columnWidthValMobile" class="js-column-width-val">100</span>px</label>
+                    <input type="number" id="columnWidthInputMobile" class="js-column-width-input" min="60" max="500" step="5" value="100" style="width: 100%">
                 </div>
                 <div class="ctrl">
                     <label title="Cores para alavancagem Long e Short">Cores de Alavancagem</label>
                     <div style="display:flex; flex-direction:column; gap:4px; margin-top:2px">
                         <div style="display:flex; align-items:center; gap:8px">
                             <span style="font-size:11px; color:#22c55e">Long Baixa:</span>
-                            <input type="color" id="colorLongLow" value="#22c55e">
+                            <input type="color" id="colorLongLowMobile" class="js-color-long-low" value="#22c55e">
                             <span style="font-size:11px; color:#16a34a">Long Alta:</span>
-                            <input type="color" id="colorLongHigh" value="#16a34a">
+                            <input type="color" id="colorLongHighMobile" class="js-color-long-high" value="#16a34a">
                         </div>
                         <div style="display:flex; align-items:center; gap:8px">
                             <span style="font-size:11px; color:#ef4444">Short Baixa:</span>
-                            <input type="color" id="colorShortLow" value="#ef4444">
+                            <input type="color" id="colorShortLowMobile" class="js-color-short-low" value="#ef4444">
                             <span style="font-size:11px; color:#dc2626">Short Alta:</span>
-                            <input type="color" id="colorShortHigh" value="#dc2626">
+                            <input type="color" id="colorShortHighMobile" class="js-color-short-high" value="#dc2626">
                         </div>
                     </div>
                 </div>
@@ -201,15 +211,15 @@
                     <div style="display:flex; flex-direction:column">
                         <div style="display:flex; align-items:center; gap:4px; margin-top:2px; padding-top:2px">
                             <span style="font-size:11px; color:#9ca3af" title="Alavancagem mínima para filtragem">Alavancagem Mín ></span>
-                            <input type="number" id="chartHighLevSplit" value="50" min="1" max="100" style="width:40px; padding:2px" title="Limiar de alavancagem">
+                            <input type="number" id="chartHighLevSplitMobile" class="js-chart-high-lev-split" value="50" min="1" max="100" style="width:40px; padding:2px" title="Limiar de alavancagem">
                             <span style="font-size:11px; color:#9ca3af; margin-left:6px" title="Alavancagem máxima para cores">Alavancagem Máx</span>
-                            <input type="number" id="colorMaxLev" value="50" min="1" max="100" style="width:35px; padding:2px" title="Alavancagem máxima">
+                            <input type="number" id="colorMaxLevMobile" class="js-color-max-lev" value="50" min="1" max="100" style="width:35px; padding:2px" title="Alavancagem máxima">
                         </div>
                     </div>
                 </div>
                 <div class="ctrl">
                     <label title="Volume BTC mínimo para destaque">Min Volume BTC (★)</label>
-                    <input type="number" id="minBtcVolume" value="0" min="0" step="0.1" style="width:100%" title="Volume BTC mínimo para destacar carteiras com estrela">
+                    <input type="number" id="minBtcVolumeMobile" class="js-min-btc-volume" value="0" min="0" step="0.1" style="width:100%" title="Volume BTC mínimo para destacar carteiras com estrela">
                 </div>
             </div>
         </div>
@@ -221,13 +231,13 @@
         <div class="controls-section">
             <div class="controls-section-title">📊 Scan & Dados</div>
             <div class="ctrl">
-                <label title="Recommended limit: 8-10 requests/s">Speed: <span id="speedVal">8</span> req/s</label>
-                <input type="number" id="speedRange" min="1" max="20" value="8" style="width: 80px">
+                <label title="Recommended limit: 8-10 requests/s">Speed: <span id="speedValDesktop" class="js-speed-val">8</span> req/s</label>
+                <input type="number" id="speedRangeDesktop" class="js-speed-range" min="1" max="20" value="8" style="width: 80px">
             </div>
             <div class="filter-sep"></div>
             <div class="ctrl">
-                <label title="Price update interval">Price Update: <span id="priceIntervalVal">3</span>s</label>
-                <input type="number" id="priceIntervalRange" min="1" max="30" value="3" style="width: 80px">
+                <label title="Price update interval">Price Update: <span id="priceIntervalValDesktop" class="js-price-interval-val">3</span>s</label>
+                <input type="number" id="priceIntervalRangeDesktop" class="js-price-interval-range" min="1" max="30" value="3" style="width: 80px">
             </div>
             <div class="filter-sep"></div>
             <div class="ctrl">
@@ -242,7 +252,7 @@
             <div class="filter-sep"></div>
             <div class="ctrl">
                 <label>Price Mode</label>
-                <div class="tabs" id="priceModeToggle">
+                <div class="tabs" id="priceModeToggleDesktop">
                     <button class="tab active" data-mode="realtime" title="Preço em tempo real">Real-time</button>
                     <button class="tab" data-mode="dailyclose" title="Preço de fechamento diário">Daily Close</button>
                 </div>
@@ -257,22 +267,22 @@
             <div class="filter-sep"></div>
             <div class="ctrl">
                 <label>Top N by Market Cap</label>
-                <input type="number" id="rankingLimit" value="10" min="1" max="100" class="col-filter" style="width:70px">
+                <input type="number" id="rankingLimitDesktop" class="col-filter js-ranking-limit" value="10" min="1" max="100" style="width:70px">
             </div>
             <div class="filter-sep"></div>
             <div class="ctrl">
-                <label title="Decimal places for prices and values">Decimals: <span id="decimalPlacesVal">2</span></label>
-                <input type="number" id="decimalPlacesRange" min="0" max="8" value="2" style="width: 80px">
+                <label title="Decimal places for prices and values">Decimals: <span id="decimalPlacesValDesktop" class="js-decimal-places-val">2</span></label>
+                <input type="number" id="decimalPlacesRangeDesktop" class="js-decimal-places-range" min="0" max="8" value="2" style="width: 80px">
             </div>
             <div class="filter-sep"></div>
             <div class="ctrl">
-                <label title="Font size for normal rows">Font Normal: <span id="fontSizeValDesktop">12</span>px</label>
-                <input type="number" id="fontSizeRangeDesktop" min="10" max="20" value="12" style="width: 80px">
+                <label title="Font size for normal rows">Font Normal: <span id="fontSizeValDesktop" class="js-font-size-val">12</span>px</label>
+                <input type="number" id="fontSizeRangeDesktop" class="js-font-size-range" min="10" max="20" value="12" style="width: 80px">
             </div>
             <div class="filter-sep"></div>
             <div class="ctrl">
-                <label title="Font size for rows with star (known addresses)">Font Known: <span id="fontSizeKnownValDesktop">14</span>px</label>
-                <input type="number" id="fontSizeKnownRangeDesktop" min="10" max="24" value="14" style="width: 80px">
+                <label title="Font size for rows with star (known addresses)">Font Known: <span id="fontSizeKnownValDesktop" class="js-font-size-known-val">14</span>px</label>
+                <input type="number" id="fontSizeKnownRangeDesktop" class="js-font-size-known-range" min="10" max="24" value="14" style="width: 80px">
             </div>
         </div>
 
@@ -290,26 +300,26 @@
                 </div>
             </div>
             <div class="filter-sep"></div>
-            <div class="ctrl" id="bubbleSizeCtrl">
-                <label>Radius: <span id="bubbleSizeVal">1.0</span>x</label>
-                <input type="number" id="bubbleSizeRange" min="0.1" max="3.0" step="0.1" value="1.0" style="width: 80px">
+            <div class="ctrl js-bubble-size-ctrl" id="bubbleSizeCtrlDesktop">
+                <label>Radius: <span id="bubbleSizeValDesktop" class="js-bubble-size-val">1.0</span>x</label>
+                <input type="number" id="bubbleSizeRangeDesktop" class="js-bubble-size-range" min="0.1" max="3.0" step="0.1" value="1.0" style="width: 80px">
             </div>
-            <div class="ctrl" id="bubbleOpacityCtrl">
-                <label>Opacity: <span id="bubbleOpacityVal">0.6</span></label>
-                <input type="number" id="bubbleOpacityRange" min="0.1" max="1.0" step="0.05" value="0.6" style="width: 80px">
+            <div class="ctrl js-bubble-opacity-ctrl" id="bubbleOpacityCtrlDesktop">
+                <label>Opacity: <span id="bubbleOpacityValDesktop" class="js-bubble-opacity-val">0.6</span></label>
+                <input type="number" id="bubbleOpacityRangeDesktop" class="js-bubble-opacity-range" min="0.1" max="1.0" step="0.05" value="0.6" style="width: 80px">
             </div>
-            <div class="ctrl" id="lineThicknessCtrl" style="display:none">
-                <label>Thickness: <span id="lineThicknessVal">2</span>px</label>
-                <input type="number" id="lineThicknessRange" min="1" max="10" step="1" value="2" style="width: 80px">
+            <div class="ctrl js-line-thickness-ctrl" id="lineThicknessCtrlDesktop" style="display:none">
+                <label>Thickness: <span id="lineThicknessValDesktop" class="js-line-thickness-val">2</span>px</label>
+                <input type="number" id="lineThicknessRangeDesktop" class="js-line-thickness-range" min="1" max="10" step="1" value="2" style="width: 80px">
             </div>
-            <div class="ctrl" id="aggregationCtrl" style="display:none">
-                <label>Bins: <span id="aggregationVal">50</span></label>
-                <input type="number" id="aggregationRange" min="10" max="1000" step="10" value="50" style="width: 120px">
+            <div class="ctrl js-aggregation-ctrl" id="aggregationCtrlDesktop" style="display:none">
+                <label>Bins: <span id="aggregationValDesktop" class="js-aggregation-val">50</span></label>
+                <input type="number" id="aggregationRangeDesktop" class="js-aggregation-range" min="10" max="1000" step="10" value="50" style="width: 120px">
             </div>
             <div class="filter-sep"></div>
             <div class="ctrl">
-                <label>Grid: <span id="gridSpacingVal">500</span></label>
-                <input type="number" id="gridSpacingRange" min="100" max="5000" step="100" value="500" style="width: 80px">
+                <label>Grid: <span id="gridSpacingValDesktop" class="js-grid-spacing-val">500</span></label>
+                <input type="number" id="gridSpacingRangeDesktop" class="js-grid-spacing-range" min="100" max="5000" step="100" value="500" style="width: 80px">
             </div>
         </div>
 
@@ -320,18 +330,18 @@
             <div class="controls-section-title">🎨 Visualização</div>
             <div class="ctrl">
                 <label>Columns</label>
-                <div class="combobox" id="columnCombobox" style="width:110px">
+                <div class="combobox js-column-combobox" id="columnComboboxDesktop" style="width:110px">
                     <div class="combobox-input-wrap">
-                        <input type="text" id="columnSelectDisplay" class="combobox-input" placeholder="Select" readonly>
+                        <input type="text" id="columnSelectDisplayDesktop" class="combobox-input js-column-select-display" placeholder="Select" readonly>
                         <span class="combobox-arrow">▾</span>
                     </div>
-                    <div class="combobox-dropdown" id="columnDropdown"></div>
+                    <div class="combobox-dropdown js-column-dropdown" id="columnDropdownDesktop"></div>
                 </div>
             </div>
             <div class="filter-sep"></div>
             <div class="ctrl">
-                <label title="Column width">Col Width: <span id="columnWidthVal">100</span>px</label>
-                <input type="number" id="columnWidthInput" min="60" max="500" step="5" value="100" style="width: 80px">
+                <label title="Column width">Col Width: <span id="columnWidthValDesktop" class="js-column-width-val">100</span>px</label>
+                <input type="number" id="columnWidthInputDesktop" class="js-column-width-input" min="60" max="500" step="5" value="100" style="width: 80px">
             </div>
             <div class="filter-sep"></div>
             <div class="ctrl">
@@ -339,15 +349,15 @@
                 <div style="display:flex; flex-direction:column; gap:4px; margin-top:2px">
                     <div style="display:flex; align-items:center; gap:8px">
                         <span style="font-size:11px; color:#22c55e">Long Low:</span>
-                        <input type="color" id="colorLongLow" value="#22c55e">
+                        <input type="color" id="colorLongLowDesktop" class="js-color-long-low" value="#22c55e">
                         <span style="font-size:11px; color:#16a34a">Long High:</span>
-                        <input type="color" id="colorLongHigh" value="#16a34a">
+                        <input type="color" id="colorLongHighDesktop" class="js-color-long-high" value="#16a34a">
                     </div>
                     <div style="display:flex; align-items:center; gap:8px">
                         <span style="font-size:11px; color:#ef4444">Short Low:</span>
-                        <input type="color" id="colorShortLow" value="#ef4444">
+                        <input type="color" id="colorShortLowDesktop" class="js-color-short-low" value="#ef4444">
                         <span style="font-size:11px; color:#dc2626">Short High:</span>
-                        <input type="color" id="colorShortHigh" value="#dc2626">
+                        <input type="color" id="colorShortHighDesktop" class="js-color-short-high" value="#dc2626">
                     </div>
                 </div>
             </div>
@@ -363,15 +373,15 @@
                 <div style="display:flex; flex-direction:column">
                     <div style="display:flex; align-items:center; gap:4px; margin-top:2px; padding-top:2px">
                         <span style="font-size:11px; color:#9ca3af">High Lev ></span>
-                        <input type="number" id="chartHighLevSplit" value="50" min="1" max="100" style="width:40px; padding:2px" title="Leverage Split Threshold">
+                        <input type="number" id="chartHighLevSplitDesktop" class="js-chart-high-lev-split" value="50" min="1" max="100" style="width:40px; padding:2px" title="Leverage Split Threshold">
                         <span style="font-size:11px; color:#9ca3af; margin-left:6px">Color Max</span>
-                        <input type="number" id="colorMaxLev" value="50" min="1" max="100" style="width:35px; padding:2px" title="High Color Leverage">
+                        <input type="number" id="colorMaxLevDesktop" class="js-color-max-lev" value="50" min="1" max="100" style="width:35px; padding:2px" title="High Color Leverage">
                     </div>
                 </div>
             </div>
             <div class="ctrl">
                 <label title="Volume BTC mínimo para destaque">Min Volume BTC (★)</label>
-                <input type="number" id="minBtcVolume" value="0" min="0" step="0.1" style="width:80px" title="Volume BTC mínimo para destacar carteiras com estrela">
+                <input type="number" id="minBtcVolumeDesktop" class="js-min-btc-volume" value="0" min="0" step="0.1" style="width:80px" title="Volume BTC mínimo para destacar carteiras com estrela">
             </div>
         </div>
     </div>
@@ -599,6 +609,12 @@
             <div class="auto-loading" id="autoLoading">
                 <span class="spinner"></span> Loading more whales in background…
             </div>
+
+            <!-- Third-party Libraries -->
+            <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
+            <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js" defer></script>
+            <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js" defer></script>
+            <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js" defer></script>
 
             <script type="module" src="js/main.js?v=2"></script>
 

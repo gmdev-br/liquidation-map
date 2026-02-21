@@ -225,10 +225,12 @@ export function setupClickOutsideHandler() {
         }
 
         // Handle column combobox
-        const columnCb = document.getElementById('columnCombobox');
-        if (columnCb && !columnCb.contains(e.target)) {
-            columnCb.classList.remove('open');
-        }
+        const columnCbs = document.querySelectorAll('.js-column-combobox');
+        columnCbs.forEach(columnCb => {
+            if (columnCb && !columnCb.contains(e.target)) {
+                columnCb.classList.remove('open');
+            }
+        });
     });
 }
 

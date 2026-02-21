@@ -42,9 +42,11 @@ th, td {
 
 /* ── Table Header ── */
 thead tr {
-    background: linear-gradient(180deg, rgba(7, 12, 26, 0.90) 0%, rgba(7, 12, 26, 0.75) 100%);
-    backdrop-filter: var(--glass-blur);
-    -webkit-backdrop-filter: var(--glass-blur);
+    /* Optimized background - less transparency, no backdrop-filter */
+    background: #0a0e1a; 
+    /* background: linear-gradient(180deg, rgba(7, 12, 26, 0.90) 0%, rgba(7, 12, 26, 0.75) 100%); */
+    /* backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur); */
     position: sticky;
     top: 0;
     z-index: var(--z-glass-elevated);
@@ -167,10 +169,13 @@ th.sorted {
 /* ── Table Body ── */
 tbody tr {
     border-bottom: 1px solid rgba(255, 255, 255, 0.03);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: background-color 0.15s ease;
     position: relative;
+    /* content-visibility: auto; */ /* Experimental, might help */
 }
 
+/* Shimmer effect disabled for performance */
+/*
 tbody tr::before {
     content: '';
     position: absolute;
@@ -188,14 +193,15 @@ tbody tr:hover::before {
     left: 100%;
     opacity: 1;
 }
+*/
 
 tbody tr:active {
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.03) 100%);
+    background: rgba(255, 255, 255, 0.05);
 }
 
 tbody tr:hover {
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.04) 100%);
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+    background: rgba(255, 255, 255, 0.06);
+    /* box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15); */
 }
 
 td {

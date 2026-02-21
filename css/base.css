@@ -49,7 +49,7 @@ body {
     -moz-osx-font-smoothing: grayscale;
 }
 
-/* Animated ambient background orbs with gradients */
+/* Animated ambient background orbs with gradients - STATIC for performance */
 body::before,
 body::after {
     content: '';
@@ -58,7 +58,7 @@ body::after {
     filter: blur(140px);
     pointer-events: none;
     z-index: 0;
-    animation: orbFloat 20s ease-in-out infinite;
+    /* animation: orbFloat 20s ease-in-out infinite; */
 }
 
 body::before {
@@ -67,7 +67,6 @@ body::before {
     top: -250px;
     left: -250px;
     background: radial-gradient(ellipse at center, rgba(156, 163, 175, 0.08) 0%, rgba(107, 114, 128, 0.04) 40%, transparent 70%);
-    animation-delay: 0s;
 }
 
 body::after {
@@ -76,10 +75,9 @@ body::after {
     bottom: -200px;
     right: -200px;
     background: radial-gradient(ellipse at center, rgba(245, 158, 11, 0.06) 0%, rgba(156, 163, 175, 0.03) 40%, transparent 70%);
-    animation-delay: -10s;
 }
 
-/* Orb floating animation */
+/* Orb floating animation - DISABLED for performance
 @keyframes orbFloat {
     0%, 100% {
         transform: translate(0, 0) scale(1);
@@ -94,6 +92,7 @@ body::after {
         transform: translate(20px, 20px) scale(1.02);
     }
 }
+*/
 
 /* ── Z-Index Hierarchy ── */
 .header {
