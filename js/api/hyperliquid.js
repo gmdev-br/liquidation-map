@@ -82,7 +82,7 @@ export function processState(whale, state, allRows) {
             address: whale.ethAddress,
             displayName: whale.displayName,
             accountValue: accountValue, // Use validated account value
-            leaderRow: whale,
+            windowPerformances: whale.windowPerformances, // Store directly to save space
             coin: pos.coin,
             szi: size,
             side: size > 0 ? 'long' : 'short',
@@ -103,6 +103,7 @@ export function processState(whale, state, allRows) {
 export async function streamPositions(whaleList, minVal, maxConcurrency, callbacks) {
     const { updateStats, updateCoinFilter, renderTable, saveTableData, setStatus, setProgress, finishScan, setLastSaveTime, setRenderPending } = callbacks;
     const lastSaveTime = getLastSaveTime();
+    let localLastSaveTime = lastSaveTime;
     const allRows = getAllRows();
     
     document.getElementById('autoLoading').style.display = 'block';
@@ -127,9 +128,10 @@ export async function streamPositions(whaleList, minVal, maxConcurrency, callbac
 
             // Periodic save to handle mid-scan refreshes
             const now = Date.now();
-            if (now - lastSaveTime > 2000) {
+            if (now - localLastSaveTime > 2000) {
                 saveTableData();
                 setLastSaveTime(now);
+                localLastSaveTime = now;
             }
         }, renderDelay);
     }
@@ -180,5 +182,6 @@ export async function streamPositions(whaleList, minVal, maxConcurrency, callbac
     updateStats(false, allRows);
     updateCoinFilter(allRows);
     renderTable();
+    saveTableData(); // Save final data
     finishScan(setStatus, setProgress);
 }

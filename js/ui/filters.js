@@ -26,8 +26,20 @@ export function sortBy(key, renderTable) {
     renderTable();
 }
 
-export function getPnlForWindow(leaderRow, window) {
-    if (!leaderRow?.windowPerformances) return 0;
-    const wp = leaderRow.windowPerformances.find(w => w[0] === window);
-    return wp ? parseFloat(wp[1].pnl || 0) : 0;
+export function getPnlForWindow(row, window) {
+    if (!row) return 0;
+    
+    // Check for windowPerformances directly on the row (new format)
+    if (row.windowPerformances) {
+        const wp = row.windowPerformances.find(w => w[0] === window);
+        return wp ? parseFloat(wp[1].pnl || 0) : 0;
+    }
+    
+    // Fallback for old format (leaderRow property)
+    if (row.leaderRow?.windowPerformances) {
+        const wp = row.leaderRow.windowPerformances.find(w => w[0] === window);
+        return wp ? parseFloat(wp[1].pnl || 0) : 0;
+    }
+    
+    return 0;
 }

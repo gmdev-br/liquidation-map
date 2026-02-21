@@ -2,7 +2,7 @@
 // LIQUID GLASS — Events Initialization
 // ═══════════════════════════════════════════════════════════
 
-console.log('init.js loaded');
+console.log('init.js loaded (v2)');
 
 import {
     getShowSymbols, getRankingLimit, getColorMaxLev, getChartHighLevSplit,

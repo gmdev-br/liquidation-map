@@ -63,21 +63,28 @@ export class VirtualScroll {
     render() {
         if (!this.tbody) return;
 
-        // Create spacer divs for scroll height
-        let html = `<div style="height: ${this.totalHeight}px; position: relative;">`;
+        const paddingTop = this.visibleStart * this.rowHeight;
+        const paddingBottom = Math.max(0, (this.data.length - this.visibleEnd) * this.rowHeight);
+
+        let html = '';
+
+        // Top spacer
+        if (paddingTop > 0) {
+            html += `<tr style="height: ${paddingTop}px; border: none; background: transparent;"><td colspan="100" style="padding: 0; border: none;"></td></tr>`;
+        }
 
         // Render only visible rows
         for (let i = this.visibleStart; i < this.visibleEnd; i++) {
             const row = this.data[i];
             if (!row) continue;
-
-            const top = i * this.rowHeight;
-            html += `<div style="position: absolute; top: ${top}px; width: 100%; height: ${this.rowHeight}px;">`;
             html += row.html || this.renderRow(row, i);
-            html += `</div>`;
         }
 
-        html += `</div>`;
+        // Bottom spacer
+        if (paddingBottom > 0) {
+            html += `<tr style="height: ${paddingBottom}px; border: none; background: transparent;"><td colspan="100" style="padding: 0; border: none;"></td></tr>`;
+        }
+
         this.tbody.innerHTML = html;
     }
 
