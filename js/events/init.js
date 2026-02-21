@@ -207,7 +207,59 @@ function setupEventListeners() {
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
             closeMobileMenu();
+            closeSettings();
         }
+    });
+
+    // Settings Drawer and Advanced Filters
+    const settingsToggle = document.getElementById('settingsToggle');
+    const settingsDrawer = document.getElementById('settingsDrawer');
+    const settingsOverlay = document.getElementById('settingsOverlay');
+    const settingsDrawerClose = document.getElementById('settingsDrawerClose');
+
+    function openSettings() {
+        if (settingsDrawer) settingsDrawer.classList.add('active');
+        if (settingsOverlay) settingsOverlay.classList.add('active');
+    }
+
+    function closeSettings() {
+        if (settingsDrawer) settingsDrawer.classList.remove('active');
+        if (settingsOverlay) settingsOverlay.classList.remove('active');
+    }
+
+    if (settingsToggle) settingsToggle.addEventListener('click', openSettings);
+    if (settingsDrawerClose) settingsDrawerClose.addEventListener('click', closeSettings);
+    if (settingsOverlay) settingsOverlay.addEventListener('click', closeSettings);
+
+    const toggleFiltersBtn = document.getElementById('toggleFiltersBtn');
+    const advancedFiltersPanel = document.getElementById('advancedFiltersPanel');
+    if (toggleFiltersBtn && advancedFiltersPanel) {
+        toggleFiltersBtn.addEventListener('click', () => {
+            const isHidden = advancedFiltersPanel.style.display === 'none';
+            advancedFiltersPanel.style.display = isHidden ? 'block' : 'none';
+            toggleFiltersBtn.classList.toggle('active', isHidden);
+        });
+    }
+
+    // Collapsible sections
+    const collapseToggles = document.querySelectorAll('.js-collapse-toggle');
+    collapseToggles.forEach(toggle => {
+        const targetId = toggle.getAttribute('data-target');
+        const wrapper = toggle.closest('.section-wrapper');
+
+        // Load saved state
+        const isCollapsed = localStorage.getItem(`collapse_${targetId}`) === 'true';
+        if (isCollapsed && wrapper) {
+            wrapper.classList.add('collapsed');
+        }
+
+        toggle.addEventListener('click', () => {
+            if (wrapper) {
+                wrapper.classList.toggle('collapsed');
+                const currentlyCollapsed = wrapper.classList.contains('collapsed');
+                localStorage.setItem(`collapse_${targetId}`, currentlyCollapsed);
+            }
+        });
     });
 
     // Scan controls

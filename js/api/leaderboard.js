@@ -3,7 +3,7 @@
 // ═══════════════════════════════════════════════════════════
 
 import { LEADERBOARD_URL } from '../config.js';
-import { 
+import {
     setAllRows, setLoadedCount, setScanning, setIsPaused, setWhaleList,
     getScanning, getIsPaused, getMaxConcurrency, getFxReady, getFxRates, getActiveCurrency
 } from '../state.js';
@@ -13,12 +13,12 @@ export async function startScan(callbacks) {
     const { setStatus, setProgress, fetchAllMids, updateStats, updateCoinFilter, renderTable, saveTableData, finishScan, setLastSaveTime, setRenderPending } = callbacks;
     const minVal = parseFloat(document.getElementById('minValue').value) || 2500000;
     const scanStartTime = Date.now();
-    
+
     document.getElementById('scanBtn').disabled = true;
     document.getElementById('pauseBtn').style.display = 'inline-block';
     document.getElementById('pauseBtn').textContent = '⏸ Pause';
     setIsPaused(false);
-    document.getElementById('tableBody').innerHTML = `<tr><td colspan="13" class="empty-cell"><span class="spinner"></span> Fetching leaderboard…</td></tr>`;
+    document.getElementById('tableBody').innerHTML = `<tr><td colspan="14" class="empty-cell"><span class="spinner"></span> Fetching leaderboard…</td></tr>`;
     setAllRows([]);
     setLoadedCount(0);
 
@@ -42,20 +42,20 @@ export async function startScan(callbacks) {
             .filter(r => {
                 const accountValue = parseFloat(r.accountValue);
                 if (accountValue < minVal) return false;
-                
+
                 // Filter out suspicious entries
                 if (accountValue > 1_000_000_000 && !r.displayName) {
-                    console.warn(`Filtering suspicious whale: ${r.ethAddress} with $${(accountValue/1_000_000_000).toFixed(1)}B and no display name`);
+                    console.warn(`Filtering suspicious whale: ${r.ethAddress} with $${(accountValue / 1_000_000_000).toFixed(1)}B and no display name`);
                     return false;
                 }
-                
+
                 return true;
             })
             .sort((a, b) => parseFloat(b.accountValue) - parseFloat(a.accountValue));
-        
+
         setWhaleList(whaleList);
         setProgress(15);
-        
+
         const fxRates = getFxRates();
         const activeCurrency = getActiveCurrency();
         const fxReady = getFxReady();
@@ -65,19 +65,19 @@ export async function startScan(callbacks) {
         // Start the concurrency-limited streaming loader with enhanced progress tracking
         setScanning(true);
         const maxConcurrency = getMaxConcurrency();
-        
+
         // Enhanced progress tracking
         const totalWhales = whaleList.length;
         let processedCount = 0;
         let lastProgressUpdate = Date.now();
-        
+
         const enhancedCallbacks = {
             ...callbacks,
             // Add progress tracking to existing callbacks
             updateStats: (showSymbols, allRows) => {
                 processedCount++;
                 const now = Date.now();
-                
+
                 // Update progress every 2 seconds during scanning
                 if (now - lastProgressUpdate > 2000) {
                     const progress = 15 + (processedCount / totalWhales) * 75; // 15% initial + 75% for processing
@@ -85,14 +85,14 @@ export async function startScan(callbacks) {
                     setStatus(`Loading ${processedCount}/${totalWhales} whales… (${Math.round(progress)}%)`, 'scanning');
                     lastProgressUpdate = now;
                 }
-                
+
                 // Call original updateStats
                 updateStats(showSymbols, allRows);
             }
         };
-        
+
         await streamPositions(whaleList, minVal, maxConcurrency, enhancedCallbacks);
-        
+
         // Show scan completion time
         const scanDuration = Date.now() - scanStartTime;
         const durationSeconds = Math.round(scanDuration / 1000);
@@ -100,12 +100,13 @@ export async function startScan(callbacks) {
 
     } catch (e) {
         console.error('Scan error:', e);
-        document.getElementById('tableBody').innerHTML = `<tr><td colspan="13" class="empty-cell" style="color:var(--red)">
+        document.getElementById('tableBody').innerHTML = `<tr><td colspan="14" class="empty-cell" style="color:var(--red)">
             <div class="empty-icon">⚠️</div>
-            <div>
+            <div style="margin-bottom: 16px;">
                 <strong>Scan Failed:</strong> ${e.message}<br>
-                <small>Please check your internet connection and try again.</small>
+                <small style="color:var(--muted)">Please check your internet connection and try again.</small>
             </div>
+            <button class="btn" onclick="document.getElementById('scanBtn').click()">🔄 Try Reconnecting</button>
         </td></tr>`;
         setStatus('Scan failed', 'error');
         document.getElementById('scanBtn').disabled = false;
@@ -126,7 +127,7 @@ export function togglePause(setStatus) {
     setIsPaused(!isPaused);
     const btn = document.getElementById('pauseBtn');
     const scanBtn = document.getElementById('scanBtn');
-    
+
     if (!isPaused) {
         // Resuming scan
         btn.textContent = '⏸ Pause';
@@ -146,7 +147,7 @@ export function finishScan(setStatus, setProgress) {
     setProgress(100);
     const scanning = getScanning();
     const stoppedEarly = !scanning;
-    
+
     // Ensure scanning state is reset
     setScanning(false);
 

@@ -11,6 +11,7 @@
 
 /* ── Base Mobile Styles ── */
 @media (max-width: 480px) {
+
     /* Typography */
     body {
         font-size: 14px;
@@ -22,7 +23,8 @@
     input[type="number"],
     input[type="text"],
     select,
-    .tab {
+    .tab,
+    .coin-pill {
         min-height: 44px;
         min-width: 44px;
     }
@@ -55,6 +57,7 @@
 
     /* Touch feedback enhancement */
     @media (hover: none) and (pointer: coarse) {
+
         .btn:active,
         .tab:active,
         .ranking-card:active,
@@ -353,8 +356,10 @@
 
     th,
     td {
-        padding: 12px 10px;
+        padding: 8px 8px;
         font-size: 12px;
+        margin-bottom: 2px;
+        line-height: 1.35;
         min-width: 100px;
         white-space: nowrap;
     }
@@ -395,8 +400,42 @@
     td[data-column="valueCcy"],
     td[data-column="entryCcy"],
     td[data-column="funding"],
-    td[data-column="distToLiq"] {
+    td[data-column="distToLiq"],
+    th.col-valueCcy,
+    td.col-valueCcy,
+    th.col-entryCcy,
+    td.col-entryCcy,
+    th.col-funding,
+    td.col-funding,
+    th.col-distToLiq,
+    td.col-distToLiq {
         display: none;
+    }
+
+    /* Sticky Columns for Mobile Context */
+    th.col-num,
+    td.col-num {
+        position: sticky !important;
+        left: 0;
+        z-index: 5;
+        background: #0a0e1a;
+    }
+
+    th.col-coin,
+    td.col-coin {
+        position: sticky !important;
+        left: 40px;
+        z-index: 5;
+        background: #0a0e1a;
+        box-shadow: 4px 0 8px rgba(0, 0, 0, 0.4);
+        border-right: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    th.col-num,
+    th.col-coin {
+        z-index: 6;
+        /* Headers stay above rows */
+        background: #0a0e1a;
     }
 
     /* Table container styling */
@@ -584,6 +623,7 @@
 
 /* ── Desktop Styles ── */
 @media (min-width: 481px) {
+
     /* Hide mobile menu toggle on desktop */
     .menu-toggle {
         display: none;
@@ -598,6 +638,7 @@
 
 /* ── Very Small Mobile (< 480px) ── */
 @media (max-width: 479px) {
+
     /* Header */
     .header {
         padding: 8px 12px;
@@ -641,7 +682,8 @@
         min-width: 700px;
     }
 
-    th, td {
+    th,
+    td {
         width: var(--column-width-mobile, 100px);
     }
 
@@ -705,6 +747,7 @@
 
 /* ── Mobile Large (480px - 767px) ── */
 @media (min-width: 480px) and (max-width: 767px) {
+
     /* This section is now for legacy support only */
     .stat {
         min-width: 120px;
@@ -789,6 +832,7 @@
 
 /* ── Touch Feedback Enhancement ── */
 @media (hover: none) and (pointer: coarse) {
+
     .btn:active,
     .tab:active,
     .ranking-card:active,
@@ -909,6 +953,7 @@
         opacity: 0;
         transform: translateY(20px);
     }
+
     to {
         opacity: 1;
         transform: translateY(0);

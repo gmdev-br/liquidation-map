@@ -19,12 +19,14 @@ import {
 } from '../events/handlers.js';
 import { renderQuotesPanel, updatePriceModeUI } from '../ui/panels.js';
 import { debounce } from '../utils/performance.js';
+import { showToast } from '../ui/toast.js';
 
 const STORAGE_KEY = 'whaleWatcherSettings';
 
 // Debounced save to reduce localStorage writes
 const debouncedSave = debounce((settings) => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+    showToast('Configurações salvas', 'success', 2500);
 }, 1000);
 
 export function saveSettings(getChartState = null, savedScatterState = null, savedLiqState = null, scatterChart = null, liqChartInstance = null) {

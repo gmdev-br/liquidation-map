@@ -193,6 +193,23 @@ a.addr-link:hover .addr-text {
     font-size: 36px;
     margin-bottom: 10px;
     opacity: 0.5;
+    display: inline-block;
+    animation: whalePulse 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes whalePulse {
+
+    0%,
+    100% {
+        opacity: 0.5;
+        transform: scale(1);
+    }
+
+    50% {
+        opacity: 1;
+        transform: scale(1.1);
+        text-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+    }
 }
 
 .spinner {

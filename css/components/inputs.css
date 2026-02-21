@@ -27,6 +27,7 @@ select {
 
 /* Mobile inputs */
 @media (max-width: 767px) {
+
     input[type="number"],
     input[type="text"],
     select {
@@ -38,6 +39,7 @@ select {
 }
 
 @media (max-width: 479px) {
+
     input[type="number"],
     input[type="text"],
     select {
@@ -63,10 +65,13 @@ select:hover {
 
 input[type="number"]:focus,
 input[type="text"]:focus,
-select:focus {
+select:focus,
+input[type="number"]:focus-visible,
+input[type="text"]:focus-visible,
+select:focus-visible {
     outline: none;
-    border-color: rgba(156, 163, 175, 0.65);
-    box-shadow: 0 0 0 3px rgba(156, 163, 175, 0.15), 0 0 16px rgba(156, 163, 175, 0.15);
+    border-color: rgba(255, 255, 255, 0.7);
+    box-shadow: 0 0 0 3px rgba(156, 163, 175, 0.35), 0 0 16px rgba(156, 163, 175, 0.25);
     background-color: var(--glass-bg-strong);
 }
 
@@ -142,6 +147,19 @@ select option {
 
 .combobox.open .combobox-dropdown {
     display: block;
+}
+
+/* Drop-in Animation for Modals & Dropdowns */
+@keyframes dropIn {
+    0% {
+        opacity: 0;
+        transform: translateY(-8px) scale(0.98);
+    }
+
+    100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
 }
 
 /* ── Combobox Items ── */
@@ -341,4 +359,79 @@ input[type="color"]:focus {
 input[type="color"]::-webkit-color-swatch:active,
 input[type="color"]::-moz-color-swatch:active {
     transform: scale(0.98);
+}
+
+
+/* ── Range Sliders (Liquid Glass) ── */
+input[type="range"] {
+    -webkit-appearance: none;
+    width: 100%;
+    background: transparent;
+    min-height: 24px;
+    padding: 0;
+    margin: 8px 0;
+}
+
+input[type="range"]:focus {
+    outline: none;
+}
+
+/* Track */
+input[type="range"]::-webkit-slider-runnable-track {
+    width: 100%;
+    height: 6px;
+    cursor: pointer;
+    background: rgba(156, 163, 175, 0.2);
+    border-radius: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    transition: background 0.2s;
+}
+
+input[type="range"]:hover::-webkit-slider-runnable-track {
+    background: rgba(156, 163, 175, 0.3);
+}
+
+/* Thumb */
+input[type="range"]::-webkit-slider-thumb {
+    height: 18px;
+    width: 18px;
+    border-radius: 50%;
+    background: #fff;
+    cursor: pointer;
+    -webkit-appearance: none;
+    appearance: none;
+    margin-top: -6px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(0, 0, 0, 0.1);
+    transition: transform 0.1s, box-shadow 0.1s;
+}
+
+input[type="range"]:active::-webkit-slider-thumb {
+    transform: scale(1.15);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5), 0 0 0 4px rgba(255, 255, 255, 0.1);
+}
+
+/* Firefox */
+input[type="range"]::-moz-range-track {
+    width: 100%;
+    height: 6px;
+    cursor: pointer;
+    background: rgba(156, 163, 175, 0.2);
+    border-radius: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+input[type="range"]::-moz-range-thumb {
+    height: 18px;
+    width: 18px;
+    border-radius: 50%;
+    background: #fff;
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(0, 0, 0, 0.1);
+    transition: transform 0.1s, box-shadow 0.1s;
+}
+
+input[type="range"]:active::-moz-range-thumb {
+    transform: scale(1.15);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5), 0 0 0 4px rgba(255, 255, 255, 0.1);
 }

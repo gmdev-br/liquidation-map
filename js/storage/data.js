@@ -3,6 +3,7 @@
 // ═══════════════════════════════════════════════════════════
 
 import { getAllRows } from '../state.js';
+import { showToast } from '../ui/toast.js';
 
 const DATA_KEY = 'whaleWatcherData';
 
@@ -13,14 +14,14 @@ export function saveTableData() {
             console.warn('Skipping save: no data to save');
             return;
         }
-        
+
         const data = JSON.stringify(allRows);
         localStorage.setItem(DATA_KEY, data);
         console.log(`Saved ${allRows.length} rows (${(data.length / 1024).toFixed(1)} KB)`);
     } catch (e) {
         console.error('Failed to save table data:', e);
         if (e.name === 'QuotaExceededError' || e.code === 22) {
-            alert('Warning: Local storage quota exceeded. Some data may not persist.');
+            showToast('Warning: Local storage quota exceeded. Some data may not persist.', 'error', 5000);
         }
     }
 }

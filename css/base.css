@@ -4,10 +4,10 @@
 
 :root {
     /* Leverage color variables */
-    --long-low-color: #f6ff00;
-    --long-high-color: #44ff00;
-    --short-low-color: #d900ff;
-    --short-high-color: #dc2626;
+    --long-low-color: #4ade80;
+    --long-high-color: #22c55e;
+    --short-low-color: #f87171;
+    --short-high-color: #ef4444;
 }
 
 /* ── Leverage-based cell coloring ── */

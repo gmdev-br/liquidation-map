@@ -225,7 +225,7 @@ function _renderTableInternal() {
     }
 
     setDisplayedRows(rows);
-    
+
     // Only update charts if not scanning
     if (!getScanning()) {
         renderCharts(); // Update chart with filtered rows
@@ -237,7 +237,7 @@ function _renderTableInternal() {
     const tbody = document.getElementById('tableBody');
 
     if (rows.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="13" class="empty-cell"><div class="empty-icon">🔍</div><div>No positions match the current filters.</div></td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="14" class="empty-cell"><div class="empty-icon">🔍</div><div>No positions match the current filters.</div></td></tr>`;
         return;
     }
 
