@@ -6,6 +6,7 @@
 let whaleList = [];       // from leaderboard
 let allRows = [];         // flat: one row per position
 let displayedRows = [];   // after filters
+let lastSeenAccountValues = {}; // for Delta Scanning
 
 // Column state
 let visibleColumns = [];   // Default all visible
@@ -120,7 +121,8 @@ export const getState = () => ({
     lastSaveTime,
     leverageColors,
     columnWidth,
-    minBtcVolume
+    minBtcVolume,
+    lastSeenAccountValues
 });
 
 // Setters
@@ -150,9 +152,9 @@ export const setState = (updates) => {
         chartHighLevSplit,
         chartMode,
         bubbleScale,
-    bubbleOpacity,
-    lineThickness,
-    aggregationFactor,
+        bubbleOpacity,
+        lineThickness,
+        aggregationFactor,
         savedScatterState,
         savedLiqState,
         fxRates,
@@ -167,7 +169,8 @@ export const setState = (updates) => {
         leverageColors,
         columnWidth,
         gridSpacing,
-        minBtcVolume
+        minBtcVolume,
+        lastSeenAccountValues
     }, updates);
 };
 
@@ -213,6 +216,7 @@ export const setLastSaveTime = (value) => { lastSaveTime = value; };
 export const setLeverageColors = (value) => { leverageColors = value; };
 export const setGridSpacing = (value) => { gridSpacing = value; };
 export const setMinBtcVolume = (value) => { minBtcVolume = value; };
+export const setLastSeenAccountValues = (value) => { lastSeenAccountValues = value; };
 
 // Getters for common state access
 export const getAllRows = () => allRows;
@@ -256,6 +260,7 @@ export const getLeverageColors = () => leverageColors;
 export const getColumnWidth = () => columnWidth;
 export const getGridSpacing = () => gridSpacing;
 export const getMinBtcVolume = () => minBtcVolume;
+export const getLastSeenAccountValues = () => lastSeenAccountValues;
 export const setPriceMode = (mode) => {
     priceMode = mode;
 };
