@@ -27,7 +27,11 @@ const urlsToCache = [
     '/js/storage/data.js',
     '/js/api/leaderboard.js',
     '/js/api/exchangeRates.js',
-    '/js/api/hyperliquid.js'
+    '/js/api/hyperliquid.js',
+    '/js/utils/performance.js',
+    '/js/utils/virtualScroll.js',
+    '/js/utils/currency.js',
+    '/js/utils/formatters.js'
 ];
 
 // Install event - cache resources

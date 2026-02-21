@@ -18,8 +18,14 @@ import {
     updateColumnSelectDisplay
 } from '../events/handlers.js';
 import { renderQuotesPanel, updatePriceModeUI } from '../ui/panels.js';
+import { debounce } from '../utils/performance.js';
 
 const STORAGE_KEY = 'whaleWatcherSettings';
+
+// Debounced save to reduce localStorage writes
+const debouncedSave = debounce((settings) => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+}, 1000);
 
 export function saveSettings(getChartState = null, savedScatterState = null, savedLiqState = null, scatterChart = null, liqChartInstance = null) {
     // Helper to get chart state
@@ -98,7 +104,8 @@ export function saveSettings(getChartState = null, savedScatterState = null, sav
         maxValueCcy: settings.maxValueCcy
     });
 
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+    // Use debounced save to reduce localStorage writes
+    debouncedSave(settings);
 }
 
 export function loadSettings() {

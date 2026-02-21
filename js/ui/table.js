@@ -16,6 +16,19 @@ import { renderScatterPlot } from '../charts/scatter.js';
 import { renderLiqScatterPlot } from '../charts/liquidation.js';
 import { setupColumnDragAndDrop } from '../events/handlers.js';
 import { updateRankingPanel } from './panels.js';
+import { debounce, Cache } from '../utils/performance.js';
+import { enableVirtualScroll } from '../utils/virtualScroll.js';
+
+// Cache for filtered data to avoid recomputing
+const filterCache = new Cache(5000);
+
+// Debounced render function to reduce DOM updates
+const debouncedRenderTable = debounce(() => {
+    _renderTableInternal();
+}, 300);
+
+// Virtual scroll instance
+let virtualScrollManager = null;
 
 function reorderTableHeadersAndFilters(columnOrder) {
     const headerRow = document.querySelector('thead tr');
@@ -79,7 +92,8 @@ export function updateStats(showSymbols, allRows) {
     document.getElementById('sLargest').textContent = sym + fmt(largest);
 }
 
-export function renderTable() {
+// Internal render function - does the actual work
+function _renderTableInternal() {
     console.log('renderTable: Starting...');
     function renderCharts() {
         renderScatterPlot();
@@ -121,61 +135,94 @@ export function renderTable() {
     const minUpnl = parseFloat(document.getElementById('minUpnl').value);
     const maxUpnl = parseFloat(document.getElementById('maxUpnl').value);
 
-    saveSettings();
-
-    let rows = allRows.filter(r => {
-        if (selectedCoins.length > 0 && !selectedCoins.includes(r.coin)) return false;
-        if (addressFilterRegex) {
-            const addr = r.address;
-            const disp = r.displayName || '';
-            if (!addressFilterRegex.test(addr) && !addressFilterRegex.test(disp)) return false;
-        }
-        if (sideFilter && r.side !== sideFilter) return false;
-        if (!isNaN(minLev) && r.leverageValue < minLev) return false;
-        if (!isNaN(maxLev) && r.leverageValue > maxLev) return false;
-        if (!isNaN(minSize) && r.positionValue < minSize) return false;
-        if (!isNaN(minFunding) && Math.abs(r.funding) < minFunding) return false;
-        if (levTypeFilter && r.leverageType !== levTypeFilter) return false;
-
-        if (!isNaN(minSzi) && Math.abs(r.szi) < minSzi) return false;
-        if (!isNaN(maxSzi) && Math.abs(r.szi) > maxSzi) return false;
-
-        const valCcy = convertToActiveCcy(r.positionValue, null, activeCurrency, fxRates);
-        if (!isNaN(minValueCcy) && valCcy < minValueCcy) return false;
-        if (!isNaN(maxValueCcy) && valCcy > maxValueCcy) return false;
-
-        const entCcy = getCorrelatedEntry(r, activeEntryCurrency, currentPrices, fxRates);
-        if (!isNaN(minEntryCcy) && entCcy < minEntryCcy) return false;
-        if (!isNaN(maxEntryCcy) && entCcy > maxEntryCcy) return false;
-
-        if (!isNaN(minUpnl) && r.unrealizedPnl < minUpnl) return false;
-        if (!isNaN(maxUpnl) && r.unrealizedPnl > maxUpnl) return false;
-
-        return true;
+    // Create cache key for filter state
+    const cacheKey = JSON.stringify({
+        selectedCoins,
+        addressFilter,
+        sideFilter,
+        minLev,
+        maxLev,
+        minSize,
+        minFunding,
+        levTypeFilter,
+        minSzi,
+        maxSzi,
+        minValueCcy,
+        maxValueCcy,
+        minEntryCcy,
+        maxEntryCcy,
+        minUpnl,
+        maxUpnl,
+        sortKey: getSortKey(),
+        sortDir: getSortDir()
     });
 
-    // Sort
-    rows.sort((a, b) => {
-        let va, vb;
-        if (sortKey === 'coin') {
-            return sortDir * a.coin.localeCompare(b.coin);
-        } else if (sortKey === 'funding') {
-            va = a.funding; vb = b.funding;
-        } else if (sortKey === 'valueCcy') {
-            va = convertToActiveCcy(a.positionValue, null, activeCurrency, fxRates);
-            vb = convertToActiveCcy(b.positionValue, null, activeCurrency, fxRates);
-        } else if (sortKey === 'entryCcy') {
-            va = getCorrelatedEntry(a, activeEntryCurrency, currentPrices, fxRates);
-            vb = getCorrelatedEntry(b, activeEntryCurrency, currentPrices, fxRates);
-        } else if (sortKey === 'liqPx') {
-            va = a.liquidationPx > 0 ? getCorrelatedPrice(a, a.liquidationPx, activeEntryCurrency, currentPrices, fxRates) : 0;
-            vb = b.liquidationPx > 0 ? getCorrelatedPrice(b, b.liquidationPx, activeEntryCurrency, currentPrices, fxRates) : 0;
-        } else {
-            va = a[sortKey] ?? 0;
-            vb = b[sortKey] ?? 0;
-        }
-        return sortDir * (vb - va);
-    });
+    // Check cache first
+    let rows;
+    if (filterCache.has(cacheKey)) {
+        rows = filterCache.get(cacheKey);
+        console.log('Using cached filtered rows:', rows.length);
+    } else {
+        // Filter rows
+        rows = allRows.filter(r => {
+            if (selectedCoins.length > 0 && !selectedCoins.includes(r.coin)) return false;
+            if (addressFilterRegex) {
+                const addr = r.address;
+                const disp = r.displayName || '';
+                if (!addressFilterRegex.test(addr) && !addressFilterRegex.test(disp)) return false;
+            }
+            if (sideFilter && r.side !== sideFilter) return false;
+            if (!isNaN(minLev) && r.leverageValue < minLev) return false;
+            if (!isNaN(maxLev) && r.leverageValue > maxLev) return false;
+            if (!isNaN(minSize) && r.positionValue < minSize) return false;
+            if (!isNaN(minFunding) && Math.abs(r.funding) < minFunding) return false;
+            if (levTypeFilter && r.leverageType !== levTypeFilter) return false;
+
+            if (!isNaN(minSzi) && Math.abs(r.szi) < minSzi) return false;
+            if (!isNaN(maxSzi) && Math.abs(r.szi) > maxSzi) return false;
+
+            const valCcy = convertToActiveCcy(r.positionValue, null, activeCurrency, fxRates);
+            if (!isNaN(minValueCcy) && valCcy < minValueCcy) return false;
+            if (!isNaN(maxValueCcy) && valCcy > maxValueCcy) return false;
+
+            const entCcy = getCorrelatedEntry(r, activeEntryCurrency, currentPrices, fxRates);
+            if (!isNaN(minEntryCcy) && entCcy < minEntryCcy) return false;
+            if (!isNaN(maxEntryCcy) && entCcy > maxEntryCcy) return false;
+
+            if (!isNaN(minUpnl) && r.unrealizedPnl < minUpnl) return false;
+            if (!isNaN(maxUpnl) && r.unrealizedPnl > maxUpnl) return false;
+
+            return true;
+        });
+
+        // Sort
+        const sortKey = getSortKey();
+        const sortDir = getSortDir();
+        rows.sort((a, b) => {
+            let va, vb;
+            if (sortKey === 'coin') {
+                return sortDir * a.coin.localeCompare(b.coin);
+            } else if (sortKey === 'funding') {
+                va = a.funding; vb = b.funding;
+            } else if (sortKey === 'valueCcy') {
+                va = convertToActiveCcy(a.positionValue, null, activeCurrency, fxRates);
+                vb = convertToActiveCcy(b.positionValue, null, activeCurrency, fxRates);
+            } else if (sortKey === 'entryCcy') {
+                va = getCorrelatedEntry(a, activeEntryCurrency, currentPrices, fxRates);
+                vb = getCorrelatedEntry(b, activeEntryCurrency, currentPrices, fxRates);
+            } else if (sortKey === 'liqPx') {
+                va = a.liquidationPx > 0 ? getCorrelatedPrice(a, a.liquidationPx, activeEntryCurrency, currentPrices, fxRates) : 0;
+                vb = b.liquidationPx > 0 ? getCorrelatedPrice(b, b.liquidationPx, activeEntryCurrency, currentPrices, fxRates) : 0;
+            } else {
+                va = a[sortKey] ?? 0;
+                vb = b[sortKey] ?? 0;
+            }
+            return sortDir * (vb - va);
+        });
+
+        // Cache the result
+        filterCache.set(cacheKey, rows);
+    }
 
     setDisplayedRows(rows);
     renderCharts(); // Update chart with filtered rows
@@ -190,7 +237,13 @@ export function renderTable() {
         return;
     }
 
-    tbody.innerHTML = rows.map((r, i) => {
+    // Use virtual scrolling for large datasets
+    if (!virtualScrollManager) {
+        virtualScrollManager = enableVirtualScroll(100);
+    }
+
+    // Row renderer function
+    const rowRenderer = (r, i) => {
         const side = r.side;
         const pnlClass = r.unrealizedPnl >= 0 ? 'green' : 'red';
         const fundClass = r.funding >= 0 ? 'green' : 'red';
@@ -310,7 +363,10 @@ export function renderTable() {
         return `<tr class="${r.displayName ? 'row-known-address' : ''}">
             ${columnOrder.filter(Key => filteredCells[Key]).map(Key => filteredCells[Key]).join('')}
         </tr>`;
-    }).join('');
+    };
+
+    // Render using virtual scroll or traditional method
+    virtualScrollManager.render(rows, rowRenderer);
 
     // Update ranking panel after rendering table (async)
     updateRankingPanel();
@@ -324,6 +380,16 @@ export function renderTable() {
             setupColumnDragAndDrop();
         }, 100);
     }
+}
+
+// Public renderTable function - debounced version
+export function renderTable() {
+    debouncedRenderTable();
+}
+
+// Force immediate render (for cases where debouncing is not desired)
+export function renderTableImmediate() {
+    _renderTableInternal();
 }
 
 // Apply column widths after table is rendered

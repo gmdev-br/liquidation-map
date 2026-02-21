@@ -27,6 +27,7 @@ import {
 // Import chart plugins - ChartZoom is already registered via CDN
 
 let scatterChart = null;
+let lastDataHash = null; // Track data changes for incremental updates
 
 // ── Chart Scale Resizing ──
 function enableChartScaleResizing(canvasId, getChartInstance, resetBtnId) {
@@ -212,6 +213,28 @@ export function renderScatterPlot() {
         section.style.display = 'none';
         return;
     }
+
+    // Calculate data hash to detect changes
+    const currentDataHash = JSON.stringify({
+        mode: getChartMode(),
+        highLevSplit: getChartHighLevSplit(),
+        bubbleScale: getBubbleScale(),
+        bubbleOpacity: getBubbleOpacity(),
+        lineThickness: getLineThickness(),
+        aggregationFactor: getAggregationFactor(),
+        dataLength: data.length,
+        // Sample first and last data points for hash (more efficient than full hash)
+        firstPoint: data[0],
+        lastPoint: data[data.length - 1]
+    });
+
+    // If data hasn't changed and chart exists, just update
+    if (scatterChart && lastDataHash === currentDataHash) {
+        console.log('Data unchanged, skipping chart recreation');
+        return;
+    }
+
+    lastDataHash = currentDataHash;
 
     // Get current BTC price for annotations
     const activeCurrency = getActiveEntryCurrency();

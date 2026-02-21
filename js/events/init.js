@@ -76,6 +76,7 @@ function setupSwipeGestures() {
         touchStartY = 0;
     }
 
+    // Use passive listeners for better scroll performance
     document.addEventListener('touchstart', handleTouchStart, { passive: true });
     document.addEventListener('touchend', handleTouchEnd);
 }
@@ -136,6 +137,7 @@ function setupPullToRefresh() {
         startY = 0;
     }
 
+    // Use passive listeners for better scroll performance
     document.addEventListener('touchstart', handleTouchStart, { passive: true });
     document.addEventListener('touchmove', handleTouchMove, { passive: false });
     document.addEventListener('touchend', handleTouchEnd);
@@ -265,11 +267,15 @@ function setupEventListeners() {
         });
     });
 
-    // Column sorting
-    document.querySelectorAll('th[id^="th-"]').forEach(th => {
-        th.addEventListener('click', (e) => {
-            // Skip if currently resizing or if clicking on resizer
+    // Column sorting - use event delegation
+    const table = document.querySelector('table');
+    if (table) {
+        table.addEventListener('click', (e) => {
+            // Skip if currently resizing
             if (document.body.classList.contains('resizing')) return;
+
+            const th = e.target.closest('th[id^="th-"]');
+            if (!th) return;
 
             const resizer = th.querySelector('.resizer');
             if (resizer && (e.target === resizer || resizer.contains(e.target))) return;
@@ -277,7 +283,7 @@ function setupEventListeners() {
             const key = th.id.replace('th-', '');
             sortBy(key, renderTable);
         });
-    });
+    }
 
     // Filter inputs
     const filterInputs = ['minValue', 'coinFilter', 'sideFilter', 'minLev', 'maxLev', 'minSize',
