@@ -226,9 +226,27 @@ export function renderAggregationTable(force = false) {
                     }
                 }
 
-                // Apply colors consistently to all directional cells based on row-level Forte status
-                colorLong = b.notionalLong > 0 ? (isForteZone ? aggZoneColors.buyStrong : aggZoneColors.buyNormal) : '#4b5563';
-                colorShort = b.notionalShort > 0 ? (isForteZone ? aggZoneColors.sellStrong : aggZoneColors.sellNormal) : '#4b5563';
+                // Apply colors consistently to all directional cells based on row-level Forte status OR High Intensity
+                // User Requirement: "linas com destaues por tipo de zona forte ou intensidade forte devem seguir somente um padrao de coloracao"
+                // User Requirement Update: "compra e venda normais devem seguir apenas 1 cor"
+                if (totalNotional >= 10_000_000) {
+                    if (domType === 'COMPRA') {
+                        // Dominant Buy: Longs get Zone Color (Strong or Normal), Shorts get Gray (Neutral)
+                        colorLong = b.notionalLong > 0 ? zoneColor : '#4b5563';
+                        colorShort = b.notionalShort > 0 ? '#9ca3af' : '#4b5563';
+                    } else if (domType === 'VENDA') {
+                        // Dominant Sell: Shorts get Zone Color (Strong or Normal), Longs get Gray (Neutral)
+                        colorLong = b.notionalLong > 0 ? '#9ca3af' : '#4b5563';
+                        colorShort = b.notionalShort > 0 ? zoneColor : '#4b5563';
+                    } else {
+                        // Neutral High Intensity: Avoid mixing. Use Gray/Neutral.
+                        colorLong = b.notionalLong > 0 ? '#9ca3af' : '#4b5563';
+                        colorShort = b.notionalShort > 0 ? '#9ca3af' : '#4b5563';
+                    }
+                } else {
+                    colorLong = b.notionalLong > 0 ? aggZoneColors.buyNormal : '#4b5563';
+                    colorShort = b.notionalShort > 0 ? aggZoneColors.sellNormal : '#4b5563';
+                }
 
                 // Update DOM color to match row-level Forte status
                 domColor = domType === 'COMPRA' ? (isForteZone ? aggZoneColors.buyStrong : aggZoneColors.buyNormal) :
@@ -303,8 +321,12 @@ export function renderAggregationTable(force = false) {
             const trClass = isCurrentPriceRange ? 'active-price-range' : '';
             const expectedStyle = `${trStyle}; ${highlightStyle}`.trim().replace(/^; | ;$/g, '');
 
+            // Star indicator for Extreme Intensity
+            const starIndicator = totalNotional >= 100_000_000 ? '<span style="color:#f59e0b; margin-right:4px; font-size:14px">⭐</span>' : '';
+
             const newContent = `
                 <td style="font-family:monospace; font-weight:700; color:${isCurrentPriceRange ? '#fff' : '#d1d5db'}">
+                    ${starIndicator}
                     ${isCurrentPriceRange ? `<div style="font-size:10px; color:${aggHighlightColor}; margin-bottom:2px">BTC $${btcPrice.toLocaleString()}</div>` : ''}
                     $${b.faixaDe.toLocaleString()}
                 </td>
