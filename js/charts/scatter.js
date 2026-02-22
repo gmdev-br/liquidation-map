@@ -456,6 +456,8 @@ export function renderScatterPlot() {
             datasets.push({
                 label: `Longs (≤${highLevSplit}x)`,
                 data: longLowData,
+                parsing: false,
+                normalized: true,
                 backgroundColor: hexToRgba(customColors.longLow, opacity),
                 borderColor: customColors.longLow,
                 borderWidth: 1,
@@ -474,6 +476,8 @@ export function renderScatterPlot() {
             datasets.push({
                 label: `Longs (>${highLevSplit}x)`,
                 data: longHighData,
+                parsing: false,
+                normalized: true,
                 backgroundColor: hexToRgba(customColors.longHigh, opacity),
                 borderColor: customColors.longHigh,
                 borderWidth: 2,
@@ -492,6 +496,8 @@ export function renderScatterPlot() {
             datasets.push({
                 label: `Shorts (≤${highLevSplit}x)`,
                 data: shortLowData,
+                parsing: false,
+                normalized: true,
                 backgroundColor: hexToRgba(customColors.shortLow, opacity),
                 borderColor: customColors.shortLow,
                 borderWidth: 1,
@@ -510,6 +516,8 @@ export function renderScatterPlot() {
             datasets.push({
                 label: `Shorts (>${highLevSplit}x)`,
                 data: shortHighData,
+                parsing: false,
+                normalized: true,
                 backgroundColor: hexToRgba(customColors.shortHigh, opacity),
                 borderColor: customColors.shortHigh,
                 borderWidth: 2,

@@ -3,13 +3,13 @@
 // ═══════════════════════════════════════════════════════════
 
 // Import chart mechanics from adapted implementation
-import { 
-    crosshairPlugin, 
+import {
+    crosshairPlugin,
     btcPriceLabelPlugin,
     btcGridPlugin
 } from './chart-mechanics-adapted.js';
 
-import { 
+import {
     originalZoomConfig,
     liqZoomConfig,
     originalScaleResizing,
@@ -32,6 +32,7 @@ export const chartMechanics = {
 };
 
 export const chartOptions = {
+    animation: false,
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
@@ -51,8 +52,8 @@ export const chartOptions = {
             WebkitBackdropFilter: 'blur(16px)',
             boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
             callbacks: {
-                label: function(context) {
-                    return context.parsed.y !== undefined ? 
+                label: function (context) {
+                    return context.parsed.y !== undefined ?
                         `Value: ${context.parsed.y.toLocaleString()}` : '';
                 }
             }

@@ -6,6 +6,7 @@ import { saveSettings } from '../storage/settings.js';
 
 // Chart.js plugins and configurations for liquidation chart
 export const liqChartOptions = {
+    animation: false,
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
@@ -29,7 +30,7 @@ export const liqChartOptions = {
             WebkitBackdropFilter: 'blur(16px)',
             boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
             callbacks: {
-                label: function(context) {
+                label: function (context) {
                     if (context.chart.config.type === 'bar') {
                         return `Count: ${context.parsed.y}`;
                     }
@@ -51,9 +52,9 @@ export const liqChartOptions = {
                 enabled: true,
                 mode: 'xy',
                 modifierKey: null,
-                onPan: ({chart}) => {
-                     chart.isZoomed = true;
-                     saveSettings();
+                onPan: ({ chart }) => {
+                    chart.isZoomed = true;
+                    saveSettings();
                 }
             },
             zoom: {
@@ -61,9 +62,9 @@ export const liqChartOptions = {
                 drag: { enabled: true, modifierKey: 'shift' },
                 pinch: { enabled: true },
                 mode: 'xy',
-                onZoom: ({chart}) => {
-                     chart.isZoomed = true;
-                     saveSettings();
+                onZoom: ({ chart }) => {
+                    chart.isZoomed = true;
+                    saveSettings();
                 }
             }
         }

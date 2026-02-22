@@ -8,9 +8,9 @@ import {
     getColumnOrder, getVisibleColumns, getRankingLimit, getColorMaxLev,
     getChartHighLevSplit, getChartHeight, getLiqChartHeight, getSavedScatterState,
     getSavedLiqState, getColumnWidths, getColumnWidth, getActiveCurrency, getActiveEntryCurrency, getDecimalPlaces, getLeverageColors, getFontSize, getFontSizeKnown, getGridSpacing, getMinBtcVolume,
-    getAggInterval, getAggTableHeight, getAggVolumeUnit, getIsZenMode, getLastSeenAccountValues,
+    getAggInterval, getAggTableHeight, getAggVolumeUnit, getIsZenMode, getLastSeenAccountValues, getShowAggSymbols, getAggZoneColors, getAggHighlightColor,
     setSortKey, setSortDir, setSavedScatterState, setSavedLiqState,
-    setColumnOrder, setVisibleColumns, setSelectedCoins, setRankingLimit, setColorMaxLev, setChartHighLevSplit, setChartMode, setBubbleScale, setBubbleOpacity, setLineThickness, setAggregationFactor, setPriceMode, setShowSymbols, setPriceUpdateInterval, setDecimalPlaces, setFontSize, setFontSizeKnown, setLeverageColors, setColumnWidth, setGridSpacing, setMinBtcVolume, setAggInterval, setAggTableHeight, setAggVolumeUnit, setIsZenMode, setLastSeenAccountValues
+    setColumnOrder, setVisibleColumns, setSelectedCoins, setRankingLimit, setColorMaxLev, setChartHighLevSplit, setChartMode, setBubbleScale, setBubbleOpacity, setLineThickness, setAggregationFactor, setPriceMode, setShowSymbols, setPriceUpdateInterval, setDecimalPlaces, setFontSize, setFontSizeKnown, setLeverageColors, setColumnWidth, setGridSpacing, setMinBtcVolume, setAggInterval, setAggTableHeight, setAggVolumeUnit, setIsZenMode, setLastSeenAccountValues, setShowAggSymbols, setAggZoneColors, setAggHighlightColor
 } from '../state.js';
 import { COLUMN_DEFS } from '../config.js';
 import { cbSetValue, updateCoinSearchLabel } from '../ui/combobox.js';
@@ -99,6 +99,9 @@ export function saveSettings(getChartState = null, savedScatterState = null, sav
         aggTableHeight: getAggTableHeight(),
         aggVolumeUnit: getAggVolumeUnit(),
         isZenMode: getIsZenMode(),
+        showAggSymbols: getShowAggSymbols(),
+        aggZoneColors: getAggZoneColors(),
+        aggHighlightColor: getAggHighlightColor(),
         lastSeenAccountValues: getLastSeenAccountValues()
     };
 
@@ -444,6 +447,22 @@ export function loadSettings() {
     if (s.isZenMode !== undefined) {
         setIsZenMode(s.isZenMode);
         // We will trigger the UI update for Zen Mode in init.js after settings are loaded
+    }
+    if (s.showAggSymbols !== undefined) {
+        setShowAggSymbols(s.showAggSymbols);
+        const checkbox = document.getElementById('showAggSymbolsDrawer');
+        if (checkbox) checkbox.checked = s.showAggSymbols;
+    }
+    if (s.aggZoneColors) {
+        setAggZoneColors(s.aggZoneColors);
+        if (document.getElementById('colorAggBuyStrong')) document.getElementById('colorAggBuyStrong').value = s.aggZoneColors.buyStrong || '#22c55e';
+        if (document.getElementById('colorAggBuyNormal')) document.getElementById('colorAggBuyNormal').value = s.aggZoneColors.buyNormal || '#4ade80';
+        if (document.getElementById('colorAggSellStrong')) document.getElementById('colorAggSellStrong').value = s.aggZoneColors.sellStrong || '#ef4444';
+        if (document.getElementById('colorAggSellNormal')) document.getElementById('colorAggSellNormal').value = s.aggZoneColors.sellNormal || '#f87171';
+    }
+    if (s.aggHighlightColor !== undefined) {
+        setAggHighlightColor(s.aggHighlightColor);
+        if (document.getElementById('colorAggHighlight')) document.getElementById('colorAggHighlight').value = s.aggHighlightColor || '#facc15';
     }
     if (s.lastSeenAccountValues) {
         setLastSeenAccountValues(s.lastSeenAccountValues);

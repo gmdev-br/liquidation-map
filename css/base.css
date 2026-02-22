@@ -119,6 +119,7 @@ body::after {
 .table-wrap {
     z-index: 1;
     position: relative;
+    overflow-anchor: none;
 }
 
 .auto-loading {

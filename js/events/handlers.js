@@ -21,9 +21,11 @@ import {
     getRankingLimit, getColorMaxLev, getChartHighLevSplit, getChartHeight,
     getLiqChartHeight, getActiveWindow, setColumnOrder, setVisibleColumns,
     getColumnOrder, getVisibleColumns, setPriceUpdateInterval, setActiveCurrency,
-    setActiveEntryCurrency, setDecimalPlaces, setFontSize, setFontSizeKnown, setLeverageColors, setGridSpacing, setMinBtcVolume, getMinBtcVolume, setAggInterval, setAggTableHeight, setAggVolumeUnit, getAggVolumeUnit, setIsZenMode, getIsZenMode
+    setActiveEntryCurrency, setDecimalPlaces, setFontSize, setFontSizeKnown, setLeverageColors, setGridSpacing, setMinBtcVolume, getMinBtcVolume, setAggInterval, setAggTableHeight, setAggVolumeUnit, getAggVolumeUnit, setIsZenMode, getIsZenMode,
+    setShowAggSymbols, getShowAggSymbols, setAggZoneColors, getAggZoneColors, setAggHighlightColor, getAggHighlightColor
 } from '../state.js';
 import { renderTable, updateStats } from '../ui/table.js';
+import { renderAggregationTable, scrollToCurrentPriceRange as aggScrollToRange } from '../ui/aggregation.js';
 import { renderQuotesPanel, updateRankingPanel } from '../ui/panels.js';
 import { saveSettings } from '../storage/settings.js';
 import { startPriceTicker, stopPriceTicker } from '../ui/panels.js';
@@ -43,6 +45,13 @@ export function toggleShowSymbols() {
         btnDesktop.textContent = isActive ? 'On' : 'Off';
         btnDesktop.classList.toggle('active', isActive);
     }
+    saveSettings();
+    renderTable();
+}
+
+export function toggleShowAggSymbols() {
+    const isChecked = document.getElementById('showAggSymbolsDrawer')?.checked;
+    setShowAggSymbols(isChecked);
     saveSettings();
     renderTable();
 }
@@ -319,6 +328,26 @@ export function updateAggTableHeight(height) {
     }
 }
 
+export function updateAggZoneColors(e) {
+    const buyStrong = document.getElementById('colorAggBuyStrong')?.value || '#22c55e';
+    const buyNormal = document.getElementById('colorAggBuyNormal')?.value || '#4ade80';
+    const sellStrong = document.getElementById('colorAggSellStrong')?.value || '#ef4444';
+    const sellNormal = document.getElementById('colorAggSellNormal')?.value || '#f87171';
+
+    setAggZoneColors({ buyStrong, buyNormal, sellStrong, sellNormal });
+
+    saveSettings();
+    // Call directly with force=true to bypass all debounce/optimization caches
+    renderAggregationTable(true);
+}
+
+export function updateAggHighlightColor(e) {
+    const highlightColor = document.getElementById('colorAggHighlight')?.value || '#facc15';
+    setAggHighlightColor(highlightColor);
+    saveSettings();
+    renderAggregationTable(true);
+}
+
 export function updateAggVolumeUnit(unit) {
     setAggVolumeUnit(unit);
     // Sync all unit tabs
@@ -330,15 +359,18 @@ export function updateAggVolumeUnit(unit) {
 }
 
 export function scrollToCurrentPrice() {
-    const tableWrap = document.querySelector('#agg-table-section .table-wrap');
-    const activeRow = tableWrap?.querySelector('.active-price-range');
-    if (tableWrap && activeRow) {
-        const topPos = activeRow.offsetTop - (tableWrap.offsetHeight / 2) + (activeRow.offsetHeight / 2);
-        tableWrap.scrollTo({
-            top: topPos,
-            behavior: 'smooth'
-        });
+    console.log('scrollToCurrentPrice called');
+
+    // Ensure section is expanded if it's collapsed
+    const sectionWrapper = document.getElementById('aggSectionContent')?.closest('.section-wrapper');
+    if (sectionWrapper && sectionWrapper.classList.contains('collapsed')) {
+        console.log('Expanding aggregation section before scrolling');
+        sectionWrapper.classList.remove('collapsed');
+        localStorage.setItem(`collapse_aggSectionContent`, 'false');
     }
+
+    // Call the specialized scroll function in aggregation.js
+    aggScrollToRange();
 }
 
 export function toggleZenMode() {

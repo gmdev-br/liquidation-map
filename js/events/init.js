@@ -25,8 +25,8 @@ import {
     updateBubbleSize, updateBubbleOpacity, updateLineThickness, updateAggregation, setChartModeHandler, updateChartHeight,
     updateLiqChartHeight, onCurrencyChange, openColumnCombobox, closeColumnComboboxDelayed,
     renderColumnDropdown as renderColumnDropdownFn, toggleColumn as toggleColumnFn, showAllColumns as showAllColumnsFn, hideAllColumns as hideAllColumnsFn, updateColumnSelectDisplay, applyColumnOrder,
-    applyColumnWidths, applyColumnVisibility, toggleShowSymbols, updatePriceInterval, updateDecimalPlaces, updateFontSize, updateFontSizeKnown, updateLeverageColors, updateGridSpacing, updateMinBtcVolume, updateAggInterval, updateAggTableHeight, updateAggVolumeUnit, scrollToCurrentPrice,
-    toggleZenMode
+    applyColumnWidths, applyColumnVisibility, toggleShowSymbols, toggleShowAggSymbols, updatePriceInterval, updateDecimalPlaces, updateFontSize, updateFontSizeKnown, updateLeverageColors, updateGridSpacing, updateMinBtcVolume, updateAggInterval, updateAggTableHeight, updateAggVolumeUnit, scrollToCurrentPrice,
+    toggleZenMode, updateAggZoneColors, updateAggHighlightColor
 } from './handlers.js';
 import { initColumnWidthControl, applyColumnWidth } from '../ui/columnWidth.js';
 import { setWindow, setStatus, setProgress } from '../ui/status.js';
@@ -372,6 +372,28 @@ function setupEventListeners() {
     }
     if (btnShowSymDesktop) {
         btnShowSymDesktop.addEventListener('click', toggleShowSymbols);
+    }
+
+    // Aggregation symbols toggle
+    const showAggSymbolsDrawer = document.getElementById('showAggSymbolsDrawer');
+    if (showAggSymbolsDrawer) {
+        showAggSymbolsDrawer.addEventListener('change', toggleShowAggSymbols);
+    }
+
+    // Aggregation color pickers
+    const aggColors = [
+        'colorAggBuyStrong', 'colorAggBuyNormal',
+        'colorAggSellStrong', 'colorAggSellNormal'
+    ];
+    aggColors.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('input', updateAggZoneColors);
+    });
+
+    // Highlight color picker
+    const highlightColorEl = document.getElementById('colorAggHighlight');
+    if (highlightColorEl) {
+        highlightColorEl.addEventListener('input', updateAggHighlightColor);
     }
 
     // Ranking limit - attach to both mobile and desktop

@@ -9,6 +9,7 @@
 export class VirtualScroll {
     constructor(options = {}) {
         this.rowHeight = options.rowHeight || 52;
+        this.rowHeightMeasured = false; // Will calibrate on first real render
         this.bufferSize = options.bufferSize || 5;
         this.tbody = options.tbody;
         this.data = [];
@@ -76,13 +77,41 @@ export class VirtualScroll {
     setData(data) {
         this.data = data;
         this.totalHeight = data.length * this.rowHeight;
+        this.rowHeightMeasured = false; // Reset so we re-measure on new data
         this.updateVisibleRange();
         this.render();
-        // Re-render after layout is complete in case containerHeight was 0 initially
+        // First pass: re-render after next animation frame
         requestAnimationFrame(() => {
+            this._calibrateRowHeight();
             this.updateVisibleRange();
             this.render();
         });
+        // Second pass: CSS fonts and custom styles can take slightly longer
+        // This guarantees row height is correct even on slower devices
+        setTimeout(() => {
+            if (!this.rowHeightMeasured) {
+                this._calibrateRowHeight();
+                this.updateVisibleRange();
+                this.render();
+            }
+        }, 250);
+    }
+
+    _calibrateRowHeight() {
+        if (this.rowHeightMeasured) return;
+        // Find the first real data row (not spacers)
+        const realRow = Array.from(this.tbody.children).find(
+            el => !el.classList.contains('vs-top-spacer') && !el.classList.contains('vs-bottom-spacer')
+        );
+        if (realRow && realRow.offsetHeight > 0) {
+            const measuredHeight = realRow.offsetHeight;
+            if (Math.abs(measuredHeight - this.rowHeight) > 2) {
+                // Real height differs from estimate - recalculate total
+                this.rowHeight = measuredHeight;
+                this.totalHeight = this.data.length * this.rowHeight;
+            }
+            this.rowHeightMeasured = true;
+        }
     }
 
     render() {
@@ -91,26 +120,93 @@ export class VirtualScroll {
         const paddingTop = this.visibleStart * this.rowHeight;
         const paddingBottom = Math.max(0, (this.data.length - this.visibleEnd) * this.rowHeight);
 
-        let html = '';
-
-        // Top spacer
-        if (paddingTop > 0) {
-            html += `<tr style="height: ${paddingTop}px; border: none; background: transparent;"><td colspan="100" style="padding: 0; border: none;"></td></tr>`;
+        // Ensure spacers exist
+        let topSpacer = this.tbody.querySelector('.vs-top-spacer');
+        if (!topSpacer) {
+            topSpacer = document.createElement('tr');
+            topSpacer.className = 'vs-top-spacer';
+            topSpacer.style.border = 'none';
+            topSpacer.style.background = 'transparent';
+            topSpacer.innerHTML = '<td colspan="100" style="padding: 0; border: none;"></td>';
+            this.tbody.insertBefore(topSpacer, this.tbody.firstChild);
         }
 
-        // Render only visible rows
-        for (let i = this.visibleStart; i < this.visibleEnd; i++) {
-            const row = this.data[i];
-            if (!row) continue;
-            html += row.html || this.renderRow(row, i);
+        let bottomSpacer = this.tbody.querySelector('.vs-bottom-spacer');
+        if (!bottomSpacer) {
+            bottomSpacer = document.createElement('tr');
+            bottomSpacer.className = 'vs-bottom-spacer';
+            bottomSpacer.style.border = 'none';
+            bottomSpacer.style.background = 'transparent';
+            bottomSpacer.innerHTML = '<td colspan="100" style="padding: 0; border: none;"></td>';
+            this.tbody.appendChild(bottomSpacer);
         }
 
-        // Bottom spacer
-        if (paddingBottom > 0) {
-            html += `<tr style="height: ${paddingBottom}px; border: none; background: transparent;"><td colspan="100" style="padding: 0; border: none;"></td></tr>`;
+        topSpacer.style.height = `${paddingTop}px`;
+        topSpacer.style.display = paddingTop > 0 ? '' : 'none';
+
+        bottomSpacer.style.height = `${paddingBottom}px`;
+        bottomSpacer.style.display = paddingBottom > 0 ? '' : 'none';
+
+        // Collect existing data rows
+        const existingRows = Array.from(this.tbody.children).filter(
+            el => !el.classList.contains('vs-top-spacer') && !el.classList.contains('vs-bottom-spacer')
+        );
+
+        const neededRowsCount = this.visibleEnd - this.visibleStart;
+
+        // Add or remove rows to match the visible count
+        while (existingRows.length < neededRowsCount) {
+            const tr = document.createElement('template');
+            this.tbody.insertBefore(tr, bottomSpacer);
+            existingRows.push(tr);
+        }
+        while (existingRows.length > neededRowsCount) {
+            const tr = existingRows.pop();
+            tr.remove();
         }
 
-        this.tbody.innerHTML = html;
+        // Update the content of each row
+        let rowIndex = this.visibleStart;
+        for (let i = 0; i < neededRowsCount; i++) {
+            const rowData = this.data[rowIndex];
+            const tr = existingRows[i];
+
+            if (rowData) {
+                // We extract just the inner content of the tr string (everything between <tr...> and </tr>)
+                // Since rowData.html is a full <tr>...</tr> string, we strip the outer tags safely
+                const fullHtml = rowData.html || this.renderRow(rowData, rowIndex);
+                const innerMatch = fullHtml.match(/<tr[^>]*>([\s\S]*?)<\/tr>/i);
+                const innerContent = innerMatch ? innerMatch[1] : fullHtml;
+
+                // Extract class names to preserve row-known-address and others
+                const classMatch = fullHtml.match(/class="([^"]*)"/i);
+                const classNames = classMatch ? classMatch[1] : '';
+
+                // Extract style attribute to preserve highlight styles
+                const styleMatch = fullHtml.match(/style=(["'])(.*?)\1/i);
+                const styleAttr = styleMatch ? styleMatch[2] : '';
+
+                if (tr.tagName.toLowerCase() === 'template') {
+                    // Convert template to actual TR
+                    const newTr = document.createElement('tr');
+                    newTr.className = classNames;
+                    newTr.style.cssText = styleAttr;
+                    newTr.innerHTML = innerContent;
+                    tr.parentNode.replaceChild(newTr, tr);
+                    existingRows[i] = newTr;
+                } else {
+                    // Update only if content changed (the user scrolled this specific row out of view and recycled it)
+                    // We check a custom dataset attribute to avoid reading innerHTML which is slow
+                    if (tr.dataset.sourceIndex !== String(rowIndex)) {
+                        tr.className = classNames;
+                        tr.style.cssText = styleAttr;
+                        tr.innerHTML = innerContent;
+                        tr.dataset.sourceIndex = rowIndex;
+                    }
+                }
+            }
+            rowIndex++;
+        }
     }
 
     renderRow(row, index) {
@@ -119,11 +215,18 @@ export class VirtualScroll {
     }
 
     scrollToIndex(index) {
-        const top = index * this.rowHeight;
         const tableContainer = this.tbody.closest('.table-wrap');
-        if (tableContainer) {
-            tableContainer.scrollTop = top;
-        }
+        if (!tableContainer) return;
+        
+        const containerHeight = tableContainer.offsetHeight;
+        const rowTop = index * this.rowHeight;
+        const centeredTop = rowTop - (containerHeight / 2) + (this.rowHeight / 2);
+        
+        // Clamp values to valid scroll range
+        const maxScroll = this.totalHeight - containerHeight;
+        const clampedTop = Math.max(0, Math.min(centeredTop, maxScroll));
+        
+        tableContainer.scrollTop = clampedTop;
     }
 
     destroy() {
@@ -140,9 +243,13 @@ export class VirtualScroll {
  * Simple virtual scroll for table rows
  * Only enables when row count exceeds threshold
  */
-export function enableVirtualScroll(threshold = 100) {
-    const tbody = document.getElementById('tableBody');
+export function enableVirtualScroll(tbodyId = 'tableBody', options = {}) {
+    const tbody = document.getElementById(tbodyId);
     if (!tbody) return;
+
+    const threshold = options.threshold || 100;
+    const rowHeight = options.rowHeight || 52;
+    const bufferSize = options.bufferSize || 5;
 
     let virtualScroll = null;
 
@@ -152,8 +259,8 @@ export function enableVirtualScroll(threshold = 100) {
                 if (!virtualScroll) {
                     virtualScroll = new VirtualScroll({
                         tbody,
-                        rowHeight: 52,
-                        bufferSize: 5
+                        rowHeight,
+                        bufferSize
                     });
                 }
 
@@ -162,6 +269,11 @@ export function enableVirtualScroll(threshold = 100) {
                     ...row,
                     html: rowRenderer(row, index)
                 }));
+
+                // Reset tbody to clean up any leftover regular rows
+                if (virtualScroll.data.length === 0) {
+                    tbody.innerHTML = '';
+                }
 
                 virtualScroll.setData(data);
             } else {
@@ -173,6 +285,17 @@ export function enableVirtualScroll(threshold = 100) {
 
                 // Render all rows normally
                 tbody.innerHTML = rows.map((row, index) => rowRenderer(row, index)).join('');
+            }
+        },
+        scrollToIndex: (index) => {
+            if (virtualScroll) {
+                virtualScroll.scrollToIndex(index);
+            } else {
+                // Fallback for non-virtualized table
+                const rows = tbody.querySelectorAll('tr');
+                if (rows[index]) {
+                    rows[index].scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
             }
         },
         destroy: () => {

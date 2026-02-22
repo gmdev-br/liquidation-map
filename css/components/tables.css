@@ -5,6 +5,8 @@
 /* ── Table Container ── */
 .table-wrap {
     overflow-x: auto;
+    overflow-anchor: none;
+    /* Prevents scroll jumps when virtual scroll spacers resize */
     background: transparent;
     -webkit-overflow-scrolling: touch;
 }

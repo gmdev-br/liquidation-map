@@ -2,14 +2,18 @@
 // LIQUID GLASS — Aggregation Table
 // ═══════════════════════════════════════════════════════════
 
-import { getDisplayedRows, getCurrentPrices, getFxRates, getActiveEntryCurrency, getAggInterval, getAggVolumeUnit } from '../state.js';
+import { getDisplayedRows, getCurrentPrices, getFxRates, getActiveEntryCurrency, getAggInterval, getAggVolumeUnit, getShowAggSymbols, getAggZoneColors, getAggHighlightColor } from '../state.js';
 import { getCorrelatedEntry } from '../utils/currency.js';
 import { fmtUSD, fmtCcy } from '../utils/formatters.js';
+import { enableVirtualScroll } from '../utils/virtualScroll.js';
 
 let lastRenderedBand = null;
 let lastRenderedUnit = null;
 let lastRenderedInterval = null;
 let lastRenderedRowCount = 0;
+let lastRenderedColorsStr = '';
+let aggVirtualScrollManager = null;
+let currentPriceRangeIndex = -1; // Track index for the floating button
 
 export function renderAggregationTable(force = false) {
     const aggSection = document.getElementById('aggSectionWrapper');
@@ -25,22 +29,25 @@ export function renderAggregationTable(force = false) {
     const fxRates = getFxRates();
     const activeEntryCurrency = getActiveEntryCurrency();
     const aggVolumeUnit = getAggVolumeUnit();
+    const showAggSymbols = getShowAggSymbols();
+    const aggZoneColors = getAggZoneColors();
+    const aggHighlightColor = getAggHighlightColor();
     const bandSize = getAggInterval();
     const btcPrice = currentPrices['BTC'] ? parseFloat(currentPrices['BTC']) : 0;
 
     // Build current band identity
     const currentBand = btcPrice > 0 ? Math.floor(btcPrice / bandSize) * bandSize : 0;
+    const colorsStr = JSON.stringify(aggZoneColors || {});
 
     // Optimization: Skip rendering if data hasn't significantly changed
     if (!force &&
         lastRenderedBand === currentBand &&
         lastRenderedUnit === aggVolumeUnit &&
         lastRenderedInterval === bandSize &&
-        lastRenderedRowCount === rows.length) {
+        lastRenderedRowCount === rows.length &&
+        lastRenderedColorsStr === colorsStr) {
         return;
     }
-
-    console.log('Rendering Aggregation Table (Optimized)...');
 
     if (!rows || rows.length === 0) {
         document.getElementById('aggTableBody').innerHTML = '<tr><td colspan="13" class="empty-cell">Sem dados disponíveis.</td></tr>';
@@ -54,6 +61,8 @@ export function renderAggregationTable(force = false) {
     lastRenderedUnit = aggVolumeUnit;
     lastRenderedInterval = bandSize;
     lastRenderedRowCount = rows.length;
+    lastRenderedColorsStr = colorsStr;
+
     const bands = {};
 
     let totalLongNotional = 0;
@@ -65,6 +74,7 @@ export function renderAggregationTable(force = false) {
     for (const r of rows) {
         // Calculate correlated entry price
         const entryCcy = getCorrelatedEntry(r, activeEntryCurrency, currentPrices, fxRates);
+
         if (isNaN(entryCcy) || entryCcy <= 0) continue;
 
         // Determine band
@@ -142,10 +152,16 @@ export function renderAggregationTable(force = false) {
         document.getElementById('aggStatsBar').innerHTML = statsHtml;
 
         // Render rows
-        let html = '';
+        // Render rows using Virtual Scroll
         const currentBtcPos = btcPrice > 0 ? btcPrice : 0;
 
-        for (const b of fullBandArray) {
+        if (!aggVirtualScrollManager) {
+            // Threshold is low because aggregation rows have heavy styling
+            // Row height is ~36px instead of 52px
+            aggVirtualScrollManager = enableVirtualScroll('aggTableBody', { threshold: 40, rowHeight: 36 });
+        }
+
+        const rowRenderer = (b, index) => {
             const totalNotional = b.notionalLong + b.notionalShort;
             const isEmpty = b.isEmpty;
 
@@ -155,17 +171,21 @@ export function renderAggregationTable(force = false) {
             let domPct = 0;
             let domBg = '';
             let domColor = '#6b7280';
+            let colorLong = '#4b5563';
+            let colorShort = '#4b5563';
 
             if (totalNotional > 0) {
                 if (b.notionalLong > b.notionalShort) {
                     domType = 'COMPRA';
-                    domColor = '#22c55e'; // Green text
-                    domBg = 'rgba(34,197,94,0.1)';
+                    const isForte = b.notionalLong >= 30_000_000;
+                    domColor = isForte ? aggZoneColors.buyStrong : aggZoneColors.buyNormal;
+                    domBg = isForte ? `rgba(${hexToRgb(aggZoneColors.buyStrong)}, 0.1)` : `rgba(${hexToRgb(aggZoneColors.buyNormal)}, 0.05)`;
                     domPct = (b.notionalLong / totalNotional) * 100;
                 } else if (b.notionalShort > b.notionalLong) {
                     domType = 'VENDA';
-                    domColor = '#ef4444'; // Red text
-                    domBg = 'rgba(239,68,68,0.1)';
+                    const isForte = b.notionalShort >= 30_000_000;
+                    domColor = isForte ? aggZoneColors.sellStrong : aggZoneColors.sellNormal;
+                    domBg = isForte ? `rgba(${hexToRgb(aggZoneColors.sellStrong)}, 0.1)` : `rgba(${hexToRgb(aggZoneColors.sellNormal)}, 0.05)`;
                     domPct = (b.notionalShort / totalNotional) * 100;
                 } else {
                     domType = 'NEUTRO';
@@ -176,6 +196,7 @@ export function renderAggregationTable(force = false) {
 
             let intType = '—';
             let intColor = '#6b7280';
+            const isWeakIntensity = totalNotional < 10_000_000; // FRACA ou MUITO FRACA
             if (totalNotional >= 100_000_000) { intType = 'EXTREMA >100M'; intColor = '#f59e0b'; } // Orange
             else if (totalNotional >= 30_000_000) { intType = 'FORTE >30M'; intColor = '#22c55e'; }   // Green
             else if (totalNotional >= 10_000_000) { intType = 'MEDIA >10M'; intColor = '#60a5fa'; }  // Blue
@@ -185,70 +206,160 @@ export function renderAggregationTable(force = false) {
             let zoneType = isEmpty ? 'Zona Vazia' : '—';
             let zoneColor = '#4b5563';
             if (!isEmpty) {
-                const isForte = domPct === 100 || totalNotional >= 30_000_000;
+                const isForteLong = b.notionalLong >= 30_000_000;
+                const isForteShort = b.notionalShort >= 30_000_000;
+                const isForteTotal = totalNotional >= 30_000_000;
+                // Strong Buy/Sell only if intensity is NOT weak (Total Notional >= 10M)
+                const isForteZone = (domPct === 100 || isForteTotal) && totalNotional >= 10_000_000;
                 const baseStr = domType === 'COMPRA' ? 'Compra' : domType === 'VENDA' ? 'Venda' : 'Neutro';
+
                 if (domPct === 50) {
                     zoneType = 'Indecisão';
-                } else if (isForte) {
-                    zoneType = baseStr + ' Forte';
-                    zoneColor = domType === 'COMPRA' ? '#22c55e' : '#ef4444';
-                } else if (totalNotional >= 10_000_000) {
-                    zoneType = baseStr + ' Leve';
-                    zoneColor = domType === 'COMPRA' ? '#4ade80' : '#f87171'; // Lighter
+                    zoneColor = '#9ca3af';
                 } else {
-                    zoneType = baseStr;
-                    zoneColor = domType === 'COMPRA' ? '#22c55e' : '#ef4444';
+                    if (isForteZone) {
+                        zoneType = baseStr + ' Forte';
+                        zoneColor = domType === 'COMPRA' ? aggZoneColors.buyStrong : aggZoneColors.sellStrong;
+                    } else {
+                        zoneType = baseStr + ' Normal';
+                        zoneColor = domType === 'COMPRA' ? aggZoneColors.buyNormal : aggZoneColors.sellNormal;
+                    }
                 }
+
+                // Apply colors consistently to all directional cells based on row-level Forte status
+                colorLong = b.notionalLong > 0 ? (isForteZone ? aggZoneColors.buyStrong : aggZoneColors.buyNormal) : '#4b5563';
+                colorShort = b.notionalShort > 0 ? (isForteZone ? aggZoneColors.sellStrong : aggZoneColors.sellNormal) : '#4b5563';
+
+                // Update DOM color to match row-level Forte status
+                domColor = domType === 'COMPRA' ? (isForteZone ? aggZoneColors.buyStrong : aggZoneColors.buyNormal) :
+                    domType === 'VENDA' ? (isForteZone ? aggZoneColors.sellStrong : aggZoneColors.sellNormal) : '#6b7280';
+                domBg = isForteZone ? `rgba(${hexToRgb(domColor)}, 0.1)` : `rgba(${hexToRgb(domColor)}, 0.05)`;
+            } else {
+                colorLong = '#4b5563';
+                colorShort = '#4b5563';
+                domBg = '';
+                domColor = '#6b7280';
+            }
+
+            // Remove all highlights for weak intensity (FRACA or MUITO FRACA)
+            let totalNotionalColor = '#bfdbfe';
+            let fwBold = '700';
+            let fwSemi = '600';
+
+            // Apply Strong Highlight to all columns if it is a strong zone
+            // or if it has Medium/Strong/Extreme Intensity (>= 10M)
+            if (!isEmpty && (domPct === 100 || totalNotional >= 10_000_000)) {
+                // We use isForteZone just for reference if needed, but apply style based on intensity
+                // The condition totalNotional >= 10M covers Medium (10-30), Strong (30-100), Extreme (100+)
+                if (totalNotional >= 10_000_000 && domType !== 'NEUTRO') {
+                    // Use the dominant color for all key metrics
+                    totalNotionalColor = domColor;
+                    intColor = domColor;
+                    // Ensure bold weight
+                    fwBold = '700';
+                    fwSemi = '700';
+                }
+            }
+
+            if (isWeakIntensity && !isEmpty) {
+                colorLong = '#4b5563';
+                colorShort = '#4b5563';
+                domColor = '#6b7280';
+                zoneColor = '#4b5563';
+                intColor = '#4b5563';
+                totalNotionalColor = '#6b7280';
+                domBg = '';
+                fwBold = '400';
+                fwSemi = '400';
             }
 
             const formatVal = (v) => {
                 if (v === 0) return '—';
                 if (aggVolumeUnit === 'BTC' && btcPrice > 0) {
                     const btcVal = v / btcPrice;
-                    return '₿' + (btcVal >= 1000 ? (btcVal / 1000).toFixed(1) + 'K' : btcVal.toFixed(2));
+                    const sym = showAggSymbols ? '₿' : '';
+                    return sym + (btcVal >= 1000 ? (btcVal / 1000).toFixed(1) + 'K' : btcVal.toFixed(2));
                 }
-                return fmtUsdCompact(v);
+                return fmtUsdCompact(v, showAggSymbols);
             };
             const formatQty = (v) => v > 0 ? v : '—';
 
-            const longCol = b.notionalLong > 0 ? '#4ade80' : '#4b5563';
-            const shortCol = b.notionalShort > 0 ? '#f87171' : '#4b5563';
+            const longCol = colorLong;
+            const shortCol = colorShort;
 
             const trStyle = isEmpty ? 'opacity:0.6;background:transparent' : '';
-            const valBg = totalNotional >= 10_000_000 ? 'background:rgba(59,130,246,0.1)' : '';
+            const valBg = (totalNotional >= 10_000_000 && !isWeakIntensity) ? 'background:rgba(59,130,246,0.1)' : '';
 
             let highlightStyle = '';
             if (isCurrentPriceRange) {
-                highlightStyle = 'background:rgba(250,204,21,0.2); border:1px solid #facc15; box-shadow:inset 0 0 10px rgba(250,204,21,0.2)';
+                // Convert hex to rgba with 0.2 opacity for background
+                const hexColor = aggHighlightColor || '#facc15';
+                const r = parseInt(hexColor.slice(1, 3), 16);
+                const g = parseInt(hexColor.slice(3, 5), 16);
+                const b = parseInt(hexColor.slice(5, 7), 16);
+                highlightStyle = `background:rgba(${r},${g},${b},0.2); border:1px solid ${hexColor}; box-shadow:inset 0 0 10px rgba(${r},${g},${b},0.2)`;
             }
 
-            html += `
-            <tr style="${trStyle}; ${highlightStyle}" class="${isCurrentPriceRange ? 'active-price-range' : ''}">
-                <td style="font-family:monospace; font-weight:700; color:${isCurrentPriceRange ? '#fff' : '#d1d5db'}">$${b.faixaDe.toLocaleString()}</td>
+            const trClass = isCurrentPriceRange ? 'active-price-range' : '';
+            const expectedStyle = `${trStyle}; ${highlightStyle}`.trim().replace(/^; | ;$/g, '');
+
+            const newContent = `
+                <td style="font-family:monospace; font-weight:700; color:${isCurrentPriceRange ? '#fff' : '#d1d5db'}">
+                    ${isCurrentPriceRange ? `<div style="font-size:10px; color:${aggHighlightColor}; margin-bottom:2px">BTC $${btcPrice.toLocaleString()}</div>` : ''}
+                    $${b.faixaDe.toLocaleString()}
+                </td>
                 <td style="font-family:monospace; color:#9ca3af">$${b.faixaAte.toLocaleString()}</td>
                 <td style="color:${longCol}; text-align:center">${formatQty(b.qtdLong)}</td>
-                <td style="color:${b.notionalLong > 0 ? '#22c55e' : '#4b5563'}; font-family:monospace; font-weight:${b.notionalLong > 30_000_000 ? '700' : '400'}">${formatVal(b.notionalLong)}</td>
+                <td style="color:${longCol}; font-family:monospace; font-weight:${b.notionalLong > 30_000_000 ? '700' : '400'}">${formatVal(b.notionalLong)}</td>
                 <td style="color:${shortCol}; text-align:center">${formatQty(b.qtdShort)}</td>
-                <td style="color:${b.notionalShort > 0 ? '#ef4444' : '#4b5563'}; font-family:monospace; font-weight:${b.notionalShort > 30_000_000 ? '700' : '400'}">${formatVal(b.notionalShort)}</td>
-                <td style="font-family:monospace; color:#bfdbfe; font-weight:600; ${valBg}">${formatVal(totalNotional)}</td>
-                <td style="color:${domColor}; font-weight:700; background:${domBg} !important">${domType}</td>
-                <td style="color:${domColor}; font-weight:700; background:${domBg} !important">${domPct > 0 ? domPct.toFixed(1) + '%' : '—'}</td>
-                <td style="color:${intColor}; font-size:11px; font-weight:600">${intType}</td>
-                <td style="color:${zoneColor}; font-weight:600">${zoneType}</td>
-                <td style="color:#4ade80; font-size:11px; max-width:150px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap" title="${Array.from(b.ativosLong).join(' ')}">${Array.from(b.ativosLong).join(' ')}</td>
-                <td style="color:#f87171; font-size:11px; max-width:150px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap" title="${Array.from(b.ativosShort).join(' ')}">${Array.from(b.ativosShort).join(' ')}</td>
-            </tr>`;
-        }
-        document.getElementById('aggTableBody').innerHTML = html;
+                <td style="color:${shortCol}; font-family:monospace; font-weight:${b.notionalShort > 30_000_000 ? '700' : '400'}">${formatVal(b.notionalShort)}</td>
+                <td style="font-family:monospace; color:${totalNotionalColor}; font-weight:${fwSemi}; ${valBg}">${formatVal(totalNotional)}</td>
+                <td style="color:${domColor}; font-weight:${fwBold}; background:${domBg}">${domType}</td>
+                <td style="color:${domColor}; font-weight:${fwBold}; background:${domBg}">${domPct > 0 ? domPct.toFixed(1) + '%' : '—'}</td>
+                <td style="color:${intColor}; font-size:11px; font-weight:${fwSemi}">${intType}</td>
+                <td style="color:${zoneColor}; font-weight:${fwSemi}">${zoneType}</td>
+                <td style="color:${longCol}; font-size:11px; max-width:150px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap" title="${Array.from(b.ativosLong).join(', ')}">${Array.from(b.ativosLong).join(', ')}</td>
+                <td style="color:${shortCol}; font-size:11px; max-width:150px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap" title="${Array.from(b.ativosShort).join(', ')}">${Array.from(b.ativosShort).join(', ')}</td>
+            `;
+
+            return `<tr class="${trClass}" style="${expectedStyle}">${newContent}</tr>`;
+        };
+
+        // Update current price range index for the scroll button
+        currentPriceRangeIndex = fullBandArray.findIndex(b => currentBtcPos >= b.faixaDe && currentBtcPos < b.faixaAte);
+
+        aggVirtualScrollManager.render(fullBandArray, rowRenderer);
     } else {
         document.getElementById('aggTableBody').innerHTML = '<tr><td colspan="13" class="empty-cell">Sem dados disponíveis.</td></tr>';
     }
 }
 
-function fmtUsdCompact(val) {
-    if (val === 0) return '$0';
-    if (val >= 1_000_000_000) return '$' + (val / 1_000_000_000).toFixed(2) + 'B';
-    if (val >= 1_000_000) return '$' + (val / 1_000_000).toFixed(2) + 'M';
-    if (val >= 1_000) return '$' + (val / 1_000).toFixed(2) + 'K';
-    return '$' + val.toFixed(2);
+/**
+ * Scrolls the aggregation table to the current price range row
+ */
+export function scrollToCurrentPriceRange() {
+    if (aggVirtualScrollManager && currentPriceRangeIndex !== -1) {
+        aggVirtualScrollManager.scrollToIndex(currentPriceRangeIndex);
+    }
+}
+
+function fmtUsdCompact(val, showSymbol = true) {
+    if (val === 0) return showSymbol ? '$0' : '0';
+    const sym = showSymbol ? '$' : '';
+    if (val >= 1_000_000_000) return sym + (val / 1_000_000_000).toFixed(2) + 'B';
+    if (val >= 1_000_000) return sym + (val / 1_000_000).toFixed(2) + 'M';
+    if (val >= 1_000) return sym + (val / 1_000).toFixed(2) + 'K';
+    return sym + val.toFixed(2);
+}
+
+function hexToRgb(hex) {
+    if (!hex || typeof hex !== 'string' || !hex.startsWith('#')) return '128,128,128';
+    try {
+        const r = parseInt(hex.slice(1, 3), 16);
+        const g = parseInt(hex.slice(3, 5), 16);
+        const b = parseInt(hex.slice(5, 7), 16);
+        return `${r},${g},${b} `;
+    } catch (e) {
+        return '128,128,128';
+    }
 }

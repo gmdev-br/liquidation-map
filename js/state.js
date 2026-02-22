@@ -66,12 +66,24 @@ let leverageColors = {
     shortHigh: '#dc2626'   // Short muito alavancado (vermelho escuro)
 };
 
+// Aggregation Zone Colors
+let aggZoneColors = {
+    buyStrong: '#22c55e',
+    buyNormal: '#4ade80',
+    sellStrong: '#ef4444',
+    sellNormal: '#f87171'
+};
+
+// Aggregation Highlight Color for current price row
+let aggHighlightColor = '#facc15';
+
 // Currency state
 let fxRates = { USD: 1 };   // USD-based rates, fetched once
 let fxReady = false;
 let activeCurrency = 'USD';
 let activeEntryCurrency = 'USD';
 let showSymbols = true;
+let showAggSymbols = true; // For aggregation table volumes
 
 // Formatting state
 let decimalPlaces = 2; // Default 2 decimal places for prices and values
@@ -132,7 +144,9 @@ export const getState = () => ({
     aggVolumeUnit,
     lastSeenAccountValues,
     whaleMeta,
-    isZenMode
+    isZenMode,
+    showAggSymbols,
+    aggZoneColors
 });
 
 // Setters
@@ -185,7 +199,9 @@ export const setState = (updates) => {
         aggVolumeUnit,
         lastSeenAccountValues,
         whaleMeta,
-        isZenMode
+        isZenMode,
+        showAggSymbols,
+        aggZoneColors
     }, updates);
 };
 
@@ -234,7 +250,10 @@ export const setMinBtcVolume = (value) => { minBtcVolume = value; };
 export const setAggInterval = (value) => { aggInterval = value; };
 export const setAggTableHeight = (value) => { aggTableHeight = value; };
 export const setAggVolumeUnit = (value) => { aggVolumeUnit = value; };
+export const setAggZoneColors = (value) => { aggZoneColors = value; };
+export const setAggHighlightColor = (value) => { aggHighlightColor = value; };
 export const setIsZenMode = (value) => { isZenMode = value; };
+export const setShowAggSymbols = (value) => { showAggSymbols = value; };
 export const setWhaleMeta = (value) => { whaleMeta = value; };
 export const setLastSeenAccountValues = (value) => { lastSeenAccountValues = value; };
 
@@ -283,7 +302,10 @@ export const getMinBtcVolume = () => minBtcVolume;
 export const getAggInterval = (value) => aggInterval;
 export const getAggTableHeight = (value) => aggTableHeight;
 export const getAggVolumeUnit = () => aggVolumeUnit;
+export const getAggZoneColors = () => aggZoneColors;
+export const getAggHighlightColor = () => aggHighlightColor;
 export const getIsZenMode = (value) => isZenMode;
+export const getShowAggSymbols = () => showAggSymbols;
 export const getWhaleMeta = () => whaleMeta;
 export const getLastSeenAccountValues = () => lastSeenAccountValues;
 export const setPriceMode = (mode) => {

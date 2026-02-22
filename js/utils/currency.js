@@ -23,10 +23,11 @@ export function getCorrelatedPrice(row, rawPrice, activeEntryCurrency, currentPr
     // Formula: Price * (BTC_Price / Coin_Price)
     // This projects the price to the equivalent BTC price level.
     const btcPrice = parseFloat(currentPrices['BTC'] || 0);
-    const coinPrice = parseFloat(currentPrices[row.coin] || 0);
-    
+    // Use row.markPrice as fallback if the coin is not found in global currentPrices
+    const coinPrice = parseFloat(currentPrices[row.coin] || row.markPrice || 0);
+
     let correlatedVal = rawPrice; // Default to raw price if data missing
-    
+
     if (row.coin !== 'BTC' && btcPrice > 0 && coinPrice > 0) {
         correlatedVal = rawPrice * (btcPrice / coinPrice);
     } else if (row.coin === 'BTC') {
