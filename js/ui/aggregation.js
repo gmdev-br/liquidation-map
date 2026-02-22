@@ -2,7 +2,7 @@
 // LIQUID GLASS — Aggregation Table
 // ═══════════════════════════════════════════════════════════
 
-import { getDisplayedRows, getCurrentPrices, getFxRates, getActiveEntryCurrency, getAggInterval, getAggVolumeUnit, getShowAggSymbols, getAggZoneColors, getAggHighlightColor } from '../state.js';
+import { getDisplayedRows, getCurrentPrices, getFxRates, getActiveEntryCurrency, getAggInterval, getAggVolumeUnit, getShowAggSymbols, getAggZoneColors, getAggHighlightColor, getDecimalPlaces, getTooltipDelay } from '../state.js';
 import { getCorrelatedEntry } from '../utils/currency.js';
 import { fmtUSD, fmtCcy } from '../utils/formatters.js';
 import { enableVirtualScroll } from '../utils/virtualScroll.js';
@@ -32,6 +32,7 @@ export function renderAggregationTable(force = false) {
     const showAggSymbols = getShowAggSymbols();
     const aggZoneColors = getAggZoneColors();
     const aggHighlightColor = getAggHighlightColor();
+    const decimalPlaces = getDecimalPlaces();
     const bandSize = getAggInterval();
     const btcPrice = currentPrices['BTC'] ? parseFloat(currentPrices['BTC']) : 0;
 
@@ -89,7 +90,9 @@ export function renderAggregationTable(force = false) {
                 qtdShort: 0,
                 notionalShort: 0,
                 ativosLong: new Set(),
-                ativosShort: new Set()
+                ativosShort: new Set(),
+                positionsLong: [],
+                positionsShort: []
             };
         }
 
@@ -100,11 +103,13 @@ export function renderAggregationTable(force = false) {
             b.qtdLong++;
             b.notionalLong += val;
             b.ativosLong.add(r.coin);
+            b.positionsLong.push(r);
             totalLongNotional += val;
         } else if (r.side === 'short') {
             b.qtdShort++;
             b.notionalShort += val;
             b.ativosShort.add(r.coin);
+            b.positionsShort.push(r);
             totalShortNotional += val;
         }
     }
@@ -133,6 +138,8 @@ export function renderAggregationTable(force = false) {
                 notionalShort: 0,
                 ativosLong: new Set(),
                 ativosShort: new Set(),
+                positionsLong: [],
+                positionsShort: [],
                 isEmpty: true
             });
             if (!bands[base]) vacuosCount++;
@@ -324,18 +331,69 @@ export function renderAggregationTable(force = false) {
             // Star indicator for Extreme Intensity
             const starIndicator = totalNotional >= 100_000_000 ? '<span style="color:#f59e0b; margin-right:4px; font-size:14px">⭐</span>' : '';
 
+            // Tooltip Data Preparation (JSON)
+            let tooltipData = null;
+            if (!isEmpty && (b.positionsLong.length > 0 || b.positionsShort.length > 0)) {
+                const maxItems = 15;
+                tooltipData = {
+                    longs: [],
+                    shorts: [],
+                    longsCount: 0,
+                    shortsCount: 0,
+                    longsRemaining: 0,
+                    shortsRemaining: 0
+                };
+
+                if (b.positionsLong.length > 0) {
+                    tooltipData.longsCount = new Set(b.positionsLong.map(p => p.address)).size;
+                    const sortedLongs = [...b.positionsLong].sort((x, y) => y.positionValue - x.positionValue);
+                    tooltipData.longs = sortedLongs.slice(0, maxItems).map(p => {
+                        const entryCorr = getCorrelatedEntry(p, activeEntryCurrency, currentPrices, fxRates);
+                        return {
+                            name: p.displayName || p.address.substring(0, 6) + '...',
+                            coin: p.coin,
+                            displayEntry: entryCorr.toLocaleString('en-US', { minimumFractionDigits: decimalPlaces, maximumFractionDigits: decimalPlaces }),
+                            displayVol: aggVolumeUnit === 'BTC' 
+                                ? `₿${(btcPrice > 0 ? p.positionValue / btcPrice : 0).toFixed(2)}` 
+                                : fmtUsdCompact(p.positionValue)
+                        };
+                    });
+                    tooltipData.longsRemaining = Math.max(0, sortedLongs.length - maxItems);
+                }
+
+                if (b.positionsShort.length > 0) {
+                    tooltipData.shortsCount = new Set(b.positionsShort.map(p => p.address)).size;
+                    const sortedShorts = [...b.positionsShort].sort((x, y) => y.positionValue - x.positionValue);
+                    tooltipData.shorts = sortedShorts.slice(0, maxItems).map(p => {
+                        const entryCorr = getCorrelatedEntry(p, activeEntryCurrency, currentPrices, fxRates);
+                        return {
+                            name: p.displayName || p.address.substring(0, 6) + '...',
+                            coin: p.coin,
+                            displayEntry: entryCorr.toLocaleString('en-US', { minimumFractionDigits: decimalPlaces, maximumFractionDigits: decimalPlaces }),
+                            displayVol: aggVolumeUnit === 'BTC' 
+                                ? `₿${(btcPrice > 0 ? p.positionValue / btcPrice : 0).toFixed(2)}` 
+                                : fmtUsdCompact(p.positionValue)
+                        };
+                    });
+                    tooltipData.shortsRemaining = Math.max(0, sortedShorts.length - maxItems);
+                }
+            }
+
+            const tooltipAttr = tooltipData ? `data-tooltip='${JSON.stringify(tooltipData).replace(/'/g, "&#39;").replace(/"/g, "&quot;")}'` : '';
+            const tooltipClass = tooltipData ? 'has-tooltip' : '';
+
             const newContent = `
-                <td style="font-family:monospace; font-weight:700; color:${isCurrentPriceRange ? '#fff' : '#d1d5db'}">
+                <td ${tooltipAttr} class="${tooltipClass}" style="font-family:monospace; font-weight:700; color:${isCurrentPriceRange ? '#fff' : '#d1d5db'}">
                     ${starIndicator}
                     ${isCurrentPriceRange ? `<div style="font-size:10px; color:${aggHighlightColor}; margin-bottom:2px">BTC $${btcPrice.toLocaleString()}</div>` : ''}
                     $${b.faixaDe.toLocaleString()}
                 </td>
-                <td style="font-family:monospace; color:#9ca3af">$${b.faixaAte.toLocaleString()}</td>
+                <td ${tooltipAttr} class="${tooltipClass}" style="font-family:monospace; color:#9ca3af">$${b.faixaAte.toLocaleString()}</td>
                 <td style="color:${longCol}; text-align:center">${formatQty(b.qtdLong)}</td>
-                <td style="color:${longCol}; font-family:monospace; font-weight:${b.notionalLong > 30_000_000 ? '700' : '400'}">${formatVal(b.notionalLong)}</td>
+                <td ${tooltipAttr} class="${tooltipClass}" style="color:${longCol}; font-family:monospace; font-weight:${b.notionalLong > 30_000_000 ? '700' : '400'}">${formatVal(b.notionalLong)}</td>
                 <td style="color:${shortCol}; text-align:center">${formatQty(b.qtdShort)}</td>
-                <td style="color:${shortCol}; font-family:monospace; font-weight:${b.notionalShort > 30_000_000 ? '700' : '400'}">${formatVal(b.notionalShort)}</td>
-                <td style="font-family:monospace; color:${totalNotionalColor}; font-weight:${fwSemi}; ${valBg}">${formatVal(totalNotional)}</td>
+                <td ${tooltipAttr} class="${tooltipClass}" style="color:${shortCol}; font-family:monospace; font-weight:${b.notionalShort > 30_000_000 ? '700' : '400'}">${formatVal(b.notionalShort)}</td>
+                <td ${tooltipAttr} class="${tooltipClass}" style="font-family:monospace; color:${totalNotionalColor}; font-weight:${fwSemi}; ${valBg}">${formatVal(totalNotional)}</td>
                 <td style="color:${domColor}; font-weight:${fwBold}; background:${domBg}">${domType}</td>
                 <td style="color:${domColor}; font-weight:${fwBold}; background:${domBg}">${domPct > 0 ? domPct.toFixed(1) + '%' : '—'}</td>
                 <td style="color:${intColor}; font-size:11px; font-weight:${fwSemi}">${intType}</td>
@@ -385,3 +443,187 @@ function hexToRgb(hex) {
         return '128,128,128';
     }
 }
+
+// Custom Tooltip Event Handling
+let activeTooltipTimeout = null;
+let pendingTooltipTarget = null;
+
+document.addEventListener('mouseover', (e) => {
+    const target = e.target.closest('.has-tooltip');
+
+    // If we moved away from a target or to a new one, clear any pending tooltip timer
+    if (activeTooltipTimeout) {
+        // Only clear if we are moving to a new target or leaving the current one
+        // If we are moving within the same target, do nothing?
+        // But mouseover bubbles. If we move child->child, target is same.
+        // If we move out and back in, target is same but we might want to restart?
+        // Let's stick to simple: clear previous pending if any.
+        clearTimeout(activeTooltipTimeout);
+        activeTooltipTimeout = null;
+        pendingTooltipTarget = null;
+    }
+
+    if (!target) return;
+
+    // GLOBAL CLEANUP: Remove any existing tooltips to prevent overlapping/stacking
+    // This fixes the issue where rapid movement or virtual scroll leaves orphan tooltips
+    document.querySelectorAll('.custom-tooltip').forEach(el => el.remove());
+    document.querySelectorAll('[data-tooltip-active="true"]').forEach(el => {
+        if (el !== target) el.dataset.tooltipActive = 'false';
+    });
+
+    // Prevent tooltip re-creation if already showing for this target
+    if (target.dataset.tooltipActive === 'true') {
+        return;
+    }
+
+    const tooltipDataStr = target.getAttribute('data-tooltip');
+    if (!tooltipDataStr) {
+        return;
+    }
+
+    // Set as pending
+    pendingTooltipTarget = target;
+
+    // Cancel timeout if mouse leaves before delay
+    const cancelTimeout = () => {
+        if (pendingTooltipTarget === target) {
+            if (activeTooltipTimeout) {
+                clearTimeout(activeTooltipTimeout);
+                activeTooltipTimeout = null;
+            }
+            pendingTooltipTarget = null;
+        }
+        target.removeEventListener('mouseleave', cancelTimeout);
+    };
+    target.addEventListener('mouseleave', cancelTimeout);
+
+    const delay = getTooltipDelay();
+
+    activeTooltipTimeout = setTimeout(() => {
+        // No longer pending
+        if (pendingTooltipTarget === target) {
+            pendingTooltipTarget = null;
+            activeTooltipTimeout = null;
+        }
+
+        // Mark as active immediately to prevent double-firing
+        target.dataset.tooltipActive = 'true';
+
+        try {
+            const data = JSON.parse(tooltipDataStr);
+            let tooltipHtml = '';
+
+            if (data.longs && data.longs.length > 0) {
+                tooltipHtml += `<div class="custom-tooltip-header longs">🟢 COMPRAS (LONGS) - ${data.longsCount} Players</div>`;
+                tooltipHtml += `<div class="custom-tooltip-table">`;
+                tooltipHtml += `
+                    <div class="custom-tooltip-row header">
+                        <span class="col-player">Player</span>
+                        <span class="col-entry">Entry</span>
+                        <span class="col-vol">Vol</span>
+                    </div>
+                `;
+                data.longs.forEach(p => {
+                    tooltipHtml += `
+                        <div class="custom-tooltip-row">
+                            <span class="col-player" title="${p.name} (${p.coin})">${p.name} <span class="coin-tag">${p.coin}</span></span>
+                            <span class="col-entry">$${p.displayEntry}</span>
+                            <span class="col-vol">${p.displayVol}</span>
+                        </div>
+                    `;
+                });
+                tooltipHtml += `</div>`; // Close table
+                if (data.longsRemaining > 0) {
+                    tooltipHtml += `<div class="custom-tooltip-remaining">...e mais ${data.longsRemaining}</div>`;
+                }
+            }
+
+            if (data.shorts && data.shorts.length > 0) {
+                if (tooltipHtml) tooltipHtml += '<div class="custom-tooltip-spacer"></div>';
+                tooltipHtml += `<div class="custom-tooltip-header shorts">🔴 VENDAS (SHORTS) - ${data.shortsCount} Players</div>`;
+                tooltipHtml += `<div class="custom-tooltip-table">`;
+                tooltipHtml += `
+                    <div class="custom-tooltip-row header">
+                        <span class="col-player">Player</span>
+                        <span class="col-entry">Entry</span>
+                        <span class="col-vol">Vol</span>
+                    </div>
+                `;
+                data.shorts.forEach(p => {
+                    tooltipHtml += `
+                        <div class="custom-tooltip-row">
+                            <span class="col-player" title="${p.name} (${p.coin})">${p.name} <span class="coin-tag">${p.coin}</span></span>
+                            <span class="col-entry">$${p.displayEntry}</span>
+                            <span class="col-vol">${p.displayVol}</span>
+                        </div>
+                    `;
+                });
+                tooltipHtml += `</div>`; // Close table
+                if (data.shortsRemaining > 0) {
+                    tooltipHtml += `<div class="custom-tooltip-remaining">...e mais ${data.shortsRemaining}</div>`;
+                }
+            }
+
+            if (!tooltipHtml) {
+                console.warn('Tooltip HTML is empty, resetting active state');
+                target.dataset.tooltipActive = 'false';
+                return;
+            }
+
+            const tooltipEl = document.createElement('div');
+            tooltipEl.className = 'custom-tooltip';
+            tooltipEl.innerHTML = tooltipHtml;
+            document.body.appendChild(tooltipEl);
+
+            const rect = target.getBoundingClientRect();
+            
+            // Initial positioning off-screen to measure
+            tooltipEl.style.visibility = 'hidden';
+            tooltipEl.style.top = '0px';
+            tooltipEl.style.left = '0px';
+            
+            requestAnimationFrame(() => {
+                const tooltipRect = tooltipEl.getBoundingClientRect();
+                
+                let top = rect.bottom + 10;
+                let left = rect.left + (rect.width / 2) - (tooltipRect.width / 2);
+
+                // Boundary checks
+                if (left < 10) left = 10;
+                if (left + tooltipRect.width > window.innerWidth - 10) left = window.innerWidth - tooltipRect.width - 10;
+                
+                // Flip to top if not enough space below
+                if (top + tooltipRect.height > window.innerHeight - 10) {
+                    top = rect.top - tooltipRect.height - 10;
+                }
+
+                tooltipEl.style.top = `${top}px`;
+                tooltipEl.style.left = `${left}px`;
+                tooltipEl.style.visibility = 'visible';
+
+                // Trigger animation
+                requestAnimationFrame(() => tooltipEl.classList.add('visible'));
+            });
+
+            // Cleanup on mouseleave (safer than mouseout to avoid flickering on children)
+            const cleanup = () => {
+                tooltipEl.classList.remove('visible');
+                target.dataset.tooltipActive = 'false';
+                
+                setTimeout(() => {
+                    if (tooltipEl.parentNode) {
+                        tooltipEl.remove();
+                    }
+                }, 200);
+                
+                target.removeEventListener('mouseleave', cleanup);
+            };
+            target.addEventListener('mouseleave', cleanup);
+
+        } catch (err) {
+            console.error('Error parsing tooltip data:', err, tooltipDataStr);
+            target.dataset.tooltipActive = 'false';
+        }
+    }, delay);
+});

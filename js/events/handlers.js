@@ -22,7 +22,7 @@ import {
     getLiqChartHeight, getActiveWindow, setColumnOrder, setVisibleColumns,
     getColumnOrder, getVisibleColumns, setPriceUpdateInterval, setActiveCurrency,
     setActiveEntryCurrency, setDecimalPlaces, setFontSize, setFontSizeKnown, setLeverageColors, setGridSpacing, setMinBtcVolume, getMinBtcVolume, setAggInterval, setAggTableHeight, setAggVolumeUnit, getAggVolumeUnit, setIsZenMode, getIsZenMode,
-    setShowAggSymbols, getShowAggSymbols, setAggZoneColors, getAggZoneColors, setAggHighlightColor, getAggHighlightColor
+    setShowAggSymbols, getShowAggSymbols, setAggZoneColors, getAggZoneColors, setAggHighlightColor, getAggHighlightColor, setTooltipDelay
 } from '../state.js';
 import { renderTable, updateStats } from '../ui/table.js';
 import { renderAggregationTable, scrollToCurrentPriceRange as aggScrollToRange } from '../ui/aggregation.js';
@@ -346,6 +346,18 @@ export function updateAggHighlightColor(e) {
     setAggHighlightColor(highlightColor);
     saveSettings();
     renderAggregationTable(true);
+}
+
+export function updateTooltipDelay(val) {
+    const v = parseInt(val, 10);
+    if (!isNaN(v) && v >= 0) {
+        setTooltipDelay(v);
+        const vals = document.querySelectorAll('.js-tooltip-delay-val');
+        const ranges = document.querySelectorAll('.js-tooltip-delay-range');
+        vals.forEach(el => el.textContent = v);
+        ranges.forEach(el => el.value = v);
+        saveSettings();
+    }
 }
 
 export function updateAggVolumeUnit(unit) {

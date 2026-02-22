@@ -77,6 +77,9 @@ let aggZoneColors = {
 // Aggregation Highlight Color for current price row
 let aggHighlightColor = '#facc15';
 
+// Tooltip state
+let tooltipDelay = 500; // Default 500ms
+
 // Currency state
 let fxRates = { USD: 1 };   // USD-based rates, fetched once
 let fxReady = false;
@@ -304,6 +307,12 @@ export const getAggTableHeight = (value) => aggTableHeight;
 export const getAggVolumeUnit = () => aggVolumeUnit;
 export const getAggZoneColors = () => aggZoneColors;
 export const getAggHighlightColor = () => aggHighlightColor;
+
+export const getTooltipDelay = () => tooltipDelay;
+export const setTooltipDelay = (val) => {
+    tooltipDelay = parseInt(val, 10);
+    if (isNaN(tooltipDelay)) tooltipDelay = 500;
+};
 export const getIsZenMode = (value) => isZenMode;
 export const getShowAggSymbols = () => showAggSymbols;
 export const getWhaleMeta = () => whaleMeta;

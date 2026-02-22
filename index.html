@@ -28,6 +28,7 @@
     <link rel="stylesheet" href="css/components/panels.css">
     <link rel="stylesheet" href="css/components/tables.css">
     <link rel="stylesheet" href="css/components/tabs.css">
+    <link rel="stylesheet" href="css/components/tooltips.css">
     <link rel="stylesheet" href="css/components/toast.css">
     <link rel="stylesheet" href="css/components/chart.css">
     <link rel="stylesheet" href="css/utilities.css">
@@ -461,6 +462,10 @@
                         </div>
                     </div>
                 </div>
+                <div class="ctrl">
+                    <label title="Delay to show tooltip">Tooltip Delay: <span class="js-tooltip-delay-val">500</span>ms</label>
+                    <input type="range" class="js-tooltip-delay-range" min="0" max="2000" step="100" value="500" style="width: 100%">
+                </div>
             </div>
 
 
@@ -890,7 +895,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"
         defer></script>
 
-    <script type="module" src="js/main.js?v=2"></script>
+    <script type="module" src="js/main.js?v=7"></script>
 
     <!-- Service Worker Registration -->
     <script>

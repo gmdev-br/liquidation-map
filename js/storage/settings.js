@@ -8,9 +8,9 @@ import {
     getColumnOrder, getVisibleColumns, getRankingLimit, getColorMaxLev,
     getChartHighLevSplit, getChartHeight, getLiqChartHeight, getSavedScatterState,
     getSavedLiqState, getColumnWidths, getColumnWidth, getActiveCurrency, getActiveEntryCurrency, getDecimalPlaces, getLeverageColors, getFontSize, getFontSizeKnown, getGridSpacing, getMinBtcVolume,
-    getAggInterval, getAggTableHeight, getAggVolumeUnit, getIsZenMode, getLastSeenAccountValues, getShowAggSymbols, getAggZoneColors, getAggHighlightColor,
+    getAggInterval, getAggTableHeight, getAggVolumeUnit, getIsZenMode, getLastSeenAccountValues, getShowAggSymbols, getAggZoneColors, getAggHighlightColor, getTooltipDelay,
     setSortKey, setSortDir, setSavedScatterState, setSavedLiqState,
-    setColumnOrder, setVisibleColumns, setSelectedCoins, setRankingLimit, setColorMaxLev, setChartHighLevSplit, setChartMode, setBubbleScale, setBubbleOpacity, setLineThickness, setAggregationFactor, setPriceMode, setShowSymbols, setPriceUpdateInterval, setDecimalPlaces, setFontSize, setFontSizeKnown, setLeverageColors, setColumnWidth, setGridSpacing, setMinBtcVolume, setAggInterval, setAggTableHeight, setAggVolumeUnit, setIsZenMode, setLastSeenAccountValues, setShowAggSymbols, setAggZoneColors, setAggHighlightColor
+    setColumnOrder, setVisibleColumns, setSelectedCoins, setRankingLimit, setColorMaxLev, setChartHighLevSplit, setChartMode, setBubbleScale, setBubbleOpacity, setLineThickness, setAggregationFactor, setPriceMode, setShowSymbols, setPriceUpdateInterval, setDecimalPlaces, setFontSize, setFontSizeKnown, setLeverageColors, setColumnWidth, setGridSpacing, setMinBtcVolume, setAggInterval, setAggTableHeight, setAggVolumeUnit, setIsZenMode, setLastSeenAccountValues, setShowAggSymbols, setAggZoneColors, setAggHighlightColor, setTooltipDelay
 } from '../state.js';
 import { COLUMN_DEFS } from '../config.js';
 import { cbSetValue, updateCoinSearchLabel } from '../ui/combobox.js';
@@ -102,7 +102,8 @@ export function saveSettings(getChartState = null, savedScatterState = null, sav
         showAggSymbols: getShowAggSymbols(),
         aggZoneColors: getAggZoneColors(),
         aggHighlightColor: getAggHighlightColor(),
-        lastSeenAccountValues: getLastSeenAccountValues()
+        lastSeenAccountValues: getLastSeenAccountValues(),
+        tooltipDelay: getTooltipDelay()
     };
 
     console.log('Saving currency settings:', {
@@ -278,6 +279,13 @@ export function loadSettings() {
         const fontSizeKnownRanges = document.querySelectorAll('.js-font-size-known-range');
         fontSizeKnownVals.forEach(el => el.textContent = s.fontSizeKnown);
         fontSizeKnownRanges.forEach(el => el.value = s.fontSizeKnown);
+    }
+    if (s.tooltipDelay !== undefined) {
+        setTooltipDelay(s.tooltipDelay);
+        const tooltipDelayVals = document.querySelectorAll('.js-tooltip-delay-val');
+        const tooltipDelayRanges = document.querySelectorAll('.js-tooltip-delay-range');
+        tooltipDelayVals.forEach(el => el.textContent = s.tooltipDelay + 'ms');
+        tooltipDelayRanges.forEach(el => el.value = s.tooltipDelay);
     }
     if (s.minValue) document.getElementById('minValue').value = s.minValue;
     if (s.coinFilter) {
