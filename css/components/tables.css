@@ -122,7 +122,6 @@ th {
     z-index: 1;
     transition: background 0.2s;
     user-select: none;
-    -webkit-user-select: none;
     -moz-user-select: none;
     -ms-user-select: none;
     pointer-events: auto;
@@ -428,8 +427,11 @@ td {
     transition: all 0.2s;
 }
 
-.filter-row input.col-filter:focus {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(156, 163, 175, 0.4);
-    outline: none;
+/* ── Aggregation Table Overrides ── */
+.agg-table th {
+    white-space: normal;
+    vertical-align: bottom;
+    padding: 8px 6px;
+    line-height: 1.2;
+    height: auto;
 }
