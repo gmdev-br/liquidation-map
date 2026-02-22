@@ -220,23 +220,40 @@ export function renderAggregationTable(force = false) {
                 const isForteZone = (domPct === 100 || isForteTotal) && totalNotional >= 10_000_000;
                 const baseStr = domType === 'COMPRA' ? 'Compra' : domType === 'VENDA' ? 'Venda' : 'Neutro';
 
-                if (domPct === 50) {
-                    zoneType = 'Indecisão';
-                    zoneColor = '#9ca3af';
+                const isContested = domPct < 70;
+
+                if (isContested) {
+                    zoneType = 'Contestada';
+                    zoneColor = '#ffffff';
+                    domColor = '#ffffff';
                 } else {
-                    if (isForteZone) {
-                        zoneType = baseStr + ' Forte';
-                        zoneColor = domType === 'COMPRA' ? aggZoneColors.buyStrong : aggZoneColors.sellStrong;
+                    if (domPct === 50) {
+                        zoneType = 'Indecisão';
+                        zoneColor = '#9ca3af';
                     } else {
-                        zoneType = baseStr + ' Normal';
-                        zoneColor = domType === 'COMPRA' ? aggZoneColors.buyNormal : aggZoneColors.sellNormal;
+                        if (isForteZone) {
+                            zoneType = baseStr + ' Forte';
+                            zoneColor = domType === 'COMPRA' ? aggZoneColors.buyStrong : aggZoneColors.sellStrong;
+                        } else {
+                            zoneType = baseStr + ' Normal';
+                            zoneColor = domType === 'COMPRA' ? aggZoneColors.buyNormal : aggZoneColors.sellNormal;
+                        }
                     }
+                    
+                    // Update DOM color to match row-level Forte status
+                    domColor = domType === 'COMPRA' ? (isForteZone ? aggZoneColors.buyStrong : aggZoneColors.buyNormal) :
+                        domType === 'VENDA' ? (isForteZone ? aggZoneColors.sellStrong : aggZoneColors.sellNormal) : '#6b7280';
                 }
 
                 // Apply colors consistently to all directional cells based on row-level Forte status OR High Intensity
                 // User Requirement: "linas com destaues por tipo de zona forte ou intensidade forte devem seguir somente um padrao de coloracao"
                 // User Requirement Update: "compra e venda normais devem seguir apenas 1 cor"
-                if (totalNotional >= 10_000_000) {
+                // User Requirement Update: "seo % de dominacia for menor que 70% a area é tida como contestada e todos os textos devem ser brancos"
+                
+                if (isContested) {
+                     colorLong = b.notionalLong > 0 ? '#ffffff' : '#4b5563';
+                     colorShort = b.notionalShort > 0 ? '#ffffff' : '#4b5563';
+                } else if (totalNotional >= 10_000_000) {
                     if (domType === 'COMPRA') {
                         // Dominant Buy: Longs get Zone Color (Strong or Normal), Shorts get Gray (Neutral)
                         colorLong = b.notionalLong > 0 ? zoneColor : '#4b5563';
@@ -255,9 +272,6 @@ export function renderAggregationTable(force = false) {
                     colorShort = b.notionalShort > 0 ? aggZoneColors.sellNormal : '#4b5563';
                 }
 
-                // Update DOM color to match row-level Forte status
-                domColor = domType === 'COMPRA' ? (isForteZone ? aggZoneColors.buyStrong : aggZoneColors.buyNormal) :
-                    domType === 'VENDA' ? (isForteZone ? aggZoneColors.sellStrong : aggZoneColors.sellNormal) : '#6b7280';
                 domBg = isForteZone ? `rgba(${hexToRgb(domColor)}, 0.1)` : `rgba(${hexToRgb(domColor)}, 0.05)`;
             } else {
                 colorLong = '#4b5563';
@@ -284,6 +298,14 @@ export function renderAggregationTable(force = false) {
                     fwBold = '700';
                     fwSemi = '700';
                 }
+            }
+
+            // Force white text for Contested/Neutral areas if significant volume
+            if (!isEmpty && domPct < 70 && totalNotional >= 10_000_000) {
+                totalNotionalColor = '#ffffff';
+                intColor = '#ffffff';
+                fwBold = '700';
+                fwSemi = '700';
             }
 
             if (isWeakIntensity && !isEmpty) {
