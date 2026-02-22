@@ -11,6 +11,7 @@ export class VirtualScroll {
         this.rowHeight = options.rowHeight || 52;
         this.rowHeightMeasured = false; // Will calibrate on first real render
         this.bufferSize = options.bufferSize || 5;
+        this.keyField = options.keyField || null;
         this.tbody = options.tbody;
         this.data = [];
         this.scrollTop = 0;
