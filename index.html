@@ -529,61 +529,91 @@
 
     </div>
 
-    <!-- Quotes panel: shown when coins are selected -->
-    <div id="quotes-panel" style="display:none"></div>
+    <!-- Collapsible Quotes Panel -->
+    <div class="section-wrapper" id="quotesSectionWrapper" style="display:none">
+        <div class="section-header js-collapse-toggle" data-target="quotesSectionContent">
+            <h2 class="section-title">Quotes</h2>
+            <svg class="chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+        </div>
+        <div class="section-content" id="quotesSectionContent">
+            <div id="quotes-panel"></div>
+        </div>
+    </div>
 
-    <!-- Ranking panel: shows top coins by whale position value -->
-    <div id="ranking-panel"></div>
+    <!-- Collapsible Ranking Panel -->
+    <div class="section-wrapper" id="rankingSectionWrapper">
+        <div class="section-header js-collapse-toggle" data-target="rankingSectionContent">
+            <h2 class="section-title">Top Holdings</h2>
+            <svg class="chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+        </div>
+        <div class="section-content" id="rankingSectionContent">
+            <div id="ranking-panel"></div>
+        </div>
+    </div>
 
     <div class="progress-bar">
         <div class="progress-fill" id="progressFill"></div>
     </div>
 
-    <div class="stats-row">
-        <div class="stat">
-            <div class="stat-label">Whales Found</div>
-            <div class="stat-main">
-                <div class="stat-value blue" id="sWhales">—</div>
-            </div>
-            <div class="stat-sub">
-                <span class="stat-sub-item long" id="sWhalesLong">—</span>
-                <span class="stat-sub-item short" id="sWhalesShort">—</span>
-            </div>
+    <div class="section-wrapper" id="statsSectionWrapper">
+        <div class="section-header js-collapse-toggle" data-target="statsSectionContent">
+            <h2 class="section-title">General Stats</h2>
+            <svg class="chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
         </div>
-        <div class="stat">
-            <div class="stat-label">Total Positions</div>
-            <div class="stat-main">
-                <div class="stat-value" id="sPositions">—</div>
-            </div>
-            <div class="stat-sub">
-                <span class="stat-sub-item long" id="sPositionsLong">—</span>
-                <span class="stat-sub-item short" id="sPositionsShort">—</span>
-            </div>
-        </div>
-        <div class="stat">
-            <div class="stat-label">Total Capital</div>
-            <div class="stat-main">
-                <div class="stat-value green" id="sCapital">—</div>
-            </div>
-            <div class="stat-sub">
-                <span class="stat-sub-item long" id="sCapitalLong">—</span>
-                <span class="stat-sub-item short" id="sCapitalShort">—</span>
-            </div>
-        </div>
-        <div class="stat">
-            <div class="stat-label">Total UPNL</div>
-            <div class="stat-main">
-                <div class="stat-value" id="sUpnl">—</div>
-            </div>
-            <div class="stat-sub">
-                <span class="stat-sub-item long" id="sUpnlLong">—</span>
-                <span class="stat-sub-item short" id="sUpnlShort">—</span>
-            </div>
-        </div>
-        <div class="stat">
-            <div class="stat-label">Largest Wallet</div>
-            <div class="stat-main">
-                <div class="stat-value gold" id="sLargest">—</div>
+        <div class="section-content" id="statsSectionContent">
+            <div class="stats-row">
+                <div class="stat">
+                    <div class="stat-label">Whales Found</div>
+                    <div class="stat-main">
+                        <div class="stat-value blue" id="sWhales">—</div>
+                    </div>
+                    <div class="stat-sub">
+                        <span class="stat-sub-item long" id="sWhalesLong">—</span>
+                        <span class="stat-sub-item short" id="sWhalesShort">—</span>
+                    </div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Total Positions</div>
+                    <div class="stat-main">
+                        <div class="stat-value" id="sPositions">—</div>
+                    </div>
+                    <div class="stat-sub">
+                        <span class="stat-sub-item long" id="sPositionsLong">—</span>
+                        <span class="stat-sub-item short" id="sPositionsShort">—</span>
+                    </div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Total Capital</div>
+                    <div class="stat-main">
+                        <div class="stat-value green" id="sCapital">—</div>
+                    </div>
+                    <div class="stat-sub">
+                        <span class="stat-sub-item long" id="sCapitalLong">—</span>
+                        <span class="stat-sub-item short" id="sCapitalShort">—</span>
+                    </div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Total UPNL</div>
+                    <div class="stat-main">
+                        <div class="stat-value" id="sUpnl">—</div>
+                    </div>
+                    <div class="stat-sub">
+                        <span class="stat-sub-item long" id="sUpnlLong">—</span>
+                        <span class="stat-sub-item short" id="sUpnlShort">—</span>
+                    </div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Largest Wallet</div>
+                    <div class="stat-main">
+                        <div class="stat-value gold" id="sLargest">—</div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

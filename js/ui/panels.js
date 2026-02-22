@@ -100,6 +100,7 @@ export async function updateRankingPanel() {
             return;
         }
 
+
         // Get whale position data for additional info
         const allRows = getAllRows();
         const whaleStats = {};
