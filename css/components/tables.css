@@ -13,9 +13,9 @@
 
 /* ── Table ── */
 table {
-    width: 100%;
+    width: max-content; /* Respect column widths, don't stretch */
     border-collapse: collapse;
-    min-width: 1000px;
+    min-width: auto; /* Let content dictate width */
     table-layout: fixed; /* Fixed layout for resizing */
 }
 
@@ -46,6 +46,10 @@ td {
 }
 
 /* ── Table Header ── */
+tbody tr {
+    height: var(--row-height, 52px);
+}
+
 thead tr {
     /* Optimized background - less transparency, no backdrop-filter */
     background: #0a0e1a;

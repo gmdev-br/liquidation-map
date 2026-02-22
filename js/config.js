@@ -7,20 +7,20 @@ export const LEADERBOARD_URL = 'https://stats-data.hyperliquid.xyz/Mainnet/leade
 export const FX_URL = 'https://open.er-api.com/v6/latest/USD';
 
 export const COLUMN_DEFS = [
-    { key: 'col-num', label: '#' },
-    { key: 'col-address', label: 'Address' },
-    { key: 'col-coin', label: 'Coin' },
-    { key: 'col-szi', label: 'Size' },
-    { key: 'col-leverage', label: 'Leverage' },
-    { key: 'col-positionValue', label: 'Value' },
-    { key: 'col-valueCcy', label: 'Value (CCY)' },
-    { key: 'col-entryPx', label: 'Avg Entry' },
-    { key: 'col-entryCcy', label: 'Avg Entry (Corr)' },
-    { key: 'col-unrealizedPnl', label: 'UPNL' },
-    { key: 'col-funding', label: 'Funding' },
-    { key: 'col-liqPx', label: 'Liq. Price' },
-    { key: 'col-distToLiq', label: 'Dist. to Liq.' },
-    { key: 'col-accountValue', label: 'Acct. Value' }
+    { key: 'col-num', label: '#', width: 40 },
+    { key: 'col-address', label: 'Address', width: 180 },
+    { key: 'col-coin', label: 'Coin', width: 80 },
+    { key: 'col-szi', label: 'Size', width: 90 },
+    { key: 'col-leverage', label: 'Leverage', width: 90 },
+    { key: 'col-positionValue', label: 'Value', width: 100 },
+    { key: 'col-valueCcy', label: 'Value (CCY)', width: 100 },
+    { key: 'col-entryPx', label: 'Avg Entry', width: 100 },
+    { key: 'col-entryCcy', label: 'Avg Entry (Corr)', width: 100 },
+    { key: 'col-unrealizedPnl', label: 'UPNL', width: 100 },
+    { key: 'col-funding', label: 'Funding', width: 100 },
+    { key: 'col-liqPx', label: 'Liq. Price', width: 100 },
+    { key: 'col-distToLiq', label: 'Dist. to Liq.', width: 120 },
+    { key: 'col-accountValue', label: 'Acct. Value', width: 110 }
 ];
 
 export const CURRENCY_META = {

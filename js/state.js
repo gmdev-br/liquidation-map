@@ -93,6 +93,7 @@ let showAggSymbols = true; // For aggregation table volumes
 let decimalPlaces = 2; // Default 2 decimal places for prices and values
 let fontSize = 12; // Default font size for normal rows in px
 let fontSizeKnown = 14; // Default font size for known addresses in px
+let rowHeight = 52; // Default row height in px
 
 // Concurrency state
 let maxConcurrency = 8;
@@ -137,6 +138,8 @@ export const getState = () => ({
     activeEntryCurrency,
     showSymbols,
     decimalPlaces,
+    fontSizeKnown,
+    rowHeight,
     maxConcurrency,
     renderPending,
     lastSaveTime,
@@ -230,6 +233,7 @@ export const setShowSymbols = (value) => { showSymbols = value; };
 export const setDecimalPlaces = (value) => { decimalPlaces = value; };
 export const setFontSize = (value) => { fontSize = value; };
 export const setFontSizeKnown = (value) => { fontSizeKnown = value; };
+export const setRowHeight = (value) => { rowHeight = value; };
 export const setSelectedCoins = (value) => { selectedCoins = value; };
 export const setMaxConcurrency = (value) => { maxConcurrency = value; };
 export const setSortKey = (value) => { sortKey = value; };
@@ -276,6 +280,7 @@ export const getShowSymbols = () => showSymbols;
 export const getDecimalPlaces = () => decimalPlaces;
 export const getFontSize = () => fontSize;
 export const getFontSizeKnown = () => fontSizeKnown;
+export const getRowHeight = () => rowHeight;
 export const getSortKey = () => sortKey;
 export const getSortDir = () => sortDir;
 export const getActiveWindow = () => activeWindow;

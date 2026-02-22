@@ -46,3 +46,12 @@ The user reports persistent issues despite previous fixes:
 2.  **Implement Toast:** Add update notification.
 3.  **Refine Worker Logging:** Add temporary logs to `dataWorker.js` for verification.
 4.  **Deploy:** User tests.
+
+## 6. Adjustable Row Height (Completed)
+- **Objective:** Allow users to customize the height of table rows for better density control.
+- **Implementation:**
+  - Added `rowHeight` to `state.js` and `settings.js`.
+  - Added UI control in `index.html`.
+  - Implemented `updateRowHeight` handler in `handlers.js`.
+  - Updated `table.js` to use `rowHeight` in virtual scrolling and rendering.
+  - Added event listeners in `init.js`.

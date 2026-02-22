@@ -23,8 +23,9 @@ import {
     getColumnOrder, getVisibleColumns, setPriceUpdateInterval, setActiveCurrency,
     setActiveEntryCurrency, setDecimalPlaces, setFontSize, setFontSizeKnown, setLeverageColors, setGridSpacing, setMinBtcVolume, getMinBtcVolume, setAggInterval, setAggTableHeight, setAggVolumeUnit, getAggVolumeUnit, setIsZenMode, getIsZenMode,
     setShowAggSymbols, getShowAggSymbols, setAggZoneColors, getAggZoneColors, setAggHighlightColor, getAggHighlightColor, setTooltipDelay,
-    getColumnWidths, setColumnWidths
+    getColumnWidths, setColumnWidths, setRowHeight
 } from '../state.js';
+import { COLUMN_DEFS } from '../config.js';
 import { renderTable, updateStats } from '../ui/table.js';
 import { renderAggregationTable, scrollToCurrentPriceRange as aggScrollToRange } from '../ui/aggregation.js';
 import { renderQuotesPanel, updateRankingPanel } from '../ui/panels.js';
@@ -179,6 +180,19 @@ export function updateFontSizeKnown(val) {
         saveSettings();
         // Trigger table re-render to apply new font size
         console.log('Calling renderTable for fontSizeKnown update');
+        renderTable();
+    }
+}
+
+export function updateRowHeight(val) {
+    const v = parseInt(val, 10);
+    if (v >= 30 && v <= 100) {
+        setRowHeight(v);
+        syncControls(['.js-row-height-val', '.js-row-height-range'], v);
+        // Update CSS variable
+        document.documentElement.style.setProperty('--row-height', v + 'px');
+        saveSettings();
+        // Trigger table re-render
         renderTable();
     }
 }
@@ -829,12 +843,19 @@ export function applyColumnVisibility() {
 
 export function applyColumnWidths() {
     const columnWidths = getColumnWidths() || {};
-    Object.keys(columnWidths).forEach(thId => {
+
+    // Apply widths from storage or defaults from COLUMN_DEFS
+    COLUMN_DEFS.forEach(colDef => {
+        const thId = `th-${colDef.key.replace('col-', '')}`;
         const th = document.getElementById(thId);
+        
         if (th) {
-            let width = columnWidths[thId];
+            // Priority: Stored width > Default width > 100
+            let width = columnWidths[thId] || colDef.width || 100;
+            
             // Enforce minimum width
-            if (width < 50) width = 50;
+            if (width < 40) width = 40; // Allow smaller columns like # (width 40 in config)
+
             th.style.width = `${width}px`;
             th.style.minWidth = `${width}px`;
             th.style.maxWidth = `${width}px`;

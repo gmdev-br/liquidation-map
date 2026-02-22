@@ -25,7 +25,7 @@ import {
     updateBubbleSize, updateBubbleOpacity, updateLineThickness, updateAggregation, setChartModeHandler, updateChartHeight,
     updateLiqChartHeight, onCurrencyChange, openColumnCombobox, closeColumnComboboxDelayed,
     renderColumnDropdown as renderColumnDropdownFn, toggleColumn as toggleColumnFn, showAllColumns as showAllColumnsFn, hideAllColumns as hideAllColumnsFn, updateColumnSelectDisplay, applyColumnOrder,
-    applyColumnWidths, applyColumnVisibility, toggleShowSymbols, toggleShowAggSymbols, updatePriceInterval, updateDecimalPlaces, updateFontSize, updateFontSizeKnown, updateLeverageColors, updateGridSpacing, updateMinBtcVolume, updateAggInterval, updateAggTableHeight, updateAggVolumeUnit, scrollToCurrentPrice,
+    applyColumnWidths, applyColumnVisibility, toggleShowSymbols, toggleShowAggSymbols, updatePriceInterval, updateDecimalPlaces, updateFontSize, updateFontSizeKnown, updateRowHeight, updateLeverageColors, updateGridSpacing, updateMinBtcVolume, updateAggInterval, updateAggTableHeight, updateAggVolumeUnit, scrollToCurrentPrice,
     toggleZenMode, updateAggZoneColors, updateAggHighlightColor
 } from './handlers.js';
 import { initColumnWidthControl, applyColumnWidth } from '../ui/columnWidth.js';
@@ -489,6 +489,20 @@ function setupEventListeners() {
         });
     });
 
+    // Row height control - attach to both mobile and desktop
+    const rowHeightRanges = document.querySelectorAll('.js-row-height-range');
+    rowHeightRanges.forEach(range => {
+        range.addEventListener('input', (e) => {
+            updateRowHeight(e.target.value);
+        });
+        range.addEventListener('change', (e) => {
+            updateRowHeight(e.target.value);
+        });
+        range.addEventListener('keyup', (e) => {
+            updateRowHeight(e.target.value);
+        });
+    });
+
     // Leverage color inputs - attach to both mobile and desktop
     const colorInputs = [
         { id: 'colorLongLow', class: 'js-color-long-low' },
@@ -785,6 +799,7 @@ async function loadInitialState() {
 
     // Apply column visibility first
     applyColumnVisibility();
+    applyColumnWidths();
     updateColumnSelectDisplay();
 
     // Update chart control visibility based on current mode

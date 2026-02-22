@@ -6,7 +6,7 @@ import {
     getAllRows, getDisplayedRows, getSelectedCoins, getActiveCurrency,
     getActiveEntryCurrency, getShowSymbols, getSortKey, getSortDir,
     getVisibleColumns, getColumnOrder, setDisplayedRows, getCurrentPrices, getFxRates, getChartHighLevSplit, getFontSize, getFontSizeKnown, getDecimalPlaces, getMinBtcVolume, getScanning,
-    getWhaleMeta, getPriceUpdateVersion
+    getWhaleMeta, getPriceUpdateVersion, getRowHeight
 } from '../state.js';
 import { convertToActiveCcy } from '../utils/currency.js';
 import { fmt, fmtUSD, fmtAddr, fmtCcy } from '../utils/formatters.js';
@@ -394,8 +394,14 @@ function _renderTableInternal() {
         }
 
         // Use virtual scrolling for large datasets
+        const rowHeight = getRowHeight();
         if (!virtualScrollManager) {
-            virtualScrollManager = enableVirtualScroll('tableBody', { threshold: 100, rowHeight: 52 });
+            virtualScrollManager = enableVirtualScroll('tableBody', { threshold: 100, rowHeight: rowHeight });
+        } else {
+             // Update row height in case it changed
+             if (typeof virtualScrollManager.setRowHeight === 'function') {
+                 virtualScrollManager.setRowHeight(rowHeight);
+             }
         }
 
         // Row renderer function
@@ -517,8 +523,8 @@ function _renderTableInternal() {
                 });
             }
 
-            return `<tr class="${meta.displayName ? 'row-known-address' : ''}">
-            ${columnOrder.filter(Key => filteredCells[Key]).map(Key => filteredCells[Key]).join('')}
+            return `<tr class="${meta.displayName ? 'row-known-address' : ''}" style="height: ${rowHeight}px">
+            ${columnOrder.filter(Key => filteredCells[Key] !== undefined).map(Key => filteredCells[Key]).join('')}
         </tr>`;
         };
 

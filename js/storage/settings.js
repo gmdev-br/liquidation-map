@@ -7,7 +7,7 @@ import {
     getAggregationFactor, getSelectedCoins, getPriceMode, getPriceUpdateInterval, getActiveWindow,
     getColumnOrder, getVisibleColumns, getRankingLimit, getColorMaxLev,
     getChartHighLevSplit, getChartHeight, getLiqChartHeight, getSavedScatterState,
-    getSavedLiqState, getColumnWidths, getColumnWidth, getActiveCurrency, getActiveEntryCurrency, getDecimalPlaces, getLeverageColors, getFontSize, getFontSizeKnown, getGridSpacing, getMinBtcVolume,
+    getSavedLiqState, getColumnWidths, getColumnWidth, getActiveCurrency, getActiveEntryCurrency, getDecimalPlaces, getLeverageColors, getFontSize, getFontSizeKnown, getRowHeight, setRowHeight, getGridSpacing, getMinBtcVolume,
     getAggInterval, getAggTableHeight, getAggVolumeUnit, getIsZenMode, getLastSeenAccountValues, getShowAggSymbols, getAggZoneColors, getAggHighlightColor, getTooltipDelay,
     setSortKey, setSortDir, setSavedScatterState, setSavedLiqState,
     setColumnOrder, setVisibleColumns, setSelectedCoins, setRankingLimit, setColorMaxLev, setChartHighLevSplit, setChartMode, setBubbleScale, setBubbleOpacity, setLineThickness, setAggregationFactor, setPriceMode, setShowSymbols, setPriceUpdateInterval, setDecimalPlaces, setFontSize, setFontSizeKnown, setLeverageColors, setColumnWidth, setGridSpacing, setMinBtcVolume, setAggInterval, setAggTableHeight, setAggVolumeUnit, setIsZenMode, setLastSeenAccountValues, setShowAggSymbols, setAggZoneColors, setAggHighlightColor, setTooltipDelay
@@ -89,6 +89,7 @@ export function saveSettings(getChartState = null, savedScatterState = null, sav
         decimalPlaces: getDecimalPlaces(),
         fontSize: getFontSize(),
         fontSizeKnown: getFontSizeKnown(),
+        rowHeight: getRowHeight(),
         visibleColumns: getVisibleColumns(),
         columnOrder: getColumnOrder(),
         leverageColors: getLeverageColors(),
@@ -305,6 +306,14 @@ export function loadSettings() {
         const fontSizeKnownRanges = document.querySelectorAll('.js-font-size-known-range');
         fontSizeKnownVals.forEach(el => el.textContent = s.fontSizeKnown);
         fontSizeKnownRanges.forEach(el => el.value = s.fontSizeKnown);
+    }
+    if (s.rowHeight !== undefined) {
+        setRowHeight(s.rowHeight);
+        const rowHeightVals = document.querySelectorAll('.js-row-height-val');
+        const rowHeightRanges = document.querySelectorAll('.js-row-height-range');
+        rowHeightVals.forEach(el => el.textContent = s.rowHeight);
+        rowHeightRanges.forEach(el => el.value = s.rowHeight);
+        document.documentElement.style.setProperty('--row-height', s.rowHeight + 'px');
     }
     if (s.tooltipDelay !== undefined) {
         setTooltipDelay(s.tooltipDelay);

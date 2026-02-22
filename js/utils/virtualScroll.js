@@ -156,7 +156,7 @@ export class VirtualScroll {
 
         // Add or remove rows to match the visible count
         while (existingRows.length < neededRowsCount) {
-            const tr = document.createElement('template');
+            const tr = document.createElement('tr');
             this.tbody.insertBefore(tr, bottomSpacer);
             existingRows.push(tr);
         }
@@ -164,6 +164,9 @@ export class VirtualScroll {
             const tr = existingRows.pop();
             tr.remove();
         }
+
+        // Helper template for parsing HTML strings
+        const tempTemplate = document.createElement('template');
 
         // Update the content of each row
         let rowIndex = this.visibleStart;
@@ -173,34 +176,29 @@ export class VirtualScroll {
 
             if (rowData) {
                 // We extract just the inner content of the tr string (everything between <tr...> and </tr>)
-                // Since rowData.html is a full <tr>...</tr> string, we strip the outer tags safely
                 const fullHtml = rowData.html || this.renderRow(rowData, rowIndex);
-                const innerMatch = fullHtml.match(/<tr[^>]*>([\s\S]*?)<\/tr>/i);
-                const innerContent = innerMatch ? innerMatch[1] : fullHtml;
-
-                // Extract class names to preserve row-known-address and others
-                const classMatch = fullHtml.match(/class="([^"]*)"/i);
-                const classNames = classMatch ? classMatch[1] : '';
-
-                // Extract style attribute to preserve highlight styles
-                const styleMatch = fullHtml.match(/style=(["'])(.*?)\1/i);
-                const styleAttr = styleMatch ? styleMatch[2] : '';
-
-                if (tr.tagName.toLowerCase() === 'template') {
-                    // Convert template to actual TR
-                    const newTr = document.createElement('tr');
-                    newTr.className = classNames;
-                    newTr.style.cssText = styleAttr;
-                    newTr.innerHTML = innerContent;
-                    tr.parentNode.replaceChild(newTr, tr);
-                    existingRows[i] = newTr;
-                } else {
-                    // Update only if content changed (the user scrolled this specific row out of view and recycled it)
-                    // We check a custom dataset attribute to avoid reading innerHTML which is slow
+                
+                // Use robust DOM parsing instead of brittle regex
+                tempTemplate.innerHTML = fullHtml.trim();
+                const sourceTr = tempTemplate.content.firstElementChild;
+                
+                if (sourceTr) {
+                    // Check if update is needed
                     if (forceUpdate || tr.dataset.sourceIndex !== String(rowIndex)) {
-                        tr.className = classNames;
-                        tr.style.cssText = styleAttr;
-                        tr.innerHTML = innerContent;
+                        // Copy attributes (class, style, etc.)
+                        tr.className = sourceTr.className;
+                        tr.style.cssText = sourceTr.style.cssText;
+                        
+                        // Copy inner HTML (cells)
+                        tr.innerHTML = sourceTr.innerHTML;
+                        
+                        // Track index
+                        tr.dataset.sourceIndex = String(rowIndex);
+                    }
+                } else {
+                    // Fallback for non-TR strings (e.g. just inner content)
+                    if (forceUpdate || tr.dataset.sourceIndex !== String(rowIndex)) {
+                        tr.innerHTML = fullHtml;
                         tr.dataset.sourceIndex = String(rowIndex);
                     }
                 }
@@ -248,7 +246,7 @@ export function enableVirtualScroll(tbodyId = 'tableBody', options = {}) {
     if (!tbody) return;
 
     const threshold = options.threshold || 100;
-    const rowHeight = options.rowHeight || 52;
+    let rowHeight = options.rowHeight || 52;
     const bufferSize = options.bufferSize || 5;
 
     let virtualScroll = null;
@@ -303,6 +301,13 @@ export function enableVirtualScroll(tbodyId = 'tableBody', options = {}) {
         setData: (rows) => renderFn(rows, currentRenderer),
         set renderRow(fn) { currentRenderer = fn; },
         get renderRow() { return currentRenderer; },
+        setRowHeight: (height) => {
+            rowHeight = height;
+            if (virtualScroll) {
+                virtualScroll.rowHeight = height;
+                virtualScroll.rowHeightMeasured = false;
+            }
+        },
         scrollToIndex: (index) => {
             if (virtualScroll) {
                 virtualScroll.scrollToIndex(index);
