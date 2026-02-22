@@ -79,12 +79,12 @@ export class VirtualScroll {
         this.totalHeight = data.length * this.rowHeight;
         this.rowHeightMeasured = false; // Reset so we re-measure on new data
         this.updateVisibleRange();
-        this.render();
+        this.render(true); // Force update content
         // First pass: re-render after next animation frame
         requestAnimationFrame(() => {
             this._calibrateRowHeight();
             this.updateVisibleRange();
-            this.render();
+            this.render(true);
         });
         // Second pass: CSS fonts and custom styles can take slightly longer
         // This guarantees row height is correct even on slower devices
@@ -92,7 +92,7 @@ export class VirtualScroll {
             if (!this.rowHeightMeasured) {
                 this._calibrateRowHeight();
                 this.updateVisibleRange();
-                this.render();
+                this.render(true);
             }
         }, 250);
     }
@@ -114,7 +114,7 @@ export class VirtualScroll {
         }
     }
 
-    render() {
+    render(forceUpdate = false) {
         if (!this.tbody) return;
 
         const paddingTop = this.visibleStart * this.rowHeight;
@@ -197,11 +197,11 @@ export class VirtualScroll {
                 } else {
                     // Update only if content changed (the user scrolled this specific row out of view and recycled it)
                     // We check a custom dataset attribute to avoid reading innerHTML which is slow
-                    if (tr.dataset.sourceIndex !== String(rowIndex)) {
+                    if (forceUpdate || tr.dataset.sourceIndex !== String(rowIndex)) {
                         tr.className = classNames;
                         tr.style.cssText = styleAttr;
                         tr.innerHTML = innerContent;
-                        tr.dataset.sourceIndex = rowIndex;
+                        tr.dataset.sourceIndex = String(rowIndex);
                     }
                 }
             }
@@ -252,41 +252,57 @@ export function enableVirtualScroll(tbodyId = 'tableBody', options = {}) {
     const bufferSize = options.bufferSize || 5;
 
     let virtualScroll = null;
+    let currentRenderer = null;
+
+    const renderFn = (rows, rowRenderer) => {
+        // Update renderer if provided
+        if (rowRenderer) currentRenderer = rowRenderer;
+        
+        // Use stored renderer if not provided
+        const renderer = rowRenderer || currentRenderer;
+        if (!renderer) {
+            console.error('VirtualScroll: No row renderer provided');
+            return;
+        }
+
+        if (rows.length > threshold) {
+            if (!virtualScroll) {
+                virtualScroll = new VirtualScroll({
+                    tbody,
+                    rowHeight,
+                    bufferSize
+                });
+            }
+
+            // Add html property to each row
+            const data = rows.map((row, index) => ({
+                ...row,
+                html: renderer(row, index)
+            }));
+
+            // Reset tbody to clean up any leftover regular rows
+            if (virtualScroll.data.length === 0) {
+                tbody.innerHTML = '';
+            }
+
+            virtualScroll.setData(data);
+        } else {
+            // Disable virtual scroll for small datasets
+            if (virtualScroll) {
+                virtualScroll.destroy();
+                virtualScroll = null;
+            }
+
+            // Render all rows normally
+            tbody.innerHTML = rows.map((row, index) => renderer(row, index)).join('');
+        }
+    };
 
     return {
-        render: (rows, rowRenderer) => {
-            if (rows.length > threshold) {
-                if (!virtualScroll) {
-                    virtualScroll = new VirtualScroll({
-                        tbody,
-                        rowHeight,
-                        bufferSize
-                    });
-                }
-
-                // Add html property to each row
-                const data = rows.map((row, index) => ({
-                    ...row,
-                    html: rowRenderer(row, index)
-                }));
-
-                // Reset tbody to clean up any leftover regular rows
-                if (virtualScroll.data.length === 0) {
-                    tbody.innerHTML = '';
-                }
-
-                virtualScroll.setData(data);
-            } else {
-                // Disable virtual scroll for small datasets
-                if (virtualScroll) {
-                    virtualScroll.destroy();
-                    virtualScroll = null;
-                }
-
-                // Render all rows normally
-                tbody.innerHTML = rows.map((row, index) => rowRenderer(row, index)).join('');
-            }
-        },
+        render: renderFn,
+        setData: (rows) => renderFn(rows, currentRenderer),
+        set renderRow(fn) { currentRenderer = fn; },
+        get renderRow() { return currentRenderer; },
         scrollToIndex: (index) => {
             if (virtualScroll) {
                 virtualScroll.scrollToIndex(index);

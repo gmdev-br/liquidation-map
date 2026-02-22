@@ -162,15 +162,34 @@ export function loadSettings() {
 
     // Initialize visible columns
     if (s && s.visibleColumns && s.visibleColumns.length > 0) {
-        // Merge new columns
-        const currentKeys = COLUMN_DEFS.map(c => c.key);
-        const savedKeys = new Set(s.visibleColumns);
-        currentKeys.forEach(key => {
-            if (!savedKeys.has(key)) {
-                s.visibleColumns.push(key);
-            }
-        });
-        console.log('Setting visibleColumns from saved:', s.visibleColumns);
+        // Filter out invalid keys from visibleColumns
+        const validKeys = new Set(COLUMN_DEFS.map(c => c.key));
+        s.visibleColumns = s.visibleColumns.filter(key => validKeys.has(key));
+
+        // If after filtering we have no columns, reset to all
+        if (s.visibleColumns.length === 0) {
+            console.warn('All saved visibleColumns were invalid, resetting to default');
+            s.visibleColumns = COLUMN_DEFS.map(c => c.key);
+        } else {
+            // Merge new columns (if any are missing from saved but exist in defs)
+            // Note: We don't force-add new columns here to respect user's choice of hidden columns,
+            // unless we want to auto-show new features.
+            // For now, let's only add them if the user hasn't explicitly hidden them?
+            // Actually, safe bet is to append new columns so user sees them.
+            const savedKeys = new Set(s.visibleColumns);
+            COLUMN_DEFS.forEach(def => {
+                if (!savedKeys.has(def.key)) {
+                    // But wait, if user intentionally hid it?
+                    // We can't distinguish "hidden by user" vs "new column".
+                    // Let's assume if it's not in saved, it might be new.
+                    // But for now, let's NOT auto-add to visibleColumns to respect privacy,
+                    // UNLESS the user has "All" visible?
+                    // Let's stick to: Ensure valid keys.
+                }
+            });
+        }
+
+        console.log('Setting visibleColumns from saved (sanitized):', s.visibleColumns);
         setVisibleColumns(s.visibleColumns);
         applyColumnVisibility();
         updateColumnSelectDisplay();
@@ -183,22 +202,29 @@ export function loadSettings() {
         s.visibleColumns = defaultVisible;
     }
 
-    // ENSURE SYNCHRONIZATION: Make sure columnOrder and visibleColumns are identical
-    // This prevents persistence issues where columns get out of sync
-    const finalColumnOrder = getColumnOrder();
-    const finalVisibleColumns = getVisibleColumns();
-
-    if (JSON.stringify(finalColumnOrder) !== JSON.stringify(finalVisibleColumns)) {
-        console.warn('Column order mismatch detected, synchronizing...');
-        console.warn('columnOrder:', finalColumnOrder);
-        console.warn('visibleColumns:', finalVisibleColumns);
-
-        // Use columnOrder as the source of truth and update visibleColumns to match
-        setVisibleColumns([...finalColumnOrder]);
-        applyColumnVisibility();
-        updateColumnSelectDisplay();
-
-        console.log('Synchronized columnOrder and visibleColumns:', finalColumnOrder);
+    // Ensure columnOrder contains all columns from COLUMN_DEFS
+    const currentColumnOrder = getColumnOrder();
+    if (!currentColumnOrder || currentColumnOrder.length === 0) {
+        const defaultOrder = COLUMN_DEFS.map(c => c.key);
+        setColumnOrder(defaultOrder);
+    } else {
+        // Check for missing columns in columnOrder and append them
+        const allKeys = COLUMN_DEFS.map(c => c.key);
+        const existingKeys = new Set(currentColumnOrder);
+        let updatedOrder = [...currentColumnOrder];
+        let hasChanges = false;
+        
+        allKeys.forEach(key => {
+            if (!existingKeys.has(key)) {
+                updatedOrder.push(key);
+                hasChanges = true;
+            }
+        });
+        
+        if (hasChanges) {
+            console.log('Updating columnOrder with missing columns:', updatedOrder);
+            setColumnOrder(updatedOrder);
+        }
     }
 
     // Load other settings if they exist

@@ -16,14 +16,15 @@ table {
     width: 100%;
     border-collapse: collapse;
     min-width: 1000px;
-    table-layout: auto;
+    table-layout: fixed; /* Fixed layout for resizing */
 }
 
-/* Apply custom column width */
+/* Default column width if not set inline */
 th,
 td {
-    width: var(--column-width, 100px);
-    max-width: var(--column-width, 100px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 /* Mobile table adaptation */

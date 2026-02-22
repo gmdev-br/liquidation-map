@@ -2,7 +2,7 @@
 // LIQUID GLASS — Service Worker
 // ═══════════════════════════════════════════════════════════
 
-const CACHE_NAME = 'whale-watcher-v3';
+const CACHE_NAME = 'whale-watcher-v6';
 const urlsToCache = [
     '/',
     '/index.html',
@@ -47,6 +47,8 @@ const urlsToCache = [
 
 // Install event - cache resources
 self.addEventListener('install', (event) => {
+    // Force immediate activation
+    self.skipWaiting();
     event.waitUntil(
         caches.open(CACHE_NAME)
             .then((cache) => {
@@ -96,16 +98,21 @@ self.addEventListener('fetch', (event) => {
 
 // Activate event - clean up old caches
 self.addEventListener('activate', (event) => {
-    const cacheWhitelist = [CACHE_NAME];
     event.waitUntil(
-        caches.keys().then((cacheNames) => {
-            return Promise.all(
-                cacheNames.map((cacheName) => {
-                    if (cacheWhitelist.indexOf(cacheName) === -1) {
-                        return caches.delete(cacheName);
-                    }
-                })
-            );
-        })
+        Promise.all([
+            // Claim clients immediately
+            self.clients.claim(),
+            // Clean up old caches
+            caches.keys().then((cacheNames) => {
+                return Promise.all(
+                    cacheNames.map((cacheName) => {
+                        if (cacheName !== CACHE_NAME) {
+                            console.log('Service Worker: Clearing Old Cache', cacheName);
+                            return caches.delete(cacheName);
+                        }
+                    })
+                );
+            })
+        ])
     );
 });

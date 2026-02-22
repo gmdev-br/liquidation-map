@@ -430,7 +430,9 @@ export function renderAggregationTable(force = false) {
         // Update current price range index for the scroll button
         currentPriceRangeIndex = fullBandArray.findIndex(b => currentBtcPos >= b.faixaDe && currentBtcPos < b.faixaAte);
 
-        aggVirtualScrollManager.render(fullBandArray, rowRenderer);
+        // Render using virtual scroll
+        aggVirtualScrollManager.renderRow = rowRenderer;
+        aggVirtualScrollManager.setData(fullBandArray);
     } else {
         document.getElementById('aggTableBody').innerHTML = '<tr><td colspan="13" class="empty-cell">Sem dados disponíveis.</td></tr>';
     }

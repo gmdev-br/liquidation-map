@@ -22,7 +22,8 @@ import {
     getLiqChartHeight, getActiveWindow, setColumnOrder, setVisibleColumns,
     getColumnOrder, getVisibleColumns, setPriceUpdateInterval, setActiveCurrency,
     setActiveEntryCurrency, setDecimalPlaces, setFontSize, setFontSizeKnown, setLeverageColors, setGridSpacing, setMinBtcVolume, getMinBtcVolume, setAggInterval, setAggTableHeight, setAggVolumeUnit, getAggVolumeUnit, setIsZenMode, getIsZenMode,
-    setShowAggSymbols, getShowAggSymbols, setAggZoneColors, getAggZoneColors, setAggHighlightColor, getAggHighlightColor, setTooltipDelay
+    setShowAggSymbols, getShowAggSymbols, setAggZoneColors, getAggZoneColors, setAggHighlightColor, getAggHighlightColor, setTooltipDelay,
+    getColumnWidths, setColumnWidths
 } from '../state.js';
 import { renderTable, updateStats } from '../ui/table.js';
 import { renderAggregationTable, scrollToCurrentPriceRange as aggScrollToRange } from '../ui/aggregation.js';
@@ -600,6 +601,65 @@ export function applyColumnOrder() {
 
     // Setup drag and drop for column reordering
     setupColumnDragAndDrop();
+    setupColumnResizing();
+}
+
+export function setupColumnResizing() {
+    const table = document.getElementById('positionsTable');
+    if (!table) return;
+
+    const ths = table.querySelectorAll('th');
+    ths.forEach(th => {
+        const resizer = th.querySelector('.resizer');
+        if (resizer) {
+            if (resizer.dataset.initialized) return;
+            resizer.dataset.initialized = 'true';
+
+            resizer.addEventListener('mousedown', initResize);
+            resizer.addEventListener('click', e => e.stopPropagation());
+        }
+    });
+}
+
+function initResize(e) {
+    e.stopPropagation();
+    e.preventDefault();
+
+    const resizer = e.target;
+    const th = resizer.closest('th');
+    if (!th) return;
+
+    const startX = e.clientX;
+    const startWidth = th.offsetWidth;
+
+    document.body.classList.add('resizing');
+    th.classList.add('resizing-active');
+
+    const onMouseMove = (e) => {
+        requestAnimationFrame(() => {
+            const diffX = e.clientX - startX;
+            const newWidth = Math.max(50, startWidth + diffX);
+            th.style.width = `${newWidth}px`;
+            th.style.minWidth = `${newWidth}px`;
+            th.style.maxWidth = `${newWidth}px`;
+        });
+    };
+
+    const onMouseUp = () => {
+        document.body.classList.remove('resizing');
+        th.classList.remove('resizing-active');
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+
+        // Save new width
+        const columnWidths = getColumnWidths() || {};
+        columnWidths[th.id] = parseInt(th.style.width);
+        setColumnWidths(columnWidths);
+        saveSettings();
+    };
+
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
 }
 
 export function setupColumnDragAndDrop() {
@@ -724,11 +784,14 @@ export function setupColumnDragAndDrop() {
     });
 
     // Prevent default dragstart (we're handling it manually)
+    // Removed because it conflicts with HTML5 Drag & Drop API used in setupColumnDragAndDrop
+    /*
     document.addEventListener('dragstart', (e) => {
         if (e.target.closest('th[id^="th-"]')) {
             e.preventDefault();
         }
     });
+    */
 
     // Mark as initialized
     const marker = document.createElement('div');
@@ -765,6 +828,16 @@ export function applyColumnVisibility() {
 }
 
 export function applyColumnWidths() {
-    // Apply column widths to table
-    // This would need columnWidths from state
+    const columnWidths = getColumnWidths() || {};
+    Object.keys(columnWidths).forEach(thId => {
+        const th = document.getElementById(thId);
+        if (th) {
+            let width = columnWidths[thId];
+            // Enforce minimum width
+            if (width < 50) width = 50;
+            th.style.width = `${width}px`;
+            th.style.minWidth = `${width}px`;
+            th.style.maxWidth = `${width}px`;
+        }
+    });
 }

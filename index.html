@@ -726,7 +726,7 @@
 
             <div class="table-wrap">
 
-                <table>
+                <table id="positionsTable">
                     <thead>
                         <tr>
                             <th id="th-num" class="col-num" title="Row index in the table"><span
@@ -995,7 +995,14 @@
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"
         defer></script>
 
-    <script type="module" src="js/main.js?v=7"></script>
+    <script type="module" src="js/main.js?v=9"></script>
+
+    <!-- Debug Panel -->
+    <div id="debug-panel" style="position: fixed; bottom: 10px; left: 10px; background: rgba(0,0,0,0.8); color: lime; padding: 10px; border-radius: 5px; font-family: monospace; font-size: 12px; z-index: 9999; pointer-events: none;">
+        <div>Last Update: <span id="debug-last-update">Waiting...</span></div>
+        <div>BTC Price: <span id="debug-btc-price">Waiting...</span></div>
+        <div>Table Rows: <span id="debug-table-rows">0</span></div>
+    </div>
 
     <!-- Service Worker Registration -->
     <script>
@@ -1004,10 +1011,29 @@
                 navigator.serviceWorker.register('/sw.js')
                     .then((registration) => {
                         console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                        
+                        // Check for updates
+                        registration.addEventListener('updatefound', () => {
+                            const newWorker = registration.installing;
+                            console.log('Service Worker update found!');
+                            
+                            newWorker.addEventListener('statechange', () => {
+                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    console.log('New content is available; please refresh.');
+                                    // Optional: Show toast to user to refresh
+                                }
+                            });
+                        });
                     })
                     .catch((error) => {
                         console.log('ServiceWorker registration failed: ', error);
                     });
+            });
+            
+            // Reload when controller changes
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                console.log('Controller changed, reloading page...');
+                window.location.reload();
             });
         }
     </script>

@@ -35,6 +35,7 @@ let priceTicker = null;
 let dailyCloseCache = {}; // { COIN: price }
 let currentPrices = {};   // coin -> mark price
 let priceUpdateInterval = 3000; // Default 3 seconds (configurable by user)
+let priceUpdateVersion = 0; // Incremented on every price update
 
 // Ranking state
 let rankingLimit = 10;
@@ -215,7 +216,11 @@ export const setDisplayedRows = (value) => { displayedRows = value; };
 export const setScanning = (value) => { scanning = value; };
 export const setIsPaused = (value) => { isPaused = value; };
 export const setLoadedCount = (value) => { loadedCount = value; };
-export const setCurrentPrices = (value) => { currentPrices = value; };
+export const setCurrentPrices = (value) => { 
+    currentPrices = value; 
+    priceUpdateVersion++;
+};
+export const getPriceUpdateVersion = () => priceUpdateVersion;
 export const setPriceUpdateInterval = (value) => { priceUpdateInterval = value; };
 export const setFxRates = (value) => { fxRates = value; };
 export const setFxReady = (value) => { fxReady = value; };

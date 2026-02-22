@@ -91,9 +91,16 @@ export const btcPriceLabelPlugin = {
     id: 'btcPriceLabel',
     afterDraw: (chart) => {
         const opts = chart.options.plugins.btcPriceLabel;
-        if (!opts || !opts.text) return;
+        // DEBUG: Check if plugin is drawing and what price
+        // if (opts && opts.price) console.log('btcPriceLabel drawing at:', opts.price);
+        
+        if (!opts || !opts.text || !opts.price) return;
 
         const { ctx, chartArea: { top, bottom, left, right }, scales: { x, y } } = chart;
+        
+        // Ensure we have valid scales before trying to use them
+        if (!x || !y) return;
+        
         const isVertical = chart.options.indexAxis === 'y';
 
         ctx.save();
@@ -105,20 +112,36 @@ export const btcPriceLabelPlugin = {
         ctx.setLineDash([5, 5]);
 
         if (isVertical) {
+            // Check if price is within valid range for drawing (even roughly)
+            if (isNaN(opts.price)) {
+                ctx.restore();
+                return;
+            }
+
             const yVal = y.getPixelForValue(opts.price);
+            
+            // Only draw if within visible area (or slightly outside to allow scrolling)
             if (yVal >= top && yVal <= bottom) {
                 ctx.moveTo(left, yVal);
                 ctx.lineTo(right, yVal);
                 ctx.stroke();
             }
         } else {
+            // Check if price is within valid range for drawing (even roughly)
+            if (isNaN(opts.price)) {
+                ctx.restore();
+                return;
+            }
+            
             const xVal = x.getPixelForValue(opts.price);
+            
             if (xVal >= left && xVal <= right) {
                 ctx.moveTo(xVal, top);
                 ctx.lineTo(xVal, bottom);
                 ctx.stroke();
             }
         }
+
 
         ctx.font = '9px sans-serif';
         const text = opts.text;

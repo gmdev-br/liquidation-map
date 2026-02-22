@@ -6,7 +6,7 @@ import {
     getAllRows, getDisplayedRows, getSelectedCoins, getActiveCurrency,
     getActiveEntryCurrency, getShowSymbols, getSortKey, getSortDir,
     getVisibleColumns, getColumnOrder, setDisplayedRows, getCurrentPrices, getFxRates, getChartHighLevSplit, getFontSize, getFontSizeKnown, getDecimalPlaces, getMinBtcVolume, getScanning,
-    getWhaleMeta
+    getWhaleMeta, getPriceUpdateVersion
 } from '../state.js';
 import { convertToActiveCcy } from '../utils/currency.js';
 import { fmt, fmtUSD, fmtAddr, fmtCcy } from '../utils/formatters.js';
@@ -15,7 +15,7 @@ import { CURRENCY_META } from '../config.js';
 import { saveSettings } from '../storage/settings.js';
 import { renderScatterPlot } from '../charts/scatter.js';
 import { renderLiqScatterPlot } from '../charts/liquidation.js';
-import { setupColumnDragAndDrop } from '../events/handlers.js';
+import { setupColumnDragAndDrop, applyColumnWidths, setupColumnResizing } from '../events/handlers.js';
 import { updateRankingPanel } from './panels.js';
 import { debounce, Cache } from '../utils/performance.js';
 import { enableVirtualScroll } from '../utils/virtualScroll.js';
@@ -38,31 +38,54 @@ if (window.Worker) {
     dataWorker = new Worker('js/workers/dataWorker.js');
 }
 
+// Cache for headers to prevent loss during reordering
+let cachedHeaders = null;
+let cachedFilterHeaders = null;
+
 function reorderTableHeadersAndFilters(columnOrder) {
-    const headerRow = document.querySelector('thead tr');
+    const table = document.getElementById('positionsTable');
+    if (!table) return;
+
+    const headerRow = table.querySelector('thead tr');
     if (!headerRow) return;
 
-    // Get all header cells
-    const headers = Array.from(headerRow.querySelectorAll('th'));
-    const filterRow = document.querySelector('.filter-row');
-    const filterHeaders = filterRow ? Array.from(filterRow.querySelectorAll('th')) : [];
-
-    // Create a map of column key to header element
-    const headerMap = {};
-    const filterHeaderMap = {};
-
-    headers.forEach(th => {
-        const colKey = th.id.replace('th-', '');
-        headerMap[`col-${colKey}`] = th;
-    });
-
-    filterHeaders.forEach(th => {
-        const classes = Array.from(th.classList);
-        const colClass = classes.find(cls => cls.startsWith('col-'));
-        if (colClass) {
-            filterHeaderMap[colClass] = th;
+    // Initialize cache from DOM if not present
+    if (!cachedHeaders) {
+        const currentHeaders = Array.from(headerRow.querySelectorAll('th'));
+        if (currentHeaders.length > 0) {
+            cachedHeaders = {};
+            currentHeaders.forEach(th => {
+                const colKey = th.id.replace('th-', '');
+                cachedHeaders[`col-${colKey}`] = th;
+            });
         }
-    });
+    }
+
+    const filterRow = document.querySelector('.filter-row');
+    if (!cachedFilterHeaders && filterRow) {
+        const currentFilterHeaders = Array.from(filterRow.querySelectorAll('th'));
+        if (currentFilterHeaders.length > 0) {
+            cachedFilterHeaders = {};
+            currentFilterHeaders.forEach(th => {
+                const classes = Array.from(th.classList);
+                const colClass = classes.find(cls => cls.startsWith('col-'));
+                if (colClass) {
+                    cachedFilterHeaders[colClass] = th;
+                }
+            });
+        }
+    }
+
+    // If no headers cached and none in DOM, we can't do anything
+    if (!cachedHeaders || Object.keys(cachedHeaders).length === 0) {
+        console.warn('reorderTableHeadersAndFilters: No headers found.');
+        return;
+    }
+
+    // If columnOrder is empty, do not clear headers
+    if (!columnOrder || columnOrder.length === 0) {
+        return;
+    }
 
     // Clear header row
     headerRow.innerHTML = '';
@@ -72,11 +95,11 @@ function reorderTableHeadersAndFilters(columnOrder) {
 
     // Reorder headers based on columnOrder
     columnOrder.forEach(colKey => {
-        if (headerMap[colKey]) {
-            headerRow.appendChild(headerMap[colKey]);
+        if (cachedHeaders[colKey]) {
+            headerRow.appendChild(cachedHeaders[colKey]);
         }
-        if (filterRow && filterHeaderMap[colKey]) {
-            filterRow.appendChild(filterHeaderMap[colKey]);
+        if (filterRow && cachedFilterHeaders && cachedFilterHeaders[colKey]) {
+            filterRow.appendChild(cachedFilterHeaders[colKey]);
         }
     });
 }
@@ -145,7 +168,7 @@ export function updateStats(showSymbols, allRows) {
 
 // Internal render function - does the actual work
 function _renderTableInternal() {
-    console.log('renderTable: Starting...');
+    console.log(`[TableRender] ${new Date().toLocaleTimeString()} - Starting render...`);
     function renderCharts() {
         renderScatterPlot();
         renderLiqScatterPlot();
@@ -208,7 +231,7 @@ function _renderTableInternal() {
         maxEntryCcy,
         activeCurrency,
         activeEntryCurrency,
-        pricesLen: Object.keys(currentPrices || {}).length, // INvalidate cache when prices load
+        priceVersion: getPriceUpdateVersion(), // Invalidate cache when prices update
         sortKey: getSortKey(),
         sortDir: getSortDir()
     });
@@ -224,6 +247,7 @@ function _renderTableInternal() {
             // Use Web Worker for heavy lifting
             dataWorker.onmessage = function (e) {
                 const processedRows = e.data.rows;
+                console.log(`[Table] Worker returned ${processedRows.length} rows.`);
                 filterCache.set(cacheKey, processedRows);
                 finalizeTableRender(processedRows, showSymbols);
             };
@@ -249,7 +273,29 @@ function _renderTableInternal() {
             return; // Exit here, the rest is handled by finalizeTableRender
         } else {
             // Fallback for browsers without Worker support
-            rows = allRows.filter(r => {
+            
+            // 0. Update rows with current prices
+            const updatedRows = allRows.map(r => {
+                const currentPrice = parseFloat(currentPrices[r.coin]);
+                if (!isNaN(currentPrice) && currentPrice > 0) {
+                    const newRow = { ...r };
+                    newRow.markPrice = currentPrice;
+                    newRow.positionValue = Math.abs(newRow.szi) * currentPrice;
+                    if (newRow.leverageValue > 0) {
+                        newRow.marginUsed = newRow.positionValue / newRow.leverageValue;
+                    }
+                    newRow.unrealizedPnl = (currentPrice - newRow.entryPx) * newRow.szi;
+                    if (newRow.liquidationPx > 0) {
+                        newRow.distPct = Math.abs((currentPrice - newRow.liquidationPx) / currentPrice) * 100;
+                    } else {
+                        newRow.distPct = null;
+                    }
+                    return newRow;
+                }
+                return r;
+            });
+
+            rows = updatedRows.filter(r => {
                 if (selectedCoins.length > 0 && !selectedCoins.includes(r.coin)) return false;
                 if (addressFilterRegex) {
                     const addr = r.address;
@@ -477,7 +523,13 @@ function _renderTableInternal() {
         };
 
         // Render using virtual scroll or traditional method
-        virtualScrollManager.render(rows, rowRenderer);
+        // Override row renderer and update data
+        virtualScrollManager.renderRow = rowRenderer;
+        virtualScrollManager.setData(rows);
+
+        // DEBUG: Update table rows count
+        const debugRows = document.getElementById('debug-table-rows');
+        if (debugRows) debugRows.textContent = rows.length;
 
         // Update ranking panel after rendering table (async)
         updateRankingPanel();
@@ -486,12 +538,13 @@ function _renderTableInternal() {
         renderAggregationTable(true);
 
         // Apply column widths after table is rendered
-        applyColumnWidthAfterRender();
+        applyColumnWidths();
 
         // Setup drag and drop for column reordering only once
         if (!document.querySelector('.dragging-initialized')) {
             setTimeout(() => {
                 setupColumnDragAndDrop();
+                setupColumnResizing();
             }, 100);
         }
     }
@@ -505,22 +558,4 @@ export function renderTable() {
 // Force immediate render (for cases where debouncing is not desired)
 export function renderTableImmediate() {
     _renderTableInternal();
-}
-
-// Apply column widths after table is rendered
-function applyColumnWidthAfterRender() {
-    const table = document.querySelector('table');
-    if (table) {
-        table.style.tableLayout = 'auto';
-    }
-
-    const headers = document.querySelectorAll('th[id^="th-"]');
-    headers.forEach(th => {
-        const savedWidth = localStorage.getItem(`col-width-${th.id}`);
-        if (savedWidth) {
-            th.style.width = savedWidth + 'px';
-            th.style.minWidth = savedWidth + 'px';
-            th.style.maxWidth = savedWidth + 'px';
-        }
-    });
 }

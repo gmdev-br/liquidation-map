@@ -3,9 +3,14 @@
 // ═══════════════════════════════════════════════════════════
 
 // Currency conversion logic adapted for the worker
-function convertToActiveCcy(valueUsd, coin, targetCurrency, fxRates) {
+function convertToActiveCcy(valueUsd, coin, targetCurrency, fxRates, currentPrices) {
     if (!valueUsd) return 0;
     if (!targetCurrency || targetCurrency === 'USD') return valueUsd;
+    
+    if (targetCurrency === 'BTC') {
+        const btcPrice = parseFloat(currentPrices['BTC'] || 0);
+        return btcPrice > 0 ? valueUsd / btcPrice : 0;
+    }
 
     // For non-USD, convert using fxRates matrix
     const rate = fxRates[targetCurrency] || 1;
@@ -82,8 +87,49 @@ self.onmessage = function (e) {
 
     const addressFilterRegex = addressFilter ? new RegExp(addressFilter, 'i') : null;
 
+    // DEBUG: Log worker receipt
+    console.log(`[Worker] Received update. Rows: ${allRows.length}, ActiveCurrency: ${activeCurrency}, BTC Price: ${currentPrices['BTC']}`);
+
+    // 0. Update rows with current prices (Real-time PnL & Value calculation)
+    // We map over allRows to create a new array with updated values
+    const updatedRows = allRows.map(r => {
+        const currentPrice = parseFloat(currentPrices[r.coin]);
+        
+        // If we have a valid current price, update the row's calculated fields
+        if (!isNaN(currentPrice) && currentPrice > 0) {
+            // Create a shallow copy to avoid mutating the original source array (though it's a structured clone in worker)
+            const newRow = { ...r };
+            
+            newRow.markPrice = currentPrice;
+            
+            // Update Position Value: size * price
+            newRow.positionValue = Math.abs(newRow.szi) * currentPrice;
+
+            // Update Margin Used: positionValue / leverage
+            if (newRow.leverageValue > 0) {
+                newRow.marginUsed = newRow.positionValue / newRow.leverageValue;
+            }
+            
+            // Update Unrealized PnL: (price - entry) * size
+            // szi is signed, so this works for both Long and Short
+            // Long (szi > 0): (P - E) * szi
+            // Short (szi < 0): (P - E) * (-abs(szi)) = (E - P) * abs(szi)
+            newRow.unrealizedPnl = (currentPrice - newRow.entryPx) * newRow.szi;
+            
+            // Update Distance to Liquidation
+            if (newRow.liquidationPx > 0) {
+                newRow.distPct = Math.abs((currentPrice - newRow.liquidationPx) / currentPrice) * 100;
+            } else {
+                newRow.distPct = null;
+            }
+            
+            return newRow;
+        }
+        return r;
+    });
+
     // 1. Filter rows
-    let rows = allRows.filter(r => {
+    let rows = updatedRows.filter(r => {
         if (selectedCoins.length > 0 && !selectedCoins.includes(r.coin)) return false;
 
         if (addressFilterRegex) {
@@ -104,7 +150,7 @@ self.onmessage = function (e) {
         if (!isNaN(maxSzi) && Math.abs(r.szi) > maxSzi) return false;
 
         if (!isNaN(minValueCcy) || !isNaN(maxValueCcy)) {
-            const valCcy = convertToActiveCcy(r.positionValue, null, activeCurrency, fxRates);
+            const valCcy = convertToActiveCcy(r.positionValue, null, activeCurrency, fxRates, currentPrices);
             if (!isNaN(minValueCcy) && valCcy < minValueCcy) return false;
             if (!isNaN(maxValueCcy) && valCcy > maxValueCcy) return false;
         }
@@ -132,8 +178,8 @@ self.onmessage = function (e) {
         } else if (sortKey === 'funding') {
             va = a.funding; vb = b.funding;
         } else if (sortKey === 'valueCcy') {
-            va = convertToActiveCcy(a.positionValue, null, activeCurrency, fxRates);
-            vb = convertToActiveCcy(b.positionValue, null, activeCurrency, fxRates);
+            va = convertToActiveCcy(a.positionValue, null, activeCurrency, fxRates, currentPrices);
+            vb = convertToActiveCcy(b.positionValue, null, activeCurrency, fxRates, currentPrices);
         } else if (sortKey === 'entryCcy') {
             va = getCorrelatedEntry(a, activeEntryCurrency, currentPrices, fxRates);
             vb = getCorrelatedEntry(b, activeEntryCurrency, currentPrices, fxRates);

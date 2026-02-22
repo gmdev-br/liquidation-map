@@ -62,9 +62,9 @@ export function initColumnWidthControl() {
 export function applyColumnWidth(width) {
     console.log('applyColumnWidth called with width:', width);
 
-    const table = document.querySelector('table');
+    const table = document.getElementById('positionsTable');
     if (!table) {
-        console.warn('Table not found for column width adjustment - will retry in 100ms');
+        console.warn('Positions table not found for column width adjustment - will retry in 100ms');
         setTimeout(() => applyColumnWidth(width), 100);
         return;
     }

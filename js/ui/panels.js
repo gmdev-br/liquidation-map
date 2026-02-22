@@ -2,12 +2,15 @@
 // LIQUID GLASS — UI Panels
 // ═══════════════════════════════════════════════════════════
 
-import { getAllRows, getCurrentPrices, getSelectedCoins, getPriceMode, getPriceUpdateInterval, getRankingLimit, setSelectedCoins, setPriceMode, getScanning, setCurrentPrices } from '../state.js';
+import { getAllRows, getCurrentPrices, getSelectedCoins, getPriceMode, getPriceUpdateInterval, getRankingLimit, setSelectedCoins, setPriceMode, getScanning, setCurrentPrices, getActiveCurrency, getFxRates, getShowSymbols, getActiveEntryCurrency } from '../state.js';
 import { saveSettings } from '../storage/settings.js';
 import { fmtCcy } from '../utils/formatters.js';
 import { updateCoinSearchLabel } from './combobox.js';
 import { renderTable } from './table.js';
 import { renderAggregationTable } from './aggregation.js';
+import { getScatterChart } from '../charts/scatter.js';
+import { getLiqChartInstance } from '../charts/liquidation.js';
+import { CURRENCY_META } from '../config.js';
 
 // Cache for market cap data
 let marketCapCache = null;
@@ -254,6 +257,9 @@ export function updateQuotesHTML() {
     const panel = document.getElementById('quotes-panel');
     if (!panel) return;
 
+    // DEBUG: Log quotes update
+    console.log(`[QuotesUpdate] ${new Date().toLocaleTimeString()} - Updating DOM`);
+
     const selectedCoins = getSelectedCoins();
     const currentPrices = getCurrentPrices();
 
@@ -322,69 +328,99 @@ export function startPriceTicker() {
 
             const data = await response.json();
 
+            // DEBUG: Update debug panel
+            const debugUpdate = document.getElementById('debug-last-update');
+            const debugBtc = document.getElementById('debug-btc-price');
+            if (debugUpdate) debugUpdate.textContent = new Date().toLocaleTimeString();
+            if (debugBtc && data['BTC']) debugBtc.textContent = parseFloat(data['BTC']).toFixed(2);
+
             // Update current prices with the fetched data
             if (data && typeof data === 'object') {
                 const selectedCoins = getSelectedCoins();
                 const currentPrices = getCurrentPrices();
-                selectedCoins.forEach(coin => {
+                
+                // DEBUG: Log BTC price update
+                if (data['BTC']) {
+                    console.log(`[PriceUpdate] ${new Date().toLocaleTimeString()} - BTC Price: ${data['BTC']} | Total Coins Updated: ${Object.keys(data).length}`);
+                }
+                
+                // Update ALL prices to ensure BTC and other reference currencies are up to date
+                Object.keys(data).forEach(coin => {
                     const newPrice = parseFloat(data[coin]);
                     if (!isNaN(newPrice)) {
-                        // Store previous price for comparison
-                        const prevPrice = parseFloat(window[`prevPrice_${coin}`] || newPrice);
-                        window[`prevPrice_${coin}`] = prevPrice;
-
-                        // Update current price in state
                         currentPrices[coin] = newPrice;
                     }
                 });
 
+                // Update prevPrice only for selected coins for the flash effect
+                selectedCoins.forEach(coin => {
+                    const newPrice = parseFloat(data[coin]);
+                    if (!isNaN(newPrice)) {
+                        // Initialize prevPrice if not set
+                        if (!window[`prevPrice_${coin}`]) {
+                            window[`prevPrice_${coin}`] = newPrice;
+                        }
+                    }
+                });
+
                 setCurrentPrices(currentPrices);
+                
+                // Now update UI which uses these prices
+                updateQuotesHTML();
+
+                // Update prevPrice for NEXT tick
+                selectedCoins.forEach(coin => {
+                     const newPrice = parseFloat(data[coin]);
+                     if (!isNaN(newPrice)) {
+                         window[`prevPrice_${coin}`] = newPrice;
+                     }
+                });
             }
 
-            updateQuotesHTML();
-
             // Update charts to reflect new price line position
-            const scatterChart = window.getScatterChart ? window.getScatterChart() : null;
-            const liqChart = window.getLiqChartInstance ? window.getLiqChartInstance() : null;
+            const scatterChart = getScatterChart();
+            const liqChart = getLiqChartInstance();
             if (scatterChart) {
                 // Update the price line annotation
                 const currentPrices = getCurrentPrices();
                 const btcPrice = parseFloat(currentPrices['BTC'] || 0);
-                const activeCurrency = window.getActiveCurrency ? window.getActiveCurrency() : 'USD';
-                const fxRates = window.getFxRates ? window.getFxRates() : { USD: 1 };
-                const rate = fxRates[activeCurrency] || 1;
-                const refPrice = btcPrice * rate;
-
-                // Update annotation
-                if (scatterChart.options.plugins.annotation && scatterChart.options.plugins.annotation.annotations.currentPriceLine) {
-                    scatterChart.options.plugins.annotation.annotations.currentPriceLine.xMin = refPrice;
-                    scatterChart.options.plugins.annotation.annotations.currentPriceLine.xMax = refPrice;
-                    scatterChart.options.plugins.annotation.annotations.currentPriceLine.yMin = undefined;
-                    scatterChart.options.plugins.annotation.annotations.currentPriceLine.yMax = undefined;
+                const activeEntryCurrency = getActiveEntryCurrency();
+                
+                // Calculate refPrice based on entry currency (X-axis)
+                let refPrice = btcPrice;
+                if (activeEntryCurrency === 'BTC') {
+                    refPrice = 1;
+                } else if (activeEntryCurrency && activeEntryCurrency !== 'USD') {
+                    const fxRates = getFxRates();
+                    const rate = fxRates[activeEntryCurrency] || 1;
+                    refPrice = btcPrice * rate;
                 }
 
-                // Update BTC price label
+                // Update BTC price label plugin
                 if (scatterChart.options.plugins.btcPriceLabel) {
                     scatterChart.options.plugins.btcPriceLabel.price = refPrice;
-                    const currencyMeta = window.CURRENCY_META ? window.CURRENCY_META[activeCurrency] || window.CURRENCY_META.USD : { symbol: '$' };
-                    const showSymbols = window.getShowSymbols ? window.getShowSymbols() : true;
+                    const currencyMeta = CURRENCY_META[activeEntryCurrency] || CURRENCY_META.USD;
+                    const showSymbols = getShowSymbols();
                     const sym = showSymbols ? currencyMeta.symbol : '';
                     scatterChart.options.plugins.btcPriceLabel.text = `BTC: ${sym}${refPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                    
+                    // DEBUG: Chart update
+                    console.log(`[ChartUpdate] Scatter refPrice: ${refPrice} (Entry Currency: ${activeEntryCurrency})`);
                 }
-
-                scatterChart.update('none');
+                
+                scatterChart.update(); // Use default animation mode to ensure full redraw if needed
             }
 
             if (liqChart) {
                 // Update liquidation chart price line
                 const currentPrices = getCurrentPrices();
                 const btcPrice = parseFloat(currentPrices['BTC'] || 0);
-                const activeEntryCurrency = window.getActiveEntryCurrency ? window.getActiveEntryCurrency() : 'USD';
+                const activeEntryCurrency = getActiveEntryCurrency();
                 let refPrice = btcPrice;
                 if (activeEntryCurrency === 'BTC') {
                     refPrice = 1;
                 } else if (activeEntryCurrency && activeEntryCurrency !== 'USD') {
-                    const fxRates = window.getFxRates ? window.getFxRates() : { USD: 1 };
+                    const fxRates = getFxRates();
                     const rate = fxRates[activeEntryCurrency] || 1;
                     refPrice = btcPrice * rate;
                 }
@@ -400,17 +436,23 @@ export function startPriceTicker() {
                 // Update BTC price label
                 if (liqChart.options.plugins.btcPriceLabel) {
                     liqChart.options.plugins.btcPriceLabel.price = refPrice;
-                    const currencyMeta = window.CURRENCY_META ? window.CURRENCY_META[activeEntryCurrency] || window.CURRENCY_META.USD : { symbol: '$' };
-                    const showSymbols = window.getShowSymbols ? window.getShowSymbols() : true;
+                    const currencyMeta = CURRENCY_META[activeEntryCurrency] || CURRENCY_META.USD;
+                    const showSymbols = getShowSymbols();
                     const sym = showSymbols ? currencyMeta.symbol : '';
                     liqChart.options.plugins.btcPriceLabel.text = `BTC: ${sym}${refPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                    
+                    // DEBUG: LiqChart update
+                    console.log(`[ChartUpdate] LiqChart refPrice: ${refPrice}`);
                 }
-
-                liqChart.update('none');
+                
+                liqChart.update(); // Use default animation mode
             }
 
             // Update aggregation table highlight if active
             renderAggregationTable();
+            
+            // Update main table with new prices
+            renderTable();
         } catch (e) {
             console.warn('Failed to fetch prices', e);
         }
