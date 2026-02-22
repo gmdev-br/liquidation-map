@@ -404,13 +404,28 @@ export function renderAggregationTable(force = false) {
             const tooltipAttr = tooltipData ? `data-tooltip='${JSON.stringify(tooltipData).replace(/'/g, "&#39;").replace(/"/g, "&quot;")}'` : '';
             const tooltipClass = tooltipData ? 'has-tooltip' : '';
 
+            // Check for multiple of 1000 and 500 in price ranges
+            const isRangeMultiple1000 = b.faixaDe % 1000 === 0;
+            const isRangeMultiple500 = b.faixaDe % 500 === 0;
+            
+            let rangeColor = isCurrentPriceRange ? '#fff' : '#d1d5db';
+            let rangeWeight = '700';
+            
+            if (isRangeMultiple1000) {
+                rangeColor = '#fbbf24'; // Gold
+                rangeWeight = '800';
+            } else if (isRangeMultiple500) {
+                rangeColor = '#fcd34d'; // Amber-300
+                rangeWeight = '700';
+            }
+
             const newContent = `
-                <td ${tooltipAttr} class="${tooltipClass}" style="font-family:monospace; font-weight:700; color:${isCurrentPriceRange ? '#fff' : '#d1d5db'}">
+                <td ${tooltipAttr} class="${tooltipClass}" style="font-family:monospace; font-weight:${rangeWeight}; color:${rangeColor}">
                     ${starIndicator}
                     ${isCurrentPriceRange ? `<div style="font-size:10px; color:${aggHighlightColor}; margin-bottom:2px">BTC $${btcPrice.toLocaleString()}</div>` : ''}
                     $${b.faixaDe.toLocaleString()}
                 </td>
-                <td ${tooltipAttr} class="${tooltipClass}" style="font-family:monospace; color:#9ca3af">$${b.faixaAte.toLocaleString()}</td>
+                <td ${tooltipAttr} class="${tooltipClass}" style="font-family:monospace; color:${isRangeMultiple1000 || isRangeMultiple500 ? rangeColor : '#9ca3af'}; font-weight:${isRangeMultiple1000 ? '800' : (isRangeMultiple500 ? '700' : '400')}">$${b.faixaAte.toLocaleString()}</td>
                 <td style="color:${longCol}; text-align:center">${formatQty(b.qtdLong)}</td>
                 <td ${tooltipAttr} class="${tooltipClass}" style="color:${longCol}; font-family:monospace; font-weight:${b.notionalLong > 30_000_000 ? '700' : '400'}">${formatVal(b.notionalLong)}</td>
                 <td style="color:${shortCol}; text-align:center">${formatQty(b.qtdShort)}</td>
