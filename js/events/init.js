@@ -645,6 +645,11 @@ function setupEventListeners() {
         zenToggleHeader.addEventListener('click', toggleZenMode);
     }
 
+    const zenToggleMobile = document.getElementById('zenToggleMobile');
+    if (zenToggleMobile) {
+        zenToggleMobile.addEventListener('click', toggleZenMode);
+    }
+
     const zenToggleDrawer = document.getElementById('zenToggleDrawer');
     if (zenToggleDrawer) {
         zenToggleDrawer.addEventListener('change', toggleZenMode);

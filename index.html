@@ -884,6 +884,76 @@
         </div>
     </div>
 
+    <!-- Mobile Menu Overlay -->
+    <div class="mobile-menu-overlay" id="mobileMenuOverlay"></div>
+
+    <!-- Mobile Menu -->
+    <div class="mobile-menu" id="mobileMenu">
+        <div class="mobile-menu-header">
+            <div class="logo">
+                <span class="logo-icon">🐋</span>
+                <div>
+                    <h1>LIQUID GLASS</h1>
+                    <p>Whale Watcher v2.1</p>
+                </div>
+            </div>
+            <button class="mobile-menu-close" id="mobileMenuClose">✕</button>
+        </div>
+        
+        <div class="mobile-menu-content">
+            <!-- Scan Settings -->
+            <div class="mobile-menu-section">
+                <div class="mobile-menu-section-title">Scan Settings</div>
+                
+                <div class="ctrl">
+                    <label>Speed: <span class="js-speed-val">8</span> req/s</label>
+                    <input type="range" class="js-speed-range" min="1" max="50" value="8">
+                </div>
+                
+                <div class="ctrl">
+                    <label>Price Update: <span class="js-price-interval-val">3s</span></label>
+                    <input type="range" class="js-price-interval-range" min="1" max="30" value="3">
+                </div>
+
+                 <div class="ctrl">
+                    <label>Min BTC Vol: <span class="js-min-btc-volume">0</span></label>
+                    <input type="number" class="js-min-btc-volume" min="0" step="10" value="0" style="width: 60px; background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); color: var(--text); padding: 4px; border-radius: 4px;">
+                </div>
+            </div>
+
+            <!-- Display Settings -->
+            <div class="mobile-menu-section">
+                <div class="mobile-menu-section-title">Display</div>
+                
+                <div class="ctrl">
+                    <label>Font Size: <span class="js-font-size-val">12</span>px</label>
+                    <input type="range" class="js-font-size-range" min="10" max="20" value="12">
+                </div>
+                
+                <div class="ctrl" style="justify-content: space-between;">
+                    <label>Show Symbols</label>
+                    <button id="btnShowSymMobile" class="tab">Sim</button>
+                </div>
+
+                 <div class="ctrl" style="justify-content: space-between;">
+                    <label>Zen Mode</label>
+                    <label class="switch">
+                        <input type="checkbox" id="zenToggleMobile" class="js-zen-toggle">
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+            </div>
+
+             <!-- External Links -->
+            <div class="mobile-menu-section">
+                <div class="mobile-menu-section-title">Links</div>
+                <div class="ctrl">
+                    <a href="https://github.com/liquid-glass" target="_blank" style="color: var(--accent); text-decoration: none; font-size: 13px;">GitHub Repository</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="auto-loading" id="autoLoading">
         <span class="spinner"></span> Loading more whales in background…
     </div>

@@ -392,26 +392,6 @@
         min-height: 44px;
     }
 
-    /* Hide less important columns on mobile */
-    th[data-column="valueCcy"],
-    th[data-column="entryCcy"],
-    th[data-column="funding"],
-    th[data-column="distToLiq"],
-    td[data-column="valueCcy"],
-    td[data-column="entryCcy"],
-    td[data-column="funding"],
-    td[data-column="distToLiq"],
-    th.col-valueCcy,
-    td.col-valueCcy,
-    th.col-entryCcy,
-    td.col-entryCcy,
-    th.col-funding,
-    td.col-funding,
-    th.col-distToLiq,
-    td.col-distToLiq {
-        display: none;
-    }
-
     /* Sticky Columns for Mobile Context */
     th.col-num,
     td.col-num {
