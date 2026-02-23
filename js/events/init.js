@@ -80,6 +80,12 @@ function setupSwipeGestures() {
     // Use passive listeners for better scroll performance
     document.addEventListener('touchstart', handleTouchStart, { passive: true });
     document.addEventListener('touchend', handleTouchEnd);
+
+    // Listen for save-settings requests from aggregation.js
+    window.addEventListener('save-settings', () => {
+        console.log('Received save-settings request');
+        saveSettings();
+    });
 }
 
 // ── Pull-to-Refresh ──
@@ -394,6 +400,12 @@ function setupEventListeners() {
     const highlightColorEl = document.getElementById('colorAggHighlight');
     if (highlightColorEl) {
         highlightColorEl.addEventListener('input', updateAggHighlightColor);
+    }
+
+    // Reset columns button
+    const resetColumnsBtn = document.getElementById('resetColumnsBtn');
+    if (resetColumnsBtn) {
+        resetColumnsBtn.addEventListener('click', resetColumnLayout);
     }
 
     // Ranking limit - attach to both mobile and desktop

@@ -12,7 +12,9 @@ let lastSeenAccountValues = {}; // for Delta Scanning
 // Column state
 let visibleColumns = [];   // Default all visible
 let columnOrder = [];     // Default order
+let aggColumnOrder = [];  // Default aggregation table order
 let columnWidths = {};    // { th-id: width_px }
+let aggColumnWidths = {}; // { th-id: width_px } for aggregation table
 let _columnCloseTimer = null;
 let columnWidth = 100;    // Default column width in px
 
@@ -111,6 +113,7 @@ export const getState = () => ({
     visibleColumns,
     columnOrder,
     columnWidths,
+    aggColumnWidths,
     sortKey,
     sortDir,
     activeWindow,
@@ -165,6 +168,7 @@ export const setState = (updates) => {
         visibleColumns,
         columnOrder,
         columnWidths,
+        aggColumnWidths,
         sortKey,
         sortDir,
         activeWindow,
@@ -253,7 +257,9 @@ export const setSavedScatterState = (value) => { savedScatterState = value; };
 export const setSavedLiqState = (value) => { savedLiqState = value; };
 export const setVisibleColumns = (value) => { visibleColumns = value; };
 export const setColumnOrder = (value) => { columnOrder = value; };
+export const setAggColumnOrder = (value) => { aggColumnOrder = value; };
 export const setColumnWidths = (value) => { columnWidths = value; };
+export const setAggColumnWidths = (value) => { aggColumnWidths = value; };
 export const setRenderPending = (value) => { renderPending = value; };
 export const setLastSaveTime = (value) => { lastSaveTime = value; };
 export const setLeverageColors = (value) => { leverageColors = value; };
@@ -286,7 +292,9 @@ export const getSortDir = () => sortDir;
 export const getActiveWindow = () => activeWindow;
 export const getVisibleColumns = () => visibleColumns;
 export const getColumnOrder = () => columnOrder;
+export const getAggColumnOrder = () => aggColumnOrder;
 export const getColumnWidths = () => columnWidths;
+export const getAggColumnWidths = () => aggColumnWidths;
 export const getScanning = () => scanning;
 export const getIsPaused = () => isPaused;
 export const getMaxConcurrency = () => maxConcurrency;
