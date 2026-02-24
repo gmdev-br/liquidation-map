@@ -424,7 +424,7 @@ td {
 /* ── Aggregation Table Overrides ── */
 /* O thead da tabela de agregação NÃO usa sticky para evitar desalinhamento
    com overflow-y:scroll. O header está visível pois a tabela tem altura fixa. */
-.agg-table-wrap .agg-table thead tr {
+.agg-table-wrap .liquidation-table thead tr {
     position: static;
     top: auto;
     z-index: auto;
@@ -435,7 +435,7 @@ td {
     border-bottom: 1px solid var(--glass-border);
 }
 
-.agg-table th {
+.liquidation-table th {
     white-space: normal;
     vertical-align: bottom;
     padding: 8px 6px;
@@ -489,7 +489,7 @@ td {
     text-align: left;
 }
 
-.agg-table td {
+.liquidation-table td {
     padding: 6px;
     vertical-align: middle;
     overflow: hidden;
@@ -539,4 +539,51 @@ td {
         background-color: transparent;
         box-shadow: inset 0 0 0 rgba(96, 165, 250, 0);
     }
+}
+
+/* ── Aggregation Table Column Resizers ── */
+.liquidation-table th {
+    position: relative;
+}
+
+.liquidation-table .resizer {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 6px;
+    height: 100%;
+    cursor: col-resize;
+    z-index: 1;
+    transition: background 0.2s;
+    user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    pointer-events: auto;
+}
+
+.liquidation-table .resizer:hover,
+.liquidation-table .resizing .resizer {
+    background: rgba(156, 163, 175, 0.4);
+}
+
+.liquidation-table th.resizing-active {
+    background: rgba(96, 165, 250, 0.1);
+}
+
+/* ── Column Drag Ghost ── */
+.column-drag-ghost {
+    position: fixed;
+    pointer-events: none;
+    z-index: 10000;
+    background: rgba(30, 41, 59, 0.95);
+    border: 1px solid var(--accent);
+    border-radius: var(--r-sm);
+    padding: 8px 12px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text);
+    white-space: nowrap;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
 }

@@ -386,7 +386,7 @@ function _renderTableInternal() {
             console.error('updateStats error (non-fatal):', err);
         }
 
-        const tbody = document.getElementById('tableBody');
+        const tbody = document.getElementById('positionsTableBody');
 
         if (rows.length === 0) {
             tbody.innerHTML = `<tr><td colspan="14" class="empty-cell"><div class="empty-icon">🔍</div><div>No positions match the current filters.</div></td></tr>`;
@@ -396,7 +396,7 @@ function _renderTableInternal() {
         // Use virtual scrolling for large datasets
         const rowHeight = getRowHeight();
         if (!virtualScrollManager) {
-            virtualScrollManager = enableVirtualScroll('tableBody', { threshold: 100, rowHeight: rowHeight });
+            virtualScrollManager = enableVirtualScroll('positionsTableBody', { threshold: 100, rowHeight: rowHeight });
         } else {
              // Update row height in case it changed
              if (typeof virtualScrollManager.setRowHeight === 'function') {

@@ -77,7 +77,7 @@ export async function updateRankingPanel() {
     }
 
     rankingPanelDebounceTimer = setTimeout(async () => {
-        const panel = document.getElementById('ranking-panel');
+        const panel = document.getElementById('holdingsPanel');
         if (!panel) {
             console.warn('Ranking panel element not found');
             return;
@@ -177,7 +177,7 @@ export async function updateRankingPanel() {
 
 // Fallback function for whale position ranking
 function updateWhalePositionRanking() {
-    const panel = document.getElementById('ranking-panel');
+    const panel = document.getElementById('holdingsPanel');
     if (!panel) return;
 
     const allRows = getAllRows();
@@ -234,7 +234,7 @@ function updateWhalePositionRanking() {
 }
 
 export function renderQuotesPanel() {
-    const panel = document.getElementById('quotes-panel');
+    const panel = document.getElementById('quotesPanel');
     if (!panel) return;
 
     const selectedCoins = getSelectedCoins();
@@ -254,7 +254,7 @@ export function renderQuotesPanel() {
 }
 
 export function updateQuotesHTML() {
-    const panel = document.getElementById('quotes-panel');
+    const panel = document.getElementById('quotesPanel');
     if (!panel) return;
 
     // DEBUG: Log quotes update

@@ -171,7 +171,7 @@ export async function startScanWithValidation(callbacks) {
     document.getElementById('pauseBtn').style.display = 'inline-block';
     document.getElementById('pauseBtn').textContent = '⏸ Pause';
     setIsPaused(false);
-    document.getElementById('tableBody').innerHTML = `<tr><td colspan="13" class="empty-cell"><span class="spinner"></span> Fetching leaderboard…</td></tr>`;
+    document.getElementById('positionsTableBody').innerHTML = `<tr><td colspan="13" class="empty-cell"><span class="spinner"></span> Fetching leaderboard…</td></tr>`;
     setAllRows([]);
     setLoadedCount(0);
 
@@ -219,7 +219,7 @@ export async function startScanWithValidation(callbacks) {
 
     } catch (e) {
         console.error(e);
-        document.getElementById('tableBody').innerHTML = `<tr><td colspan="13" class="empty-cell" style="color:var(--red)">Error: ${e.message}</td></tr>`;
+        document.getElementById('positionsTableBody').innerHTML = `<tr><td colspan="13" class="empty-cell" style="color:var(--red)">Error: ${e.message}</td></tr>`;
         setStatus('Error', 'error');
         document.getElementById('scanBtn').disabled = false;
     }

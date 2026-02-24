@@ -18,7 +18,7 @@ export async function startScan(callbacks) {
     document.getElementById('pauseBtn').style.display = 'inline-block';
     document.getElementById('pauseBtn').textContent = '⏸ Pause';
     setIsPaused(false);
-    document.getElementById('tableBody').innerHTML = `<tr><td colspan="14" class="empty-cell"><span class="spinner"></span> Fetching leaderboard…</td></tr>`;
+    document.getElementById('positionsTableBody').innerHTML = `<tr><td colspan="14" class="empty-cell"><span class="spinner"></span> Fetching leaderboard…</td></tr>`;
     setAllRows([]);
     setLoadedCount(0);
 
@@ -100,7 +100,7 @@ export async function startScan(callbacks) {
 
     } catch (e) {
         console.error('Scan error:', e);
-        document.getElementById('tableBody').innerHTML = `<tr><td colspan="14" class="empty-cell" style="color:var(--red)">
+        document.getElementById('positionsTableBody').innerHTML = `<tr><td colspan="14" class="empty-cell" style="color:var(--red)">
             <div class="empty-icon">⚠️</div>
             <div style="margin-bottom: 16px;">
                 <strong>Scan Failed:</strong> ${e.message}<br>

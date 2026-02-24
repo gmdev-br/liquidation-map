@@ -8,11 +8,11 @@ import {
     getColumnOrder, getVisibleColumns, getRankingLimit, getColorMaxLev,
     getChartHighLevSplit, getChartHeight, getLiqChartHeight, getSavedScatterState,
     getSavedLiqState, getColumnWidths, getColumnWidth, getActiveCurrency, getActiveEntryCurrency, getDecimalPlaces, getLeverageColors, getFontSize, getFontSizeKnown, getRowHeight, setRowHeight, getGridSpacing, getMinBtcVolume,
-    getAggInterval, getAggTableHeight, getAggVolumeUnit, getAggMinPrice, getAggMaxPrice, getUseCompactFormat, getIsZenMode, getLastSeenAccountValues, getShowAggSymbols, getAggZoneColors, getAggHighlightColor, getTooltipDelay,
-    getAggMinPriceResumida, getAggMaxPriceResumida, getAggVolumeUnitResumida,
+    getAggInterval, getLiquidationTableHeight, getAggVolumeUnit, getLiquidationMinPriceFull, getLiquidationMaxPriceFull, getUseCompactFormat, getIsZenMode, getLastSeenAccountValues, getShowLiquidationSymbols, getLiquidationZoneColors, getLiquidationHighlightColor, getTooltipDelay,
+    getLiquidationMinPriceSummary, getLiquidationMaxPriceSummary, getLiquidationVolumeUnitSummary,
     setSortKey, setSortDir, setSavedScatterState, setSavedLiqState,
-    setColumnOrder, setVisibleColumns, setSelectedCoins, setRankingLimit, setColorMaxLev, setChartHighLevSplit, setChartMode, setBubbleScale, setBubbleOpacity, setLineThickness, setAggregationFactor, setPriceMode, setShowSymbols, setPriceUpdateInterval, setDecimalPlaces, setFontSize, setFontSizeKnown, setLeverageColors, setColumnWidth, setGridSpacing, setMinBtcVolume, setAggInterval, setAggTableHeight, setAggVolumeUnit, setAggMinPrice, setAggMaxPrice, setUseCompactFormat, setIsZenMode, setLastSeenAccountValues, setShowAggSymbols, setAggZoneColors, setAggHighlightColor, setTooltipDelay,
-    setAggMinPriceResumida, setAggMaxPriceResumida, setAggVolumeUnitResumida
+    setColumnOrder, setVisibleColumns, setSelectedCoins, setRankingLimit, setColorMaxLev, setChartHighLevSplit, setChartMode, setBubbleScale, setBubbleOpacity, setLineThickness, setAggregationFactor, setPriceMode, setShowSymbols, setPriceUpdateInterval, setDecimalPlaces, setFontSize, setFontSizeKnown, setLeverageColors, setColumnWidth, setGridSpacing, setMinBtcVolume, setAggInterval, setLiquidationTableHeight, setAggVolumeUnit, setLiquidationMinPriceFull, setLiquidationMaxPriceFull, setUseCompactFormat, setIsZenMode, setLastSeenAccountValues, setShowLiquidationSymbols, setLiquidationZoneColors, setLiquidationHighlightColor, setTooltipDelay,
+    setLiquidationMinPriceSummary, setLiquidationMaxPriceSummary, setLiquidationVolumeUnitSummary
 } from '../state.js';
 import { COLUMN_DEFS } from '../config.js';
 import { cbSetValue, updateCoinSearchLabel } from '../ui/combobox.js';
@@ -99,18 +99,18 @@ export function saveSettings(getChartState = null, savedScatterState = null, sav
         gridSpacing: getGridSpacing(),
         minBtcVolume: getMinBtcVolume(),
         aggInterval: getAggInterval(),
-        aggTableHeight: getAggTableHeight(),
+        aggTableHeight: getLiquidationTableHeight(),
         aggVolumeUnit: getAggVolumeUnit(),
-        aggMinPrice: getAggMinPrice(),
-        aggMaxPrice: getAggMaxPrice(),
-        aggMinPriceResumida: getAggMinPriceResumida(),
-        aggMaxPriceResumida: getAggMaxPriceResumida(),
-        aggVolumeUnitResumida: getAggVolumeUnitResumida(),
+        aggMinPrice: getLiquidationMinPriceFull(),
+        aggMaxPrice: getLiquidationMaxPriceFull(),
+        aggMinPriceResumida: getLiquidationMinPriceSummary(),
+        aggMaxPriceResumida: getLiquidationMaxPriceSummary(),
+        aggVolumeUnitResumida: getLiquidationVolumeUnitSummary(),
         useCompactFormat: getUseCompactFormat(),
         isZenMode: getIsZenMode(),
-        showAggSymbols: getShowAggSymbols(),
-        aggZoneColors: getAggZoneColors(),
-        aggHighlightColor: getAggHighlightColor(),
+        showAggSymbols: getShowLiquidationSymbols(),
+        aggZoneColors: getLiquidationZoneColors(),
+        aggHighlightColor: getLiquidationHighlightColor(),
         lastSeenAccountValues: getLastSeenAccountValues(),
         tooltipDelay: getTooltipDelay()
     };
@@ -484,8 +484,8 @@ export function loadSettings() {
         aggIntervalEls.forEach(el => el.value = s.aggInterval);
     }
     if (s.aggTableHeight !== undefined) {
-        setAggTableHeight(s.aggTableHeight);
-        const section = document.getElementById('aggSectionContent');
+        setLiquidationTableHeight(s.aggTableHeight);
+        const section = document.getElementById('liquidationSectionFullContent');
         if (section) {
             const wrap = section.querySelector('.table-wrap');
             if (wrap) wrap.style.maxHeight = s.aggTableHeight + 'px';
@@ -496,30 +496,30 @@ export function loadSettings() {
         updateAggVolumeUI(s.aggVolumeUnit);
     }
     if (s.aggMinPrice !== undefined) {
-        setAggMinPrice(s.aggMinPrice);
-        const aggMinEl = document.getElementById('aggMinPrice');
+        setLiquidationMinPriceFull(s.aggMinPrice);
+        const aggMinEl = document.getElementById('liquidationMinPriceFull');
         if (aggMinEl) aggMinEl.value = s.aggMinPrice > 0 ? s.aggMinPrice : '';
     }
     if (s.aggMaxPrice !== undefined) {
-        setAggMaxPrice(s.aggMaxPrice);
-        const aggMaxEl = document.getElementById('aggMaxPrice');
+        setLiquidationMaxPriceFull(s.aggMaxPrice);
+        const aggMaxEl = document.getElementById('liquidationMaxPriceFull');
         if (aggMaxEl) aggMaxEl.value = s.aggMaxPrice > 0 ? s.aggMaxPrice : '';
     }
     // Resumida table settings
     if (s.aggMinPriceResumida !== undefined) {
-        setAggMinPriceResumida(s.aggMinPriceResumida);
-        const aggMinEl = document.getElementById('aggMinPriceResumida');
+        setLiquidationMinPriceSummary(s.aggMinPriceResumida);
+        const aggMinEl = document.getElementById('liquidationMinPriceSummary');
         if (aggMinEl) aggMinEl.value = s.aggMinPriceResumida > 0 ? s.aggMinPriceResumida : '';
     }
     if (s.aggMaxPriceResumida !== undefined) {
-        setAggMaxPriceResumida(s.aggMaxPriceResumida);
-        const aggMaxEl = document.getElementById('aggMaxPriceResumida');
+        setLiquidationMaxPriceSummary(s.aggMaxPriceResumida);
+        const aggMaxEl = document.getElementById('liquidationMaxPriceSummary');
         if (aggMaxEl) aggMaxEl.value = s.aggMaxPriceResumida > 0 ? s.aggMaxPriceResumida : '';
     }
     if (s.aggVolumeUnitResumida !== undefined) {
-        setAggVolumeUnitResumida(s.aggVolumeUnitResumida);
+        setLiquidationVolumeUnitSummary(s.aggVolumeUnitResumida);
         // Update UI for Resumida volume unit tabs
-        const resumidaUnitTabs = document.querySelectorAll('#aggSectionWrapperResumida .js-agg-volume-unit-tab');
+        const resumidaUnitTabs = document.querySelectorAll('#liquidationSectionSummaryWrapper .js-agg-volume-unit-tab');
         resumidaUnitTabs.forEach(btn => {
             btn.classList.toggle('active', btn.dataset.unit === s.aggVolumeUnitResumida);
         });
@@ -534,20 +534,20 @@ export function loadSettings() {
         // We will trigger the UI update for Zen Mode in init.js after settings are loaded
     }
     if (s.showAggSymbols !== undefined) {
-        setShowAggSymbols(s.showAggSymbols);
+        setShowLiquidationSymbols(s.showAggSymbols);
         const checkbox = document.getElementById('showAggSymbolsDrawer');
         if (checkbox) checkbox.checked = s.showAggSymbols;
     }
     if (s.aggZoneColors) {
-        setAggZoneColors(s.aggZoneColors);
-        if (document.getElementById('colorAggBuyStrong')) document.getElementById('colorAggBuyStrong').value = s.aggZoneColors.buyStrong || '#22c55e';
-        if (document.getElementById('colorAggBuyNormal')) document.getElementById('colorAggBuyNormal').value = s.aggZoneColors.buyNormal || '#4ade80';
-        if (document.getElementById('colorAggSellStrong')) document.getElementById('colorAggSellStrong').value = s.aggZoneColors.sellStrong || '#ef4444';
-        if (document.getElementById('colorAggSellNormal')) document.getElementById('colorAggSellNormal').value = s.aggZoneColors.sellNormal || '#f87171';
+        setLiquidationZoneColors(s.aggZoneColors);
+        if (document.getElementById('colorLiquidationBuyStrong')) document.getElementById('colorLiquidationBuyStrong').value = s.aggZoneColors.buyStrong || '#22c55e';
+        if (document.getElementById('colorLiquidationBuyNormal')) document.getElementById('colorLiquidationBuyNormal').value = s.aggZoneColors.buyNormal || '#4ade80';
+        if (document.getElementById('colorLiquidationSellStrong')) document.getElementById('colorLiquidationSellStrong').value = s.aggZoneColors.sellStrong || '#ef4444';
+        if (document.getElementById('colorLiquidationSellNormal')) document.getElementById('colorLiquidationSellNormal').value = s.aggZoneColors.sellNormal || '#f87171';
     }
     if (s.aggHighlightColor !== undefined) {
-        setAggHighlightColor(s.aggHighlightColor);
-        if (document.getElementById('colorAggHighlight')) document.getElementById('colorAggHighlight').value = s.aggHighlightColor || '#facc15';
+        setLiquidationHighlightColor(s.aggHighlightColor);
+        if (document.getElementById('colorLiquidationHighlight')) document.getElementById('colorLiquidationHighlight').value = s.aggHighlightColor || '#facc15';
     }
     if (s.lastSeenAccountValues) {
         setLastSeenAccountValues(s.lastSeenAccountValues);
@@ -556,6 +556,7 @@ export function loadSettings() {
 
 function updateAggVolumeUI(unit) {
     // Only update main table tabs (Resumida has its own state)
-    const tabs = document.querySelectorAll('#aggSectionWrapper .js-agg-volume-unit-tab, #settingsDrawer .js-agg-volume-unit-tab');
+    const tabs = document.querySelectorAll('#liquidationSectionFullWrapper .js-agg-volume-unit-tab, #settingsDrawer .js-agg-volume-unit-tab');
     tabs.forEach(t => t.classList.toggle('active', t.dataset.unit === unit));
 }
+

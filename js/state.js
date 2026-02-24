@@ -58,14 +58,14 @@ let minBtcVolume = 0; // Volume BTC minimum for highlighting
 let aggInterval = 50; // BTC price interval for aggregation (e.g. 50, 100)
 let aggTableHeight = 450; // default height for the aggregation table container
 let aggVolumeUnit = 'USD'; // 'USD' or 'BTC'
-let aggMinPrice = 0;       // Local floor for aggregation table
-let aggMaxPrice = 0;       // Local ceiling for aggregation table
+let liquidationMinPriceFull = 0;       // Local floor for aggregation table
+let liquidationMaxPriceFull = 0;       // Local ceiling for aggregation table
 let useCompactFormat = true; // Use K, M, B formatting for large numbers
 
 // Resumida table state
-let aggMinPriceResumida = 0;       // Local floor for resumida table
-let aggMaxPriceResumida = 0;       // Local ceiling for resumida table
-let aggVolumeUnitResumida = 'USD'; // 'USD' or 'BTC' for resumida table
+let liquidationMinPriceSummary = 0;       // Local floor for resumida table
+let liquidationMaxPriceSummary = 0;       // Local ceiling for resumida table
+let liquidationVolumeUnitSummary = 'USD'; // 'USD' or 'BTC' for resumida table
 
 // Custom colors for leverage categories
 let leverageColors = {
@@ -76,7 +76,7 @@ let leverageColors = {
 };
 
 // Aggregation Zone Colors
-let aggZoneColors = {
+let liquidationZoneColors = {
     buyStrong: '#22c55e',
     buyNormal: '#4ade80',
     sellStrong: '#ef4444',
@@ -84,7 +84,7 @@ let aggZoneColors = {
 };
 
 // Aggregation Highlight Color for current price row
-let aggHighlightColor = '#facc15';
+let liquidationHighlightColor = '#facc15';
 
 // Tooltip state
 let tooltipDelay = 500; // Default 500ms
@@ -95,7 +95,7 @@ let fxReady = false;
 let activeCurrency = 'USD';
 let activeEntryCurrency = 'USD';
 let showSymbols = true;
-let showAggSymbols = true; // For aggregation table volumes
+let showLiquidationSymbols = true; // For aggregation table volumes
 
 // Formatting state
 let decimalPlaces = 2; // Default 2 decimal places for prices and values
@@ -157,14 +157,14 @@ export const getState = () => ({
     aggInterval,
     aggTableHeight,
     aggVolumeUnit,
-    aggMinPrice,
-    aggMaxPrice,
+    liquidationMinPriceFull,
+    liquidationMaxPriceFull,
     useCompactFormat,
     lastSeenAccountValues,
     whaleMeta,
     isZenMode,
-    showAggSymbols,
-    aggZoneColors
+    showLiquidationSymbols,
+    liquidationZoneColors
 });
 
 // Setters
@@ -215,14 +215,14 @@ export const setState = (updates) => {
         aggInterval,
         aggTableHeight,
         aggVolumeUnit,
-        aggMinPrice,
-        aggMaxPrice,
+        liquidationMinPriceFull,
+        liquidationMaxPriceFull,
         useCompactFormat,
         lastSeenAccountValues,
         whaleMeta,
         isZenMode,
-        showAggSymbols,
-        aggZoneColors
+        showLiquidationSymbols,
+        liquidationZoneColors
     }, updates);
 };
 
@@ -274,15 +274,15 @@ export const setLeverageColors = (value) => { leverageColors = value; };
 export const setGridSpacing = (value) => { gridSpacing = value; };
 export const setMinBtcVolume = (value) => { minBtcVolume = value; };
 export const setAggInterval = (value) => { aggInterval = value; };
-export const setAggTableHeight = (value) => { aggTableHeight = value; };
+export const setLiquidationTableHeight = (value) => { aggTableHeight = value; };
 export const setAggVolumeUnit = (value) => { aggVolumeUnit = value; };
-export const setAggMinPrice = (value) => { aggMinPrice = value; };
-export const setAggMaxPrice = (value) => { aggMaxPrice = value; };
+export const setLiquidationMinPriceFull = (value) => { liquidationMinPriceFull = value; };
+export const setLiquidationMaxPriceFull = (value) => { liquidationMaxPriceFull = value; };
 export const setUseCompactFormat = (value) => { useCompactFormat = value; };
-export const setAggZoneColors = (value) => { aggZoneColors = value; };
-export const setAggHighlightColor = (value) => { aggHighlightColor = value; };
+export const setLiquidationZoneColors = (value) => { liquidationZoneColors = value; };
+export const setLiquidationHighlightColor = (value) => { liquidationHighlightColor = value; };
 export const setIsZenMode = (value) => { isZenMode = value; };
-export const setShowAggSymbols = (value) => { showAggSymbols = value; };
+export const setShowLiquidationSymbols = (value) => { showLiquidationSymbols = value; };
 export const setWhaleMeta = (value) => { whaleMeta = value; };
 export const setLastSeenAccountValues = (value) => { lastSeenAccountValues = value; };
 
@@ -330,13 +330,13 @@ export const getColumnWidth = () => columnWidth;
 export const getGridSpacing = () => gridSpacing;
 export const getMinBtcVolume = () => minBtcVolume;
 export const getAggInterval = (value) => aggInterval;
-export const getAggTableHeight = (value) => aggTableHeight;
+export const getLiquidationTableHeight = (value) => aggTableHeight;
 export const getAggVolumeUnit = () => aggVolumeUnit;
-export const getAggMinPrice = () => aggMinPrice;
-export const getAggMaxPrice = () => aggMaxPrice;
+export const getLiquidationMinPriceFull = () => liquidationMinPriceFull;
+export const getLiquidationMaxPriceFull = () => liquidationMaxPriceFull;
 export const getUseCompactFormat = () => useCompactFormat;
-export const getAggZoneColors = () => aggZoneColors;
-export const getAggHighlightColor = () => aggHighlightColor;
+export const getLiquidationZoneColors = () => liquidationZoneColors;
+export const getLiquidationHighlightColor = () => liquidationHighlightColor;
 
 export const getTooltipDelay = () => tooltipDelay;
 export const setTooltipDelay = (val) => {
@@ -344,7 +344,7 @@ export const setTooltipDelay = (val) => {
     if (isNaN(tooltipDelay)) tooltipDelay = 500;
 };
 export const getIsZenMode = (value) => isZenMode;
-export const getShowAggSymbols = () => showAggSymbols;
+export const getShowLiquidationSymbols = () => showLiquidationSymbols;
 export const getWhaleMeta = () => whaleMeta;
 export const getLastSeenAccountValues = () => lastSeenAccountValues;
 export const setPriceMode = (mode) => {
@@ -353,9 +353,9 @@ export const setPriceMode = (mode) => {
 export const setColumnWidth = (value) => { columnWidth = value; };
 
 // Resumida table getters and setters
-export const getAggMinPriceResumida = () => aggMinPriceResumida;
-export const getAggMaxPriceResumida = () => aggMaxPriceResumida;
-export const getAggVolumeUnitResumida = () => aggVolumeUnitResumida;
-export const setAggMinPriceResumida = (value) => { aggMinPriceResumida = value; };
-export const setAggMaxPriceResumida = (value) => { aggMaxPriceResumida = value; };
-export const setAggVolumeUnitResumida = (value) => { aggVolumeUnitResumida = value; };
+export const getLiquidationMinPriceSummary = () => liquidationMinPriceSummary;
+export const getLiquidationMaxPriceSummary = () => liquidationMaxPriceSummary;
+export const getLiquidationVolumeUnitSummary = () => liquidationVolumeUnitSummary;
+export const setLiquidationMinPriceSummary = (value) => { liquidationMinPriceSummary = value; };
+export const setLiquidationMaxPriceSummary = (value) => { liquidationMaxPriceSummary = value; };
+export const setLiquidationVolumeUnitSummary = (value) => { liquidationVolumeUnitSummary = value; };

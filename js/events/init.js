@@ -388,8 +388,8 @@ function setupEventListeners() {
 
     // Aggregation color pickers
     const aggColors = [
-        'colorAggBuyStrong', 'colorAggBuyNormal',
-        'colorAggSellStrong', 'colorAggSellNormal'
+        'colorLiquidationBuyStrong', 'colorLiquidationBuyNormal',
+        'colorLiquidationSellStrong', 'colorLiquidationSellNormal'
     ];
     aggColors.forEach(id => {
         const el = document.getElementById(id);
@@ -397,7 +397,7 @@ function setupEventListeners() {
     });
 
     // Highlight color picker
-    const highlightColorEl = document.getElementById('colorAggHighlight');
+    const highlightColorEl = document.getElementById('colorLiquidationHighlight');
     if (highlightColorEl) {
         highlightColorEl.addEventListener('input', updateAggHighlightColor);
     }
@@ -541,12 +541,12 @@ function setupEventListeners() {
         setupResizable(liqChartSection, updateLiqChartHeight);
     }
 
-    const aggTableSection = document.getElementById('agg-table-section');
+    const aggTableSection = document.getElementById('liquidationTableFullSection');
     if (aggTableSection) {
         setupResizable(aggTableSection, updateAggTableHeight);
     }
 
-    const aggTableSectionResumida = document.getElementById('agg-table-section-resumida');
+    const aggTableSectionResumida = document.getElementById('liquidationTableSummarySection');
     if (aggTableSectionResumida) {
         setupResizable(aggTableSectionResumida, updateAggTableHeight);
     }
@@ -687,8 +687,8 @@ function setupEventListeners() {
 
     // Aggregation Volume Unit tabs - only for main table (not Resumida)
     // Resumida table has its own handler in aggregation.js
-    // Main table tabs are in: drawer (.ctrl .tabs) and aggSectionWrapper (.agg-unit-toggle)
-    document.querySelectorAll('#aggSectionWrapper .js-agg-volume-unit-tab, #settingsDrawer .js-agg-volume-unit-tab').forEach(tab => {
+    // Main table tabs are in: drawer (.ctrl .tabs) and liquidationSectionFullWrapper (.agg-unit-toggle)
+    document.querySelectorAll('#liquidationSectionFullWrapper .js-agg-volume-unit-tab, #settingsDrawer .js-agg-volume-unit-tab').forEach(tab => {
         tab.addEventListener('click', (e) => {
             updateAggVolumeUnit(e.target.dataset.unit);
         });

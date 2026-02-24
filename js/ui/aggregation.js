@@ -1,16 +1,31 @@
-// ═══════════════════════════════════════════════════════════
+// ═════════════════════════════════════════════
 // LIQUID GLASS — Aggregation Table
-// ═══════════════════════════════════════════════════════════
+// ═════════════════════════════════════════════
 
-import { getDisplayedRows, getCurrentPrices, getFxRates, getActiveEntryCurrency, getAggInterval, getAggVolumeUnit, getShowAggSymbols, getAggZoneColors, getAggHighlightColor, getDecimalPlaces, getTooltipDelay, getAggMinPrice, getAggMaxPrice, setAggMinPrice, setAggMaxPrice, setAggVolumeUnit, setAggInterval, getAggMinPriceResumida, getAggMaxPriceResumida, getAggVolumeUnitResumida, setAggMinPriceResumida, setAggMaxPriceResumida, setAggVolumeUnitResumida } from '../state.js';
+import { getDisplayedRows, getCurrentPrices, getFxRates, getActiveEntryCurrency, getAggInterval, getAggVolumeUnit, getShowLiquidationSymbols, getLiquidationZoneColors, getLiquidationHighlightColor, getDecimalPlaces, getTooltipDelay, getLiquidationMinPriceFull, getLiquidationMaxPriceFull, setLiquidationMinPriceFull, setLiquidationMaxPriceFull, setAggVolumeUnit, setAggInterval, getLiquidationMinPriceSummary, getLiquidationMaxPriceSummary, getLiquidationVolumeUnitSummary, setLiquidationMinPriceSummary, setLiquidationMaxPriceSummary, setLiquidationVolumeUnitSummary } from '../state.js';
 import { getCorrelatedEntry, getCorrelatedPrice } from '../utils/currency.js';
 import { enableVirtualScroll } from '../utils/virtualScroll.js';
 import { saveSettings } from '../storage/settings.js';
 import { CURRENCY_META } from '../config.js';
 
-// ═══════════════════════════════════════════════════════════
+// ═════════════════════════════════════════════
 // State Management - Unified for both tables
-// ═══════════════════════════════════════════════════════════
+// ═════════════════════════════════════════════
+
+// Cache for dynamic import of handlers module (to avoid re-importing on every render)
+let handlersModulePromise = null;
+let handlersModule = null;
+
+async function getHandlersModule() {
+    if (handlersModule) return handlersModule;
+    if (!handlersModulePromise) {
+        handlersModulePromise = import('../events/handlers.js').then(module => {
+            handlersModule = module;
+            return module;
+        });
+    }
+    return handlersModulePromise;
+}
 
 // Table state container - avoids duplicating variables
 const tableState = {
@@ -63,9 +78,9 @@ function computeRelevantPricesHash(currentPrices, rows) {
 function fmtUsdCompact(val, showSymbol = true) {
     if (val === 0) return showSymbol ? '$0' : '0';
     const sym = showSymbol ? '$' : '';
-    if (val >= 1_000_000_000) return sym + (val / 1_000_000_000).toFixed(2) + 'B';
-    if (val >= 1_000_000) return sym + (val / 1_000_000).toFixed(2) + 'M';
-    if (val >= 1_000) return sym + (val / 1_000).toFixed(2) + 'K';
+    if (val >= 1000000000) return sym + (val / 1000000000).toFixed(2) + 'B';
+    if (val >= 1000000) return sym + (val / 1000000).toFixed(2) + 'M';
+    if (val >= 1000) return sym + (val / 1000).toFixed(2) + 'K';
     return sym + val.toFixed(2);
 }
 
@@ -84,9 +99,9 @@ function hexToRgb(hex) {
     }
 }
 
-// ═══════════════════════════════════════════════════════════
+// ═════════════════════════════════════════════
 // Base Aggregation Table Renderer
-// ═══════════════════════════════════════════════════════════
+// ═════════════════════════════════════════════
 
 /**
  * Renders an aggregation table (main or resumida)
@@ -100,11 +115,11 @@ function renderAggregationTableBase(options = {}) {
     const state = isResumida ? tableState.resumida : tableState.main;
 
     // Element IDs
-    const sectionId = `aggSectionWrapper${suffix}`;
-    const tableBodyId = `aggTableBody${suffix}`;
-    const statsBarId = `aggStatsBar${suffix}`;
-    const minPriceInputId = `aggMinPrice${suffix}`;
-    const maxPriceInputId = `aggMaxPrice${suffix}`;
+    const sectionId = isResumida ? 'liquidationSectionSummaryWrapper' : 'liquidationSectionFullWrapper';
+    const tableBodyId = isResumida ? 'liquidationTableSummaryBody' : 'liquidationTableFullBody';
+    const statsBarId = isResumida ? 'liquidationStatsBarSummary' : 'liquidationStatsBarFull';
+    const minPriceInputId = isResumida ? 'liquidationMinPriceSummary' : 'liquidationMinPriceFull';
+    const maxPriceInputId = isResumida ? 'liquidationMaxPriceSummary' : 'liquidationMaxPriceFull';
 
     const aggSection = document.getElementById(sectionId);
     const isCollapsed = aggSection?.classList.contains('collapsed');
@@ -125,10 +140,10 @@ function renderAggregationTableBase(options = {}) {
     const currentPrices = getCurrentPrices();
     const fxRates = getFxRates();
     const activeEntryCurrency = getActiveEntryCurrency();
-    const aggVolumeUnit = isResumida ? getAggVolumeUnitResumida() : getAggVolumeUnit();
-    const showAggSymbols = getShowAggSymbols();
-    const aggZoneColors = getAggZoneColors();
-    const aggHighlightColor = getAggHighlightColor();
+    const aggVolumeUnit = isResumida ? getLiquidationVolumeUnitSummary() : getAggVolumeUnit();
+    const showAggSymbols = getShowLiquidationSymbols();
+    const aggZoneColors = getLiquidationZoneColors();
+    const aggHighlightColor = getLiquidationHighlightColor();
     const decimalPlaces = getDecimalPlaces();
     const bandSize = Math.max(1, getAggInterval());
     const btcPrice = currentPrices['BTC'] ? parseFloat(currentPrices['BTC']) : 0;
@@ -167,8 +182,8 @@ function renderAggregationTableBase(options = {}) {
     // Build bands
     const { bands, totalLongNotional, totalShortNotional, bandsWithPosCount } = buildBands(
         rows, currentPrices, fxRates, activeEntryCurrency, bandSize,
-        isResumida ? getAggMinPriceResumida() : getAggMinPrice(),
-        isResumida ? getAggMaxPriceResumida() : getAggMaxPrice(),
+        isResumida ? getLiquidationMinPriceSummary() : getLiquidationMinPriceFull(),
+        isResumida ? getLiquidationMaxPriceSummary() : getLiquidationMaxPriceFull(),
         currentBand
     );
 
@@ -184,7 +199,7 @@ function renderAggregationTableBase(options = {}) {
             // Condição atual: intensidade >= MÉDIA
             const hasIntensity = b.notionalLong + b.notionalShort >= 10_000_000;
             
-            // Nova condição: volume de liquidação significativo
+            // Nova condição: volume de liquidação significantivo
             const hasLiquidation = b.liqVolLong >= 10_000_000 || b.liqVolShort >= 10_000_000;
             
             // Mostra se tiver intensidade OU liquidação significativa
@@ -232,6 +247,18 @@ function renderAggregationTableBase(options = {}) {
 
     state.virtualScrollManager.renderRow = rowRenderer;
     state.virtualScrollManager.setData(bandArray);
+
+    // Setup column resizing for aggregation tables after render (using cached import)
+    getHandlersModule().then(({ setupColumnResizing, applyColumnWidths }) => {
+        try {
+            setupColumnResizing();
+            applyColumnWidths();
+        } catch (error) {
+            console.error('Erro ao configurar redimensionamento de colunas:', error);
+        }
+    }).catch(error => {
+        console.error('Erro ao importar módulo de handlers para redimensionamento de colunas:', error);
+    });
 }
 
 /**
@@ -249,11 +276,11 @@ function initializeControls(isResumida, state, minPriceInputId, maxPriceInputId,
             const min = parseFloat(minInput.value) || 0;
             const max = parseFloat(maxInput.value) || 0;
             if (isResumida) {
-                setAggMinPriceResumida(min);
-                setAggMaxPriceResumida(max);
+                setLiquidationMinPriceSummary(min);
+                setLiquidationMaxPriceSummary(max);
             } else {
-                setAggMinPrice(min);
-                setAggMaxPrice(max);
+                setLiquidationMinPriceFull(min);
+                setLiquidationMaxPriceFull(max);
             }
             renderFn(true);
             saveSettings();
@@ -269,12 +296,12 @@ function initializeControls(isResumida, state, minPriceInputId, maxPriceInputId,
 
     // Volume Unit Toggle Buttons (for Resumida table)
     if (isResumida) {
-        const volumeUnitButtons = document.querySelectorAll(`#aggSectionWrapper${suffix} .js-agg-volume-unit-tab`);
+        const volumeUnitButtons = document.querySelectorAll(`#liquidationSectionSummaryWrapper .js-agg-volume-unit-tab`);
         if (volumeUnitButtons) {
             volumeUnitButtons.forEach(btn => {
                 btn.addEventListener('click', () => {
                     const unit = btn.dataset.unit;
-                    setAggVolumeUnitResumida(unit);
+                    setLiquidationVolumeUnitSummary(unit);
                     volumeUnitButtons.forEach(b => b.classList.toggle('active', b === btn));
                     renderFn(true);
                     saveSettings();
@@ -320,9 +347,9 @@ function buildBands(rows, currentPrices, fxRates, activeEntryCurrency, bandSize,
         if (r.liquidationPx > 0) {
             const liqPriceCorr = getCorrelatedPrice(r, r.liquidationPx, activeEntryCurrency, currentPrices, fxRates);
             if (isFinite(liqPriceCorr) && liqPriceCorr > 0) {
-                const lb = Math.floor(liqPriceCorr / bandSize) * bandSize;
-                if (lb < minEntryBand) minEntryBand = lb;
-                if (lb > maxEntryBand) maxEntryBand = lb;
+                const liqB = Math.floor(liqPriceCorr / bandSize) * bandSize;
+                if (liqB < minEntryBand) minEntryBand = liqB;
+                if (liqB > maxEntryBand) maxEntryBand = liqB;
             }
         }
     }
@@ -500,6 +527,12 @@ function createRowRenderer(context) {
         // Calculate zone type
         let zoneType = isEmpty ? 'Zona Vazia' : '—';
         let zoneColor = '#4b5563';
+        
+        // Initialize styling variables BEFORE the if/else block to avoid TDZ error
+        let totalNotionalColor = '#bfdbfe';
+        let fwBold = '700';
+        let fwSemi = '600';
+        
         if (!isEmpty) {
             const isForteTotal = totalNotional >= 30_000_000;
             const isForteZone = (domPct === 100 || isForteTotal) && totalNotional >= 10_000_000;
@@ -548,18 +581,23 @@ function createRowRenderer(context) {
             }
 
             domBg = isForteZone ? `rgba(${hexToRgb(domColor)}, 0.1)` : `rgba(${hexToRgb(domColor)}, 0.05)`;
+
+            // Initialize styling variables for the if branch
+            totalNotionalColor = '#bfdbfe';
+            fwBold = '700';
+            fwSemi = '600';
         } else {
             colorLong = '#4b5563';
             colorShort = '#4b5563';
-            domBg = '';
             domColor = '#6b7280';
+            zoneColor = '#4b5563';
+            intColor = '#4b5563';
+            totalNotionalColor = '#6b7280';
+            fwBold = '400';
+            fwSemi = '400';
         }
 
-        // Calculate styling
-        let totalNotionalColor = '#bfdbfe';
-        let fwBold = '700';
-        let fwSemi = '600';
-
+        // Calculate styling - variables already declared above
         if (!isEmpty && (domPct === 100 || totalNotional >= 10_000_000)) {
             if (totalNotional >= 10_000_000 && domType !== 'NEUTRO') {
                 totalNotionalColor = domColor;
@@ -581,9 +619,8 @@ function createRowRenderer(context) {
             colorShort = '#4b5563';
             domColor = '#6b7280';
             zoneColor = '#4b5563';
-            intColor = '#4b5563';
+            intColor = '#6b7280';
             totalNotionalColor = '#6b7280';
-            domBg = '';
             fwBold = '400';
             fwSemi = '400';
         }
@@ -672,7 +709,7 @@ function createRowRenderer(context) {
             }
         }
 
-        const tooltipAttr = tooltipData ? `data-tooltip='${JSON.stringify(tooltipData).replace(/'/g, "&#39;").replace(/"/g, "&quot;")}'` : '';
+        const tooltipAttr = tooltipData ? `data-tooltip='${JSON.stringify(tooltipData).replace(/'/g, '&#39;').replace(/"/g, '&quot;')}'` : '';
         const tooltipClass = tooltipData ? 'has-tooltip' : '';
 
         const isRangeMultiple1000 = b.faixaDe % 1000 === 0;
@@ -693,7 +730,7 @@ function createRowRenderer(context) {
         const avgLiqShort = b.notionalShort > 0 ? b.sumLiqNotionalShort / b.notionalShort : 0;
 
         const formatLiq = (val, col) => {
-            if (val === 0) return '—';
+            if (val === 0) return '<span class="muted" style="opacity:0.4">—</span>';
             const entMeta = CURRENCY_META[activeEntryCurrency] || CURRENCY_META.USD;
             const sym = showAggSymbols ? entMeta.symbol : '';
             return `<span style="color:${col}">${sym}${val.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>`;
@@ -747,9 +784,9 @@ function createRowRenderer(context) {
     };
 }
 
-// ═══════════════════════════════════════════════════════════
+// ═════════════════════════════════════════════
 // Public API - Wrapper Functions
-// ═══════════════════════════════════════════════════════════
+// ═════════════════════════════════════════════
 
 /**
  * Renders the main aggregation table
@@ -785,9 +822,9 @@ export function scrollToCurrentPriceRangeResumida() {
     }
 }
 
-// ═══════════════════════════════════════════════════════════
+// ═════════════════════════════════════════════
 // Custom Tooltip Event Handling
-// ═══════════════════════════════════════════════════════════
+// ═════════════════════════════════════════════
 
 let activeTooltipTimeout = null;
 let pendingTooltipTarget = null;
@@ -805,7 +842,7 @@ document.addEventListener('mouseover', (e) => {
             pendingTooltipTarget.dataset.tooltipActive = 'false';
             pendingTooltipTarget = null;
         }
-        const existing = document.getElementById('agg-tooltip');
+        const existing = document.getElementById('liquidationTooltip');
         if (existing) existing.remove();
         return;
     }
@@ -814,7 +851,7 @@ document.addEventListener('mouseover', (e) => {
 
     if (pendingTooltipTarget && pendingTooltipTarget !== target) {
         pendingTooltipTarget.dataset.tooltipActive = 'false';
-        const existing = document.getElementById('agg-tooltip');
+        const existing = document.getElementById('liquidationTooltip');
         if (existing) existing.remove();
     }
 
@@ -852,10 +889,10 @@ document.addEventListener('mouseover', (e) => {
 
             html += '</div>';
 
-            let tooltip = document.getElementById('agg-tooltip');
+            let tooltip = document.getElementById('liquidationTooltip');
             if (!tooltip) {
                 tooltip = document.createElement('div');
-                tooltip.id = 'agg-tooltip';
+                tooltip.id = 'liquidationTooltip';
                 tooltip.style.cssText = 'position:fixed;z-index:10000;background:#1a1a2e;border:1px solid #333;border-radius:8px;padding:12px;max-width:500px;box-shadow:0 4px 20px rgba(0,0,0,0.5);font-size:12px;pointer-events:none';
                 document.body.appendChild(tooltip);
             }

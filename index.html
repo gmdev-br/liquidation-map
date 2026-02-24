@@ -35,7 +35,7 @@
     <link rel="stylesheet" href="css/animations.css">
     <link rel="stylesheet" href="css/mobile.css">
     <style>
-        .agg-table {
+        .liquidation-table {
             width: 100%;
             border-collapse: collapse;
             font-size: 12px;
@@ -43,14 +43,14 @@
             text-align: right;
         }
 
-        .agg-table th,
-        .agg-table td {
+        .liquidation-table th,
+        .liquidation-table td {
             padding: 6px 8px;
             border-bottom: 1px solid var(--border-color);
             border-right: 1px solid rgba(255, 255, 255, 0.05);
         }
 
-        .agg-table th {
+        .liquidation-table th {
             background: var(--header-bg);
             color: #9ca3af;
             font-size: 11px;
@@ -66,11 +66,11 @@
             padding-bottom: 8px;
         }
 
-        .agg-table td {
+        .liquidation-table td {
             vertical-align: middle;
         }
 
-        .agg-table tr:hover {
+        .liquidation-table tr:hover {
             background: rgba(255, 255, 255, 0.05) !important;
         }
 
@@ -521,25 +521,25 @@
                     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-top:4px">
                         <div style="display:flex; flex-direction:column; gap:2px">
                             <span style="font-size:10px; color:#22c55e">Compra Forte</span>
-                            <input type="color" id="colorAggBuyStrong" class="js-agg-color-buy-strong" value="#22c55e">
+                            <input type="color" id="colorLiquidationBuyStrong" class="js-agg-color-buy-strong" value="#22c55e">
                         </div>
                         <div style="display:flex; flex-direction:column; gap:2px">
                             <span style="font-size:10px; color:#4ade80">Compra Normal</span>
-                            <input type="color" id="colorAggBuyNormal" class="js-agg-color-buy-normal" value="#4ade80">
+                            <input type="color" id="colorLiquidationBuyNormal" class="js-agg-color-buy-normal" value="#4ade80">
                         </div>
                         <div style="display:flex; flex-direction:column; gap:2px">
                             <span style="font-size:10px; color:#ef4444">Venda Forte</span>
-                            <input type="color" id="colorAggSellStrong" class="js-agg-color-sell-strong"
+                            <input type="color" id="colorLiquidationSellStrong" class="js-agg-color-sell-strong"
                                 value="#ef4444">
                         </div>
                         <div style="display:flex; flex-direction:column; gap:2px">
                             <span style="font-size:10px; color:#f87171">Venda Normal</span>
-                            <input type="color" id="colorAggSellNormal" class="js-agg-color-sell-normal"
+                            <input type="color" id="colorLiquidationSellNormal" class="js-agg-color-sell-normal"
                                 value="#f87171">
                         </div>
                         <div style="display:flex; flex-direction:column; gap:2px; grid-column: span 2">
                             <span style="font-size:10px; color:#facc15">Destaque Preço Atual</span>
-                            <input type="color" id="colorAggHighlight" class="js-agg-color-highlight" value="#facc15">
+                            <input type="color" id="colorLiquidationHighlight" class="js-agg-color-highlight" value="#facc15">
                         </div>
                     </div>
                 </div>
@@ -559,21 +559,21 @@
             </svg>
         </div>
         <div class="section-content" id="quotesSectionContent">
-            <div id="quotes-panel"></div>
+            <div id="quotesPanel"></div>
         </div>
     </div>
 
     <!-- Collapsible Ranking Panel -->
-    <div class="section-wrapper" id="rankingSectionWrapper">
-        <div class="section-header js-collapse-toggle" data-target="rankingSectionContent">
+    <div class="section-wrapper" id="holdingsSectionWrapper">
+        <div class="section-header js-collapse-toggle" data-target="holdingsSectionContent">
             <h2 class="section-title">Top Holdings</h2>
             <svg class="chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="6 9 12 15 18 9"></polyline>
             </svg>
         </div>
-        <div class="section-content" id="rankingSectionContent">
-            <div id="ranking-panel"></div>
+        <div class="section-content" id="holdingsSectionContent">
+            <div id="holdingsPanel"></div>
         </div>
     </div>
 
@@ -668,29 +668,29 @@
     </div>
 
     <!-- Collapsible Aggregation Section -->
-    <div class="section-wrapper" id="aggSectionWrapper">
-        <div class="section-header js-collapse-toggle" data-target="aggSectionContent">
+    <div class="section-wrapper" id="liquidationSectionFullWrapper">
+        <div class="section-header js-collapse-toggle" data-target="liquidationSectionFullContent">
             <h2 class="section-title">TODAS AS CRIPTOS — FAIXAS BTC DE $50</h2>
             <svg class="chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="6 9 12 15 18 9"></polyline>
             </svg>
         </div>
-        <div class="section-content" id="aggSectionContent" style="position:relative;">
+        <div class="section-content" id="liquidationSectionFullContent" style="position:relative;">
             <div class="agg-stats-bar"
                 style="display:flex; gap:12px; padding:8px 16px; background:var(--panel-bg); border-bottom:1px solid var(--border-color); font-size:12px; flex-wrap:wrap; align-items:center; justify-content: space-between;">
-                <div id="aggStatsBar" style="display:flex; gap:12px; flex-wrap:wrap; align-items:center;">
+                <div id="liquidationStatsBarFull" style="display:flex; gap:12px; flex-wrap:wrap; align-items:center;">
                     <!-- Filled by JS -->
                 </div>
                 <div style="display:flex; gap:8px; align-items:center;">
                     <div
                         style="display:flex; gap:4px; align-items:center; background:rgba(255,255,255,0.05); padding:4px 8px; border-radius:6px; border:1px solid rgba(255,255,255,0.1)">
                         <label style="font-size:10px; color:var(--text-muted)">Range:</label>
-                        <input type="number" id="aggMinPrice" placeholder="Piso"
+                        <input type="number" id="liquidationMinPriceFull" placeholder="Piso"
                             style="width:70px; height:24px; font-size:11px; background:rgba(0,0,0,0.2); border:1px solid var(--border-color); color:var(--text); padding:0 4px; border-radius:4px"
                             title="Preço mínimo (Piso) para a tabela de agregação">
                         <span style="color:var(--text-muted)">-</span>
-                        <input type="number" id="aggMaxPrice" placeholder="Teto"
+                        <input type="number" id="liquidationMaxPriceFull" placeholder="Teto"
                             style="width:70px; height:24px; font-size:11px; background:rgba(0,0,0,0.2); border:1px solid var(--border-color); color:var(--text); padding:0 4px; border-radius:4px"
                             title="Preço máximo (Teto) para a tabela de agregação">
                     </div>
@@ -703,35 +703,35 @@
                     </div>
                 </div>
             </div>
-            <div id="agg-table-section">
+            <div id="liquidationTableFullSection">
                 <div class="table-wrap agg-table-wrap" style="max-height: 450px; overflow-y: scroll;">
-                    <table class="agg-table" id="aggTable" style="table-layout: fixed; width: 100%;">
+                    <table class="liquidation-table" id="liquidationTableFull" style="table-layout: fixed; width: 100%;">
                         <thead>
                             <tr>
-                                <th class="col-agg-range">Faixa<br>De ($)</th>
-                                <th class="col-agg-range">Faixa<br>Até ($)</th>
-                                <th class="col-agg-liq" title="Weighted Average Liquidation Price (Correlated)">Liq
-                                    Price<br>Corr ($)</th>
-                                <th class="col-agg-val"
+                                <th id="th-agg-faixaDe" class="col-agg-range">Faixa<br>De ($)<div class="resizer"></div></th>
+                                <th id="th-agg-faixaAte" class="col-agg-range">Faixa<br>Até ($)<div class="resizer"></div></th>
+                                <th id="th-agg-liqPrice" class="col-agg-liq" title="Weighted Average Liquidation Price (Correlated)">Liq
+                                    Price<br>Corr ($)<div class="resizer"></div></th>
+                                <th id="th-agg-liqVolLong" class="col-agg-val"
                                     title="Total Vol of LONG positions falling in this Liquidation Price band">Liq
-                                    Vol<br>Long</th>
-                                <th class="col-agg-val"
+                                    Vol<br>Long<div class="resizer"></div></th>
+                                <th id="th-agg-liqVolShort" class="col-agg-val"
                                     title="Total Vol of SHORT positions falling in this Liquidation Price band">Liq
-                                    Vol<br>Short</th>
-                                <th class="col-agg-qty">Qtd<br>Long</th>
-                                <th class="col-agg-val">Notional<br>Long</th>
-                                <th class="col-agg-qty">Qtd<br>Short</th>
-                                <th class="col-agg-val">Notional<br>Short</th>
-                                <th class="col-agg-val">Total<br>Notional</th>
-                                <th class="col-agg-dom">Domi<br>nancia</th>
-                                <th class="col-agg-pct">% Dom</th>
-                                <th class="col-agg-int">Inten<br>sidade</th>
-                                <th class="col-agg-zone">Tipo de<br>Zona</th>
-                                <th class="col-agg-assets">Ativos<br>Long</th>
-                                <th class="col-agg-assets">Ativos<br>Short</th>
+                                    Vol<br>Short<div class="resizer"></div></th>
+                                <th id="th-agg-qtdLong" class="col-agg-qty">Qtd<br>Long<div class="resizer"></div></th>
+                                <th id="th-agg-notionalLong" class="col-agg-val">Notional<br>Long<div class="resizer"></div></th>
+                                <th id="th-agg-qtdShort" class="col-agg-qty">Qtd<br>Short<div class="resizer"></div></th>
+                                <th id="th-agg-notionalShort" class="col-agg-val">Notional<br>Short<div class="resizer"></div></th>
+                                <th id="th-agg-totalNotional" class="col-agg-val">Total<br>Notional<div class="resizer"></div></th>
+                                <th id="th-agg-dominancia" class="col-agg-dom">Domi<br>nancia<div class="resizer"></div></th>
+                                <th id="th-agg-pctDom" class="col-agg-pct">% Dom<div class="resizer"></div></th>
+                                <th id="th-agg-intensidade" class="col-agg-int">Inten<br>sidade<div class="resizer"></div></th>
+                                <th id="th-agg-tipoZona" class="col-agg-zone">Tipo de<br>Zona<div class="resizer"></div></th>
+                                <th id="th-agg-ativosLong" class="col-agg-assets">Ativos<br>Long<div class="resizer"></div></th>
+                                <th id="th-agg-ativosShort" class="col-agg-assets">Ativos<br>Short<div class="resizer"></div></th>
                             </tr>
                         </thead>
-                        <tbody id="aggTableBody">
+                        <tbody id="liquidationTableFullBody">
                             <tr>
                                 <td colspan="16" class="empty-cell">Carregando...</td>
                             </tr>
@@ -747,29 +747,29 @@
     </div>
 
     <!-- Collapsible Aggregation Section - Resumida -->
-    <div class="section-wrapper" id="aggSectionWrapperResumida">
-        <div class="section-header js-collapse-toggle" data-target="aggSectionContentResumida">
+    <div class="section-wrapper" id="liquidationSectionSummaryWrapper">
+        <div class="section-header js-collapse-toggle" data-target="liquidationSectionSummaryContent">
             <h2 class="section-title">CRIPTOS - RESUMIDA</h2>
             <svg class="chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="6 9 12 15 18 9"></polyline>
             </svg>
         </div>
-        <div class="section-content" id="aggSectionContentResumida" style="position:relative;">
+        <div class="section-content" id="liquidationSectionSummaryContent" style="position:relative;">
             <div class="agg-stats-bar"
                 style="display:flex; gap:12px; padding:8px 16px; background:var(--panel-bg); border-bottom:1px solid var(--border-color); font-size:12px; flex-wrap:wrap; align-items:center; justify-content: space-between;">
-                <div id="aggStatsBarResumida" style="display:flex; gap:12px; flex-wrap:wrap; align-items:center;">
+                <div id="liquidationStatsBarSummary" style="display:flex; gap:12px; flex-wrap:wrap; align-items:center;">
                     <!-- Filled by JS -->
                 </div>
                 <div style="display:flex; gap:8px; align-items:center;">
                     <div
                         style="display:flex; gap:4px; align-items:center; background:rgba(255,255,255,0.05); padding:4px 8px; border-radius:6px; border:1px solid rgba(255,255,255,0.1)">
                         <label style="font-size:10px; color:var(--text-muted)">Range:</label>
-                        <input type="number" id="aggMinPriceResumida" placeholder="Piso"
+                        <input type="number" id="liquidationMinPriceSummary" placeholder="Piso"
                             style="width:70px; height:24px; font-size:11px; background:rgba(0,0,0,0.2); border:1px solid var(--border-color); color:var(--text); padding:0 4px; border-radius:4px"
                             title="Preço mínimo (Piso) para a tabela de agregação">
                         <span style="color:var(--text-muted)">-</span>
-                        <input type="number" id="aggMaxPriceResumida" placeholder="Teto"
+                        <input type="number" id="liquidationMaxPriceSummary" placeholder="Teto"
                             style="width:70px; height:24px; font-size:11px; background:rgba(0,0,0,0.2); border:1px solid var(--border-color); color:var(--text); padding:0 4px; border-radius:4px"
                             title="Preço máximo (Teto) para a tabela de agregação">
                     </div>
@@ -782,35 +782,35 @@
                     </div>
                 </div>
             </div>
-            <div id="agg-table-section-resumida">
+            <div id="liquidationTableSummarySection">
                 <div class="table-wrap agg-table-wrap" style="max-height: 450px; overflow-y: scroll;">
-                    <table class="agg-table" id="aggTableResumida" style="table-layout: fixed; width: 100%;">
+                    <table class="liquidation-table" id="liquidationTableSummary" style="table-layout: fixed; width: 100%;">
                         <thead>
                             <tr>
-                                <th class="col-agg-range">Faixa<br>De ($)</th>
-                                <th class="col-agg-range">Faixa<br>Até ($)</th>
-                                <th class="col-agg-liq" title="Weighted Average Liquidation Price (Correlated)">Liq
-                                    Price<br>Corr ($)</th>
-                                <th class="col-agg-val"
+                                <th id="th-agg-faixaDe" class="col-agg-range">Faixa<br>De ($)<div class="resizer"></div></th>
+                                <th id="th-agg-faixaAte" class="col-agg-range">Faixa<br>Até ($)<div class="resizer"></div></th>
+                                <th id="th-agg-liqPrice" class="col-agg-liq" title="Weighted Average Liquidation Price (Correlated)">Liq
+                                    Price<br>Corr ($)<div class="resizer"></div></th>
+                                <th id="th-agg-liqVolLong" class="col-agg-val"
                                     title="Total Vol of LONG positions falling in this Liquidation Price band">Liq
-                                    Vol<br>Long</th>
-                                <th class="col-agg-val"
+                                    Vol<br>Long<div class="resizer"></div></th>
+                                <th id="th-agg-liqVolShort" class="col-agg-val"
                                     title="Total Vol of SHORT positions falling in this Liquidation Price band">Liq
-                                    Vol<br>Short</th>
-                                <th class="col-agg-qty">Qtd<br>Long</th>
-                                <th class="col-agg-val">Notional<br>Long</th>
-                                <th class="col-agg-qty">Qtd<br>Short</th>
-                                <th class="col-agg-val">Notional<br>Short</th>
-                                <th class="col-agg-val">Total<br>Notional</th>
-                                <th class="col-agg-dom">Domi<br>nancia</th>
-                                <th class="col-agg-pct">% Dom</th>
-                                <th class="col-agg-int">Inten<br>sidade</th>
-                                <th class="col-agg-zone">Tipo de<br>Zona</th>
-                                <th class="col-agg-assets">Ativos<br>Long</th>
-                                <th class="col-agg-assets">Ativos<br>Short</th>
+                                    Vol<br>Short<div class="resizer"></div></th>
+                                <th id="th-agg-qtdLong" class="col-agg-qty">Qtd<br>Long<div class="resizer"></div></th>
+                                <th id="th-agg-notionalLong" class="col-agg-val">Notional<br>Long<div class="resizer"></div></th>
+                                <th id="th-agg-qtdShort" class="col-agg-qty">Qtd<br>Short<div class="resizer"></div></th>
+                                <th id="th-agg-notionalShort" class="col-agg-val">Notional<br>Short<div class="resizer"></div></th>
+                                <th id="th-agg-totalNotional" class="col-agg-val">Total<br>Notional<div class="resizer"></div></th>
+                                <th id="th-agg-dominancia" class="col-agg-dom">Domi<br>nancia<div class="resizer"></div></th>
+                                <th id="th-agg-pctDom" class="col-agg-pct">% Dom<div class="resizer"></div></th>
+                                <th id="th-agg-intensidade" class="col-agg-int">Inten<br>sidade<div class="resizer"></div></th>
+                                <th id="th-agg-tipoZona" class="col-agg-zone">Tipo de<br>Zona<div class="resizer"></div></th>
+                                <th id="th-agg-ativosLong" class="col-agg-assets">Ativos<br>Long<div class="resizer"></div></th>
+                                <th id="th-agg-ativosShort" class="col-agg-assets">Ativos<br>Short<div class="resizer"></div></th>
                             </tr>
                         </thead>
-                        <tbody id="aggTableBodyResumida">
+                        <tbody id="liquidationTableSummaryBody">
                             <tr>
                                 <td colspan="16" class="empty-cell">Carregando...</td>
                             </tr>
@@ -826,15 +826,15 @@
     </div>
 
     <!-- Collapsible Table Section -->
-    <div class="section-wrapper" id="tableSectionWrapper">
-        <div class="section-header js-collapse-toggle" data-target="tableSectionContent">
+    <div class="section-wrapper" id="positionsSectionWrapper">
+        <div class="section-header js-collapse-toggle" data-target="positionsSectionContent">
             <h2 class="section-title">Positions Table</h2>
             <svg class="chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="6 9 12 15 18 9"></polyline>
             </svg>
         </div>
-        <div class="section-content" id="tableSectionContent">
+        <div class="section-content" id="positionsSectionContent">
             <div class="table-controls-bar">
                 <button class="settings-toggle filter-toggle" id="toggleFiltersBtn" aria-label="Filters">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
@@ -1024,7 +1024,7 @@
                             </th>
                         </tr>
                     </thead>
-                    <tbody id="tableBody">
+                    <tbody id="positionsTableBody">
                         <tr>
                             <td colspan="14" class="empty-cell">
                                 <div class="empty-icon">🐋</div>

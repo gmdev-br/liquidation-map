@@ -21,8 +21,8 @@ import {
     getRankingLimit, getColorMaxLev, getChartHighLevSplit, getChartHeight,
     getLiqChartHeight, getActiveWindow, setColumnOrder, setVisibleColumns,
     getColumnOrder, getVisibleColumns, setPriceUpdateInterval, setActiveCurrency,
-    setActiveEntryCurrency, setDecimalPlaces, setFontSize, setFontSizeKnown, setLeverageColors, setGridSpacing, setMinBtcVolume, getMinBtcVolume, setAggInterval, setAggTableHeight, setAggVolumeUnit, getAggVolumeUnit, setIsZenMode, getIsZenMode,
-    setShowAggSymbols, getShowAggSymbols, setAggZoneColors, getAggZoneColors, setAggHighlightColor, getAggHighlightColor, setTooltipDelay,
+    setActiveEntryCurrency, setDecimalPlaces, setFontSize, setFontSizeKnown, setLeverageColors, setGridSpacing, setMinBtcVolume, getMinBtcVolume, setAggInterval, setLiquidationTableHeight, setAggVolumeUnit, getAggVolumeUnit, setIsZenMode, getIsZenMode,
+    setShowLiquidationSymbols, getShowLiquidationSymbols, setLiquidationZoneColors, getLiquidationZoneColors, setLiquidationHighlightColor, getLiquidationHighlightColor, setTooltipDelay,
     getColumnWidths, setColumnWidths, setRowHeight, setUseCompactFormat, getUseCompactFormat
 } from '../state.js';
 import { COLUMN_DEFS } from '../config.js';
@@ -53,7 +53,7 @@ export function toggleShowSymbols() {
 
 export function toggleShowAggSymbols() {
     const isChecked = document.getElementById('showAggSymbolsDrawer')?.checked;
-    setShowAggSymbols(isChecked);
+    setShowLiquidationSymbols(isChecked);
     saveSettings();
     renderTable();
 }
@@ -334,9 +334,9 @@ export function updateLiqChartHeight(height) {
 }
 
 export function updateAggTableHeight(height) {
-    setAggTableHeight(height);
+    setLiquidationTableHeight(height);
     saveSettings();
-    const section = document.getElementById('aggSectionContent');
+    const section = document.getElementById('liquidationSectionFullContent');
     if (section) {
         const wrap = section.querySelector('.table-wrap');
         if (wrap) wrap.style.maxHeight = height + 'px';
@@ -344,12 +344,12 @@ export function updateAggTableHeight(height) {
 }
 
 export function updateAggZoneColors(e) {
-    const buyStrong = document.getElementById('colorAggBuyStrong')?.value || '#22c55e';
-    const buyNormal = document.getElementById('colorAggBuyNormal')?.value || '#4ade80';
-    const sellStrong = document.getElementById('colorAggSellStrong')?.value || '#ef4444';
-    const sellNormal = document.getElementById('colorAggSellNormal')?.value || '#f87171';
+    const buyStrong = document.getElementById('colorLiquidationBuyStrong')?.value || '#22c55e';
+    const buyNormal = document.getElementById('colorLiquidationBuyNormal')?.value || '#4ade80';
+    const sellStrong = document.getElementById('colorLiquidationSellStrong')?.value || '#ef4444';
+    const sellNormal = document.getElementById('colorLiquidationSellNormal')?.value || '#f87171';
 
-    setAggZoneColors({ buyStrong, buyNormal, sellStrong, sellNormal });
+    setLiquidationZoneColors({ buyStrong, buyNormal, sellStrong, sellNormal });
 
     saveSettings();
     // Call directly with force=true to bypass all debounce/optimization caches
@@ -358,8 +358,8 @@ export function updateAggZoneColors(e) {
 }
 
 export function updateAggHighlightColor(e) {
-    const highlightColor = document.getElementById('colorAggHighlight')?.value || '#facc15';
-    setAggHighlightColor(highlightColor);
+    const highlightColor = document.getElementById('colorLiquidationHighlight')?.value || '#facc15';
+    setLiquidationHighlightColor(highlightColor);
     saveSettings();
     renderAggregationTable(true);
     renderAggregationTableResumida(true);
@@ -380,7 +380,7 @@ export function updateTooltipDelay(val) {
 export function updateAggVolumeUnit(unit) {
     setAggVolumeUnit(unit);
     // Sync only main table unit tabs (not Resumida which has its own state)
-    const tabs = document.querySelectorAll('#aggSectionWrapper .js-agg-volume-unit-tab, #settingsDrawer .js-agg-volume-unit-tab');
+    const tabs = document.querySelectorAll('#liquidationSectionFullWrapper .js-agg-volume-unit-tab, #settingsDrawer .js-agg-volume-unit-tab');
     tabs.forEach(t => t.classList.toggle('active', t.dataset.unit === unit));
     saveSettings();
     // Re-render aggregation table (triggered via renderTable)
@@ -391,8 +391,8 @@ export function scrollToCurrentPrice() {
     console.log('scrollToCurrentPrice called');
 
     // Check which table is visible (not collapsed)
-    const sectionWrapperCompleta = document.getElementById('aggSectionContent')?.closest('.section-wrapper');
-    const sectionWrapperResumida = document.getElementById('aggSectionContentResumida')?.closest('.section-wrapper');
+    const sectionWrapperCompleta = document.getElementById('liquidationSectionFullContent')?.closest('.section-wrapper');
+    const sectionWrapperResumida = document.getElementById('liquidationSectionSummaryContent')?.closest('.section-wrapper');
 
     const isCompletaCollapsed = sectionWrapperCompleta?.classList.contains('collapsed') ?? false;
     const isResumidaCollapsed = sectionWrapperResumida?.classList.contains('collapsed') ?? false;
@@ -416,7 +416,7 @@ export function scrollToCurrentPrice() {
         console.log('Expanding completa table (both collapsed)');
         if (sectionWrapperCompleta) {
             sectionWrapperCompleta.classList.remove('collapsed');
-            localStorage.setItem(`collapse_aggSectionContent`, 'false');
+            localStorage.setItem(`collapse_liquidationSectionFullContent`, 'false');
         }
         aggScrollToRange();
     }
@@ -654,23 +654,35 @@ export function applyColumnOrder() {
 }
 
 export function setupColumnResizing() {
-    const table = document.getElementById('positionsTable');
-    if (!table) return;
+    const tables = [
+        { id: 'positionsTable', tableType: 'positions' },
+        { id: 'liquidationTableFull', tableType: 'aggregation' },
+        { id: 'liquidationTableSummary', tableType: 'aggregation' }
+    ];
 
-    const ths = table.querySelectorAll('th');
-    ths.forEach(th => {
-        const resizer = th.querySelector('.resizer');
-        if (resizer) {
+    tables.forEach(({ id, tableType }) => {
+        const table = document.getElementById(id);
+        if (!table) return;
+
+        const ths = table.querySelectorAll('th');
+        if (!ths || ths.length === 0) return;
+
+        ths.forEach((th) => {
+            if (!th) return;
+
+            const resizer = th.querySelector('.resizer');
+            if (!resizer) return;
+
             if (resizer.dataset.initialized) return;
             resizer.dataset.initialized = 'true';
 
-            resizer.addEventListener('mousedown', initResize);
+            resizer.addEventListener('mousedown', (e) => initResize(e, tableType));
             resizer.addEventListener('click', e => e.stopPropagation());
-        }
+        });
     });
 }
 
-function initResize(e) {
+function initResize(e, tableType) {
     e.stopPropagation();
     e.preventDefault();
 
@@ -681,13 +693,24 @@ function initResize(e) {
     const startX = e.clientX;
     const startWidth = th.offsetWidth;
 
+    // Get column key for persistence
+    const colKey = th.id.replace('th-', '').replace('agg-', '');
+
     document.body.classList.add('resizing');
     th.classList.add('resizing-active');
 
     const onMouseMove = (e) => {
-        requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => {
             const diffX = e.clientX - startX;
-            const newWidth = Math.max(50, startWidth + diffX);
+            let newWidth = startWidth + diffX;
+
+            // Apply limits based on table type
+            if (tableType === 'positions') {
+                newWidth = Math.max(40, Math.min(500, newWidth)); // 40-500px for positions table
+            } else if (tableType === 'aggregation') {
+                newWidth = Math.max(60, Math.min(300, newWidth)); // 60-300px for aggregation tables
+            }
+
             th.style.width = `${newWidth}px`;
             th.style.minWidth = `${newWidth}px`;
             th.style.maxWidth = `${newWidth}px`;
@@ -700,9 +723,10 @@ function initResize(e) {
         document.removeEventListener('mousemove', onMouseMove);
         document.removeEventListener('mouseup', onMouseUp);
 
-        // Save new width
+        // Save new width with table-specific key
         const columnWidths = getColumnWidths() || {};
-        columnWidths[th.id] = parseInt(th.style.width);
+        const storageKey = `${tableType}_${colKey}`;
+        columnWidths[storageKey] = parseInt(th.style.width);
         setColumnWidths(columnWidths);
         saveSettings();
     };
@@ -726,6 +750,8 @@ export function setupColumnDragAndDrop() {
     let dragStartX = 0;
     let dragStartY = 0;
     let draggedTh = null;
+    let dragGhost = null;
+    let sourceTable = null;
 
     // Remove draggable from all headers (we handle manually)
     tableHeaders.forEach(th => {
@@ -749,6 +775,7 @@ export function setupColumnDragAndDrop() {
         draggedTh = th;
         dragStartX = e.clientX;
         dragStartY = e.clientY;
+        sourceTable = th.closest('table');
 
         th.classList.add('dragging');
     }, false); // No capture to run after resize handler
@@ -763,6 +790,18 @@ export function setupColumnDragAndDrop() {
         // Only show dragging state after moving a bit
         if (Math.abs(deltaX) > 5 || Math.abs(deltaY) > 5) {
             draggedTh.style.opacity = '0.5';
+
+            // Create ghost element if not exists
+            if (!dragGhost) {
+                dragGhost = document.createElement('div');
+                dragGhost.className = 'column-drag-ghost';
+                dragGhost.textContent = draggedTh.querySelector('.th-label')?.textContent || draggedTh.textContent.trim().split('\n')[0];
+                document.body.appendChild(dragGhost);
+            }
+
+            // Position ghost element
+            dragGhost.style.left = `${e.clientX + 10}px`;
+            dragGhost.style.top = `${e.clientY + 10}px`;
         }
 
         // Find potential drop target
@@ -770,12 +809,16 @@ export function setupColumnDragAndDrop() {
         const targetTh = targetElement?.closest('th[id^="th-"]');
 
         if (targetTh && targetTh !== draggedTh) {
-            // Remove drag-over from all headers
-            document.querySelectorAll('th').forEach(header => {
-                header.classList.remove('drag-over');
-            });
-            // Add drag-over to current target
-            targetTh.classList.add('drag-over');
+            // Only allow drop within the same table
+            const targetTable = targetTh.closest('table');
+            if (targetTable === sourceTable) {
+                // Remove drag-over from all headers
+                document.querySelectorAll('th').forEach(header => {
+                    header.classList.remove('drag-over');
+                });
+                // Add drag-over to current target
+                targetTh.classList.add('drag-over');
+            }
         }
     });
 
@@ -788,35 +831,60 @@ export function setupColumnDragAndDrop() {
         const targetTh = targetElement?.closest('th[id^="th-"]');
 
         if (targetTh && targetTh !== draggedTh) {
-            console.log('Drop completed:', draggedTh.id, '->', targetTh.id);
+            const targetTable = targetTh.closest('table');
+            
+            // Only allow drop within the same table
+            if (targetTable === sourceTable) {
+                console.log('Drop completed:', draggedTh.id, '->', targetTh.id);
 
-            const draggedColumnId = draggedTh.id.replace('th-', '');
-            const targetColumnId = targetTh.id.replace('th-', '');
-            console.log('Dragged:', draggedColumnId, 'Target:', targetColumnId);
+                const draggedColumnId = draggedTh.id.replace('th-', '').replace('agg-', '');
+                const targetColumnId = targetTh.id.replace('th-', '').replace('agg-', '');
+                console.log('Dragged:', draggedColumnId, 'Target:', targetColumnId);
 
-            // Get current column order
-            const currentOrder = getColumnOrder();
-            console.log('Current order:', currentOrder);
+                // Check if this is positions table or aggregation table
+                if (sourceTable.id === 'positionsTable') {
+                    // Get current column order
+                    const currentOrder = getColumnOrder();
+                    console.log('Current order:', currentOrder);
 
-            const draggedIndex = currentOrder.indexOf(`col-${draggedColumnId}`);
-            const targetIndex = currentOrder.indexOf(`col-${targetColumnId}`);
-            console.log('Indices - Dragged:', draggedIndex, 'Target:', targetIndex);
+                    const draggedIndex = currentOrder.indexOf(`col-${draggedColumnId}`);
+                    const targetIndex = currentOrder.indexOf(`col-${targetColumnId}`);
+                    console.log('Indices - Dragged:', draggedIndex, 'Target:', targetIndex);
 
-            if (draggedIndex !== -1 && targetIndex !== -1) {
-                // Reorder columns
-                const newOrder = [...currentOrder];
-                const [draggedColumn] = newOrder.splice(draggedIndex, 1);
-                newOrder.splice(targetIndex, 0, draggedColumn);
-                console.log('New order:', newOrder);
+                    if (draggedIndex !== -1 && targetIndex !== -1) {
+                        // Reorder columns
+                        const newOrder = [...currentOrder];
+                        const [draggedColumn] = newOrder.splice(draggedIndex, 1);
+                        newOrder.splice(targetIndex, 0, draggedColumn);
+                        console.log('New order:', newOrder);
 
-                // Update state and save
-                setColumnOrder(newOrder);
-                saveSettings();
-                console.log('Order saved');
+                        // Update state and save
+                        setColumnOrder(newOrder);
+                        saveSettings();
+                        console.log('Order saved');
 
-                // Re-render table to apply new column order
-                renderTable();
-                console.log('Table re-rendered');
+                        // Re-render table to apply new column order
+                        renderTable();
+                        console.log('Table re-rendered');
+                    }
+                } else {
+                    // For aggregation tables, reorder DOM elements directly
+                    const thead = sourceTable.querySelector('thead tr');
+                    if (thead) {
+                        const allThs = Array.from(thead.querySelectorAll('th'));
+                        const draggedIdx = allThs.indexOf(draggedTh);
+                        const targetIdx = allThs.indexOf(targetTh);
+                        
+                        if (draggedIdx !== -1 && targetIdx !== -1) {
+                            if (draggedIdx < targetIdx) {
+                                targetTh.after(draggedTh);
+                            } else {
+                                targetTh.before(draggedTh);
+                            }
+                            saveSettings();
+                        }
+                    }
+                }
             }
         }
 
@@ -827,20 +895,15 @@ export function setupColumnDragAndDrop() {
             draggedTh.style.opacity = '';
             draggedTh = null;
         }
+        if (dragGhost) {
+            dragGhost.remove();
+            dragGhost = null;
+        }
+        sourceTable = null;
         document.querySelectorAll('th').forEach(header => {
             header.classList.remove('drag-over');
         });
     });
-
-    // Prevent default dragstart (we're handling it manually)
-    // Removed because it conflicts with HTML5 Drag & Drop API used in setupColumnDragAndDrop
-    /*
-    document.addEventListener('dragstart', (e) => {
-        if (e.target.closest('th[id^="th-"]')) {
-            e.preventDefault();
-        }
-    });
-    */
 
     // Mark as initialized
     const marker = document.createElement('div');
@@ -879,14 +942,15 @@ export function applyColumnVisibility() {
 export function applyColumnWidths() {
     const columnWidths = getColumnWidths() || {};
 
-    // Apply widths from storage or defaults from COLUMN_DEFS
+    // Apply widths for positions table from storage or defaults from COLUMN_DEFS
     COLUMN_DEFS.forEach(colDef => {
         const thId = `th-${colDef.key.replace('col-', '')}`;
         const th = document.getElementById(thId);
 
         if (th) {
-            // Priority: Stored width > Default width > 100
-            let width = columnWidths[thId] || colDef.width || 100;
+            // Priority: Stored width (new key format) > Stored width (old key format) > Default width > 100
+            const storageKey = `positions_${colDef.key.replace('col-', '')}`;
+            let width = columnWidths[storageKey] || columnWidths[thId] || colDef.width || 100;
 
             // Enforce minimum width
             if (width < 40) width = 40; // Allow smaller columns like # (width 40 in config)
@@ -895,5 +959,29 @@ export function applyColumnWidths() {
             th.style.minWidth = `${width}px`;
             th.style.maxWidth = `${width}px`;
         }
+    });
+
+    // Apply widths for aggregation tables (liquidationTableFull and liquidationTableSummary)
+    const aggTables = ['liquidationTableFull', 'liquidationTableSummary'];
+    aggTables.forEach(tableId => {
+        const table = document.getElementById(tableId);
+        if (!table) return;
+
+        const ths = table.querySelectorAll('th[id]');
+        ths.forEach(th => {
+            const colKey = th.id.replace('th-', '').replace('agg-', '');
+            const storageKey = `aggregation_${colKey}`;
+            
+            // Use stored width or default
+            let width = columnWidths[storageKey] || th.getAttribute('data-default-width') || 100;
+            width = parseInt(width);
+            
+            // Enforce limits for aggregation tables
+            width = Math.max(60, Math.min(300, width));
+
+            th.style.width = `${width}px`;
+            th.style.minWidth = `${width}px`;
+            th.style.maxWidth = `${width}px`;
+        });
     });
 }

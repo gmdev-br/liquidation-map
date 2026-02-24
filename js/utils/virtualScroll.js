@@ -253,7 +253,7 @@ export class VirtualScroll {
  * Simple virtual scroll for table rows
  * Only enables when row count exceeds threshold
  */
-export function enableVirtualScroll(tbodyId = 'tableBody', options = {}) {
+export function enableVirtualScroll(tbodyId = 'positionsTableBody', options = {}) {
     const tbody = document.getElementById(tbodyId);
     if (!tbody) return;
 
@@ -312,7 +312,7 @@ export function enableVirtualScroll(tbodyId = 'tableBody', options = {}) {
         render: renderFn,
         setData: (rows) => renderFn(rows, currentRenderer),
         set renderRow(fn) { currentRenderer = fn; },
-        get renderRow() { return currentRenderer; },
+        get renderRow() { return currentRenderer },
         setRowHeight: (height) => {
             rowHeight = height;
             if (virtualScroll) {
