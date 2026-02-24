@@ -23,7 +23,7 @@ import {
     getColumnOrder, getVisibleColumns, setPriceUpdateInterval, setActiveCurrency,
     setActiveEntryCurrency, setDecimalPlaces, setFontSize, setFontSizeKnown, setLeverageColors, setGridSpacing, setMinBtcVolume, getMinBtcVolume, setAggInterval, setAggTableHeight, setAggVolumeUnit, getAggVolumeUnit, setIsZenMode, getIsZenMode,
     setShowAggSymbols, getShowAggSymbols, setAggZoneColors, getAggZoneColors, setAggHighlightColor, getAggHighlightColor, setTooltipDelay,
-    getColumnWidths, setColumnWidths, setRowHeight
+    getColumnWidths, setColumnWidths, setRowHeight, setUseCompactFormat, getUseCompactFormat
 } from '../state.js';
 import { COLUMN_DEFS } from '../config.js';
 import { renderTable, updateStats } from '../ui/table.js';
@@ -418,6 +418,19 @@ export function toggleZenMode() {
     });
 
     saveSettings();
+}
+
+export function updateCompactFormat(e) {
+    const isChecked = e.target.checked;
+    setUseCompactFormat(isChecked);
+
+    // Sync UI
+    document.querySelectorAll('.js-compact-toggle').forEach(t => {
+        if (t !== e.target) t.checked = isChecked;
+    });
+
+    saveSettings();
+    renderTable();
 }
 
 export function onCurrencyChange() {
@@ -848,11 +861,11 @@ export function applyColumnWidths() {
     COLUMN_DEFS.forEach(colDef => {
         const thId = `th-${colDef.key.replace('col-', '')}`;
         const th = document.getElementById(thId);
-        
+
         if (th) {
             // Priority: Stored width > Default width > 100
             let width = columnWidths[thId] || colDef.width || 100;
-            
+
             // Enforce minimum width
             if (width < 40) width = 40; // Allow smaller columns like # (width 40 in config)
 

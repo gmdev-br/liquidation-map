@@ -508,6 +508,14 @@
                     <input type="number" id="aggIntervalDesktop" class="js-agg-interval" value="50" min="10" step="10"
                         style="width:80px" title="Tamanho da faixa de agregação em dólares para o preço do BTC">
                 </div>
+                <div class="ctrl" style="justify-content: space-between;">
+                    <label title="Usar formatação compacta (K, M, B) para números grandes">Formato Compacto
+                        (K,M,B)</label>
+                    <label class="switch">
+                        <input type="checkbox" id="useCompactFormat" class="js-compact-toggle" checked>
+                        <span class="slider round"></span>
+                    </label>
+                </div>
                 <div class="ctrl">
                     <label>Aggregation Colors</label>
                     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-top:4px">
@@ -1006,6 +1014,14 @@
                     <label>Zen Mode</label>
                     <label class="switch">
                         <input type="checkbox" id="zenToggleMobile" class="js-zen-toggle">
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+
+                <div class="ctrl" style="justify-content: space-between;">
+                    <label>Formato Compacto (K,M,B)</label>
+                    <label class="switch">
+                        <input type="checkbox" id="useCompactFormatMobile" class="js-compact-toggle" checked>
                         <span class="slider round"></span>
                     </label>
                 </div>

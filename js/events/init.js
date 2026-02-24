@@ -26,7 +26,7 @@ import {
     updateLiqChartHeight, onCurrencyChange, openColumnCombobox, closeColumnComboboxDelayed,
     renderColumnDropdown as renderColumnDropdownFn, toggleColumn as toggleColumnFn, showAllColumns as showAllColumnsFn, hideAllColumns as hideAllColumnsFn, updateColumnSelectDisplay, applyColumnOrder,
     applyColumnWidths, applyColumnVisibility, toggleShowSymbols, toggleShowAggSymbols, updatePriceInterval, updateDecimalPlaces, updateFontSize, updateFontSizeKnown, updateRowHeight, updateLeverageColors, updateGridSpacing, updateMinBtcVolume, updateAggInterval, updateAggTableHeight, updateAggVolumeUnit, scrollToCurrentPrice,
-    toggleZenMode, updateAggZoneColors, updateAggHighlightColor
+    toggleZenMode, updateAggZoneColors, updateAggHighlightColor, updateCompactFormat
 } from './handlers.js';
 import { initColumnWidthControl, applyColumnWidth } from '../ui/columnWidth.js';
 import { setWindow, setStatus, setProgress } from '../ui/status.js';
@@ -362,6 +362,12 @@ function setupEventListeners() {
                 });
             }
         }
+    });
+
+    // Compact format toggle
+    const compactToggles = document.querySelectorAll('.js-compact-toggle');
+    compactToggles.forEach(toggle => {
+        toggle.addEventListener('change', updateCompactFormat);
     });
 
     // Show symbols toggle

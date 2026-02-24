@@ -60,6 +60,7 @@ let aggTableHeight = 450; // default height for the aggregation table container
 let aggVolumeUnit = 'USD'; // 'USD' or 'BTC'
 let aggMinPrice = 0;       // Local floor for aggregation table
 let aggMaxPrice = 0;       // Local ceiling for aggregation table
+let useCompactFormat = true; // Use K, M, B formatting for large numbers
 
 // Custom colors for leverage categories
 let leverageColors = {
@@ -153,6 +154,7 @@ export const getState = () => ({
     aggVolumeUnit,
     aggMinPrice,
     aggMaxPrice,
+    useCompactFormat,
     lastSeenAccountValues,
     whaleMeta,
     isZenMode,
@@ -210,6 +212,7 @@ export const setState = (updates) => {
         aggVolumeUnit,
         aggMinPrice,
         aggMaxPrice,
+        useCompactFormat,
         lastSeenAccountValues,
         whaleMeta,
         isZenMode,
@@ -270,6 +273,7 @@ export const setAggTableHeight = (value) => { aggTableHeight = value; };
 export const setAggVolumeUnit = (value) => { aggVolumeUnit = value; };
 export const setAggMinPrice = (value) => { aggMinPrice = value; };
 export const setAggMaxPrice = (value) => { aggMaxPrice = value; };
+export const setUseCompactFormat = (value) => { useCompactFormat = value; };
 export const setAggZoneColors = (value) => { aggZoneColors = value; };
 export const setAggHighlightColor = (value) => { aggHighlightColor = value; };
 export const setIsZenMode = (value) => { isZenMode = value; };
@@ -325,6 +329,7 @@ export const getAggTableHeight = (value) => aggTableHeight;
 export const getAggVolumeUnit = () => aggVolumeUnit;
 export const getAggMinPrice = () => aggMinPrice;
 export const getAggMaxPrice = () => aggMaxPrice;
+export const getUseCompactFormat = () => useCompactFormat;
 export const getAggZoneColors = () => aggZoneColors;
 export const getAggHighlightColor = () => aggHighlightColor;
 

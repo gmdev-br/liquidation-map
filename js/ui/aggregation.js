@@ -480,7 +480,8 @@ export function renderAggregationTable(force = false) {
             const shortCol = colorShort;
 
             const trStyle = isEmpty ? 'opacity:0.6;background:transparent' : '';
-            const valBg = (totalNotional >= 10_000_000 && !isWeakIntensity) ? 'background:rgba(59,130,246,0.1)' : '';
+            // valBg is now integrated into row background if needed, but we prioritize domBg for the whole row
+            // const valBg = (totalNotional >= 10_000_000 && !isWeakIntensity) ? 'background:rgba(59,130,246,0.1)' : '';
 
             let highlightStyle = '';
             if (isCurrentPriceRange) {
@@ -493,7 +494,17 @@ export function renderAggregationTable(force = false) {
             }
 
             const trClass = isCurrentPriceRange ? 'active-price-range' : '';
-            const expectedStyle = `${trStyle}; ${highlightStyle}`.trim().replace(/^; | ;$/g, '');
+
+            // Priority: Highlight Color (Active Range) > Zone Color (Dominance)
+            let rowBgCSS = '';
+            if (highlightStyle) {
+                // If we have an active price range highlight, we use that as the primary style
+                // The CSS class .active-price-range can also handle some of this
+            } else if (domBg) {
+                rowBgCSS = `background:${domBg}`;
+            }
+
+            const expectedStyle = `${trStyle}; ${highlightStyle || ''}; ${rowBgCSS}`.replace(/;+/g, ';').replace(/^; |; $/g, '').trim();
 
             // Star indicator for Extreme Intensity
             const starIndicator = totalNotional >= 100_000_000 ? '<span style="color:#f59e0b; margin-right:4px; font-size:14px">⭐</span>' : '';
@@ -610,9 +621,9 @@ export function renderAggregationTable(force = false) {
                 <td ${tooltipAttr} class="${tooltipClass} col-agg-val" style="color:${longCol}; font-family:monospace; font-weight:${b.notionalLong > 30_000_000 ? '700' : '400'}">${formatVal(b.notionalLong)}</td>
                 <td class="col-agg-qty" style="color:${shortCol}; text-align:center">${formatQty(b.qtdShort)}</td>
                 <td ${tooltipAttr} class="${tooltipClass} col-agg-val" style="color:${shortCol}; font-family:monospace; font-weight:${b.notionalShort > 30_000_000 ? '700' : '400'}">${formatVal(b.notionalShort)}</td>
-                <td ${tooltipAttr} class="${tooltipClass} col-agg-val" style="font-family:monospace; color:${totalNotionalColor}; font-weight:${fwSemi}; ${valBg}">${formatVal(totalNotional)}</td>
-                <td class="col-agg-dom" style="color:${domColor}; font-weight:${fwBold}; background:${domBg}">${domType}</td>
-                <td class="col-agg-pct" style="color:${domColor}; font-weight:${fwBold}; background:${domBg}">${domPct > 0 ? domPct.toFixed(1) + '%' : '—'}</td>
+                <td ${tooltipAttr} class="${tooltipClass} col-agg-val" style="font-family:monospace; color:${totalNotionalColor}; font-weight:${fwSemi}">${formatVal(totalNotional)}</td>
+                <td class="col-agg-dom" style="color:${domColor}; font-weight:${fwBold}">${domType}</td>
+                <td class="col-agg-pct" style="color:${domColor}; font-weight:${fwBold}">${domPct > 0 ? domPct.toFixed(1) + '%' : '—'}</td>
                 <td class="col-agg-int" style="color:${intColor}; font-size:11px; font-weight:${fwSemi}">${intType}</td>
                 <td class="col-agg-zone" style="color:${zoneColor}; font-weight:${fwSemi}">${zoneType}</td>
                 <td class="col-agg-assets" style="color:${longCol}; font-size:11px; max-width:150px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap" title="${Array.from(b.ativosLong).join(', ')}">${Array.from(b.ativosLong).join(', ')}</td>

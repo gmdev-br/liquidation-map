@@ -8,9 +8,9 @@ import {
     getColumnOrder, getVisibleColumns, getRankingLimit, getColorMaxLev,
     getChartHighLevSplit, getChartHeight, getLiqChartHeight, getSavedScatterState,
     getSavedLiqState, getColumnWidths, getColumnWidth, getActiveCurrency, getActiveEntryCurrency, getDecimalPlaces, getLeverageColors, getFontSize, getFontSizeKnown, getRowHeight, setRowHeight, getGridSpacing, getMinBtcVolume,
-    getAggInterval, getAggTableHeight, getAggVolumeUnit, getAggMinPrice, getAggMaxPrice, getIsZenMode, getLastSeenAccountValues, getShowAggSymbols, getAggZoneColors, getAggHighlightColor, getTooltipDelay,
+    getAggInterval, getAggTableHeight, getAggVolumeUnit, getAggMinPrice, getAggMaxPrice, getUseCompactFormat, getIsZenMode, getLastSeenAccountValues, getShowAggSymbols, getAggZoneColors, getAggHighlightColor, getTooltipDelay,
     setSortKey, setSortDir, setSavedScatterState, setSavedLiqState,
-    setColumnOrder, setVisibleColumns, setSelectedCoins, setRankingLimit, setColorMaxLev, setChartHighLevSplit, setChartMode, setBubbleScale, setBubbleOpacity, setLineThickness, setAggregationFactor, setPriceMode, setShowSymbols, setPriceUpdateInterval, setDecimalPlaces, setFontSize, setFontSizeKnown, setLeverageColors, setColumnWidth, setGridSpacing, setMinBtcVolume, setAggInterval, setAggTableHeight, setAggVolumeUnit, setAggMinPrice, setAggMaxPrice, setIsZenMode, setLastSeenAccountValues, setShowAggSymbols, setAggZoneColors, setAggHighlightColor, setTooltipDelay
+    setColumnOrder, setVisibleColumns, setSelectedCoins, setRankingLimit, setColorMaxLev, setChartHighLevSplit, setChartMode, setBubbleScale, setBubbleOpacity, setLineThickness, setAggregationFactor, setPriceMode, setShowSymbols, setPriceUpdateInterval, setDecimalPlaces, setFontSize, setFontSizeKnown, setLeverageColors, setColumnWidth, setGridSpacing, setMinBtcVolume, setAggInterval, setAggTableHeight, setAggVolumeUnit, setAggMinPrice, setAggMaxPrice, setUseCompactFormat, setIsZenMode, setLastSeenAccountValues, setShowAggSymbols, setAggZoneColors, setAggHighlightColor, setTooltipDelay
 } from '../state.js';
 import { COLUMN_DEFS } from '../config.js';
 import { cbSetValue, updateCoinSearchLabel } from '../ui/combobox.js';
@@ -101,6 +101,7 @@ export function saveSettings(getChartState = null, savedScatterState = null, sav
         aggVolumeUnit: getAggVolumeUnit(),
         aggMinPrice: getAggMinPrice(),
         aggMaxPrice: getAggMaxPrice(),
+        useCompactFormat: getUseCompactFormat(),
         isZenMode: getIsZenMode(),
         showAggSymbols: getShowAggSymbols(),
         aggZoneColors: getAggZoneColors(),
@@ -498,6 +499,11 @@ export function loadSettings() {
         setAggMaxPrice(s.aggMaxPrice);
         const aggMaxEl = document.getElementById('aggMaxPrice');
         if (aggMaxEl) aggMaxEl.value = s.aggMaxPrice > 0 ? s.aggMaxPrice : '';
+    }
+    if (s.useCompactFormat !== undefined) {
+        setUseCompactFormat(s.useCompactFormat);
+        const checkbox = document.getElementById('useCompactFormat');
+        if (checkbox) checkbox.checked = s.useCompactFormat;
     }
     if (s.isZenMode !== undefined) {
         setIsZenMode(s.isZenMode);
