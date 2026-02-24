@@ -379,8 +379,8 @@ export function updateTooltipDelay(val) {
 
 export function updateAggVolumeUnit(unit) {
     setAggVolumeUnit(unit);
-    // Sync all unit tabs
-    const tabs = document.querySelectorAll('.js-agg-volume-unit-tab');
+    // Sync only main table unit tabs (not Resumida which has its own state)
+    const tabs = document.querySelectorAll('#aggSectionWrapper .js-agg-volume-unit-tab, #settingsDrawer .js-agg-volume-unit-tab');
     tabs.forEach(t => t.classList.toggle('active', t.dataset.unit === unit));
     saveSettings();
     // Re-render aggregation table (triggered via renderTable)

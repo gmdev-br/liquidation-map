@@ -555,6 +555,7 @@ export function loadSettings() {
 }
 
 function updateAggVolumeUI(unit) {
-    const tabs = document.querySelectorAll('.js-agg-volume-unit-tab');
+    // Only update main table tabs (Resumida has its own state)
+    const tabs = document.querySelectorAll('#aggSectionWrapper .js-agg-volume-unit-tab, #settingsDrawer .js-agg-volume-unit-tab');
     tabs.forEach(t => t.classList.toggle('active', t.dataset.unit === unit));
 }

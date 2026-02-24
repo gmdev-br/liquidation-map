@@ -685,8 +685,10 @@ function setupEventListeners() {
         exitZenBtn.addEventListener('click', toggleZenMode);
     }
 
-    // Aggregation Volume Unit tabs
-    document.querySelectorAll('.js-agg-volume-unit-tab').forEach(tab => {
+    // Aggregation Volume Unit tabs - only for main table (not Resumida)
+    // Resumida table has its own handler in aggregation.js
+    // Main table tabs are in: drawer (.ctrl .tabs) and aggSectionWrapper (.agg-unit-toggle)
+    document.querySelectorAll('#aggSectionWrapper .js-agg-volume-unit-tab, #settingsDrawer .js-agg-volume-unit-tab').forEach(tab => {
         tab.addEventListener('click', (e) => {
             updateAggVolumeUnit(e.target.dataset.unit);
         });
