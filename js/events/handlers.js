@@ -27,7 +27,7 @@ import {
 } from '../state.js';
 import { COLUMN_DEFS } from '../config.js';
 import { renderTable, updateStats } from '../ui/table.js';
-import { renderAggregationTable, renderAggregationTableResumida, scrollToCurrentPriceRange as aggScrollToRange } from '../ui/aggregation.js';
+import { renderAggregationTable, renderAggregationTableResumida, scrollToCurrentPriceRange as aggScrollToRange, scrollToCurrentPriceRangeResumida } from '../ui/aggregation.js';
 import { renderQuotesPanel, updateRankingPanel } from '../ui/panels.js';
 import { saveSettings } from '../storage/settings.js';
 import { startPriceTicker, stopPriceTicker } from '../ui/panels.js';
@@ -390,16 +390,36 @@ export function updateAggVolumeUnit(unit) {
 export function scrollToCurrentPrice() {
     console.log('scrollToCurrentPrice called');
 
-    // Ensure section is expanded if it's collapsed
-    const sectionWrapper = document.getElementById('aggSectionContent')?.closest('.section-wrapper');
-    if (sectionWrapper && sectionWrapper.classList.contains('collapsed')) {
-        console.log('Expanding aggregation section before scrolling');
-        sectionWrapper.classList.remove('collapsed');
-        localStorage.setItem(`collapse_aggSectionContent`, 'false');
-    }
+    // Check which table is visible (not collapsed)
+    const sectionWrapperCompleta = document.getElementById('aggSectionContent')?.closest('.section-wrapper');
+    const sectionWrapperResumida = document.getElementById('aggSectionContentResumida')?.closest('.section-wrapper');
 
-    // Call the specialized scroll function in aggregation.js
-    aggScrollToRange();
+    const isCompletaCollapsed = sectionWrapperCompleta?.classList.contains('collapsed') ?? false;
+    const isResumidaCollapsed = sectionWrapperResumida?.classList.contains('collapsed') ?? false;
+
+    // Determine which table to scroll to based on visibility
+    if (!isResumidaCollapsed && isCompletaCollapsed) {
+        // Only resumida is visible - scroll to resumida
+        console.log('Scrolling to resumida table (only one visible)');
+        scrollToCurrentPriceRangeResumida();
+    } else if (!isCompletaCollapsed && isResumidaCollapsed) {
+        // Only completa is visible - scroll to completa
+        console.log('Scrolling to completa table (only one visible)');
+        aggScrollToRange();
+    } else if (!isCompletaCollapsed && !isResumidaCollapsed) {
+        // Both are visible - scroll to both
+        console.log('Scrolling to both tables (both visible)');
+        aggScrollToRange();
+        scrollToCurrentPriceRangeResumida();
+    } else {
+        // Both are collapsed - expand completa (default) and scroll
+        console.log('Expanding completa table (both collapsed)');
+        if (sectionWrapperCompleta) {
+            sectionWrapperCompleta.classList.remove('collapsed');
+            localStorage.setItem(`collapse_aggSectionContent`, 'false');
+        }
+        aggScrollToRange();
+    }
 }
 
 export function toggleZenMode() {
