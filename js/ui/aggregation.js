@@ -181,9 +181,14 @@ function renderAggregationTableBase(options = {}) {
             // Remove vácuos
             if (b.isEmpty) return false;
             
-            // Remove intensidade fraca (menos de 10M)
-            const totalNotional = b.notionalLong + b.notionalShort;
-            return totalNotional >= 10_000_000;  // Intensidade >= MEDIA
+            // Condição atual: intensidade >= MÉDIA
+            const hasIntensity = b.notionalLong + b.notionalShort >= 10_000_000;
+            
+            // Nova condição: volume de liquidação significativo
+            const hasLiquidation = b.liqVolLong >= 10_000_000 || b.liqVolShort >= 10_000_000;
+            
+            // Mostra se tiver intensidade OU liquidação significativa
+            return hasIntensity || hasLiquidation;
         });
     }
 
@@ -291,10 +296,11 @@ function buildBands(rows, currentPrices, fxRates, activeEntryCurrency, bandSize,
     let totalShortNotional = 0;
     let bandsWithPosCount = 0;
 
-    // Determine the range
+    // Determine the range - include BOTH entry prices AND liquidation prices
     let minEntryBand = minPriceSetting;
     let maxEntryBand = maxPriceSetting;
 
+    // Calculate dynamic range if no user settings exist
     if (!minEntryBand || !maxEntryBand || minEntryBand <= 0 || maxEntryBand <= 0 || minEntryBand >= maxEntryBand) {
         minEntryBand = Infinity;
         maxEntryBand = -Infinity;
@@ -307,7 +313,22 @@ function buildBands(rows, currentPrices, fxRates, activeEntryCurrency, bandSize,
                 if (b > maxEntryBand) maxEntryBand = b;
             }
         }
-    } else {
+    }
+
+    // ALWAYS include liquidation prices in the band range (regardless of user settings)
+    for (const r of rows) {
+        if (r.liquidationPx > 0) {
+            const liqPriceCorr = getCorrelatedPrice(r, r.liquidationPx, activeEntryCurrency, currentPrices, fxRates);
+            if (isFinite(liqPriceCorr) && liqPriceCorr > 0) {
+                const lb = Math.floor(liqPriceCorr / bandSize) * bandSize;
+                if (lb < minEntryBand) minEntryBand = lb;
+                if (lb > maxEntryBand) maxEntryBand = lb;
+            }
+        }
+    }
+
+    // Apply floor alignment to band boundaries
+    if (minEntryBand !== Infinity && minEntryBand !== -Infinity) {
         minEntryBand = Math.floor(minEntryBand / bandSize) * bandSize;
         maxEntryBand = Math.floor(maxEntryBand / bandSize) * bandSize;
     }
@@ -388,6 +409,7 @@ function buildBands(rows, currentPrices, fxRates, activeEntryCurrency, bandSize,
                 const liqBand = Math.floor(liqPriceCorr / bandSize) * bandSize;
                 const lb = bands[liqBand];
                 if (lb) {
+                    lb.isEmpty = false;  // Marca como não-vazio quando há liquidação
                     if (r.side === 'long') lb.liqVolLong += r.positionValue;
                     else lb.liqVolShort += r.positionValue;
                 }
