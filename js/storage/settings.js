@@ -11,13 +11,14 @@ import {
     getAggInterval, getLiquidationTableHeight, getAggVolumeUnit, getLiquidationMinPriceFull, getLiquidationMaxPriceFull, getUseCompactFormat, getIsZenMode, getLastSeenAccountValues, getShowLiquidationSymbols, getLiquidationZoneColors, getLiquidationHighlightColor, getTooltipDelay,
     getLiquidationMinPriceSummary, getLiquidationMaxPriceSummary, getLiquidationVolumeUnitSummary,
     setSortKey, setSortDir, setSavedScatterState, setSavedLiqState,
-    setColumnOrder, setVisibleColumns, setSelectedCoins, setRankingLimit, setColorMaxLev, setChartHighLevSplit, setChartMode, setBubbleScale, setBubbleOpacity, setLineThickness, setAggregationFactor, setPriceMode, setShowSymbols, setPriceUpdateInterval, setDecimalPlaces, setFontSize, setFontSizeKnown, setLeverageColors, setColumnWidth, setGridSpacing, setMinBtcVolume, setAggInterval, setLiquidationTableHeight, setAggVolumeUnit, setLiquidationMinPriceFull, setLiquidationMaxPriceFull, setUseCompactFormat, setIsZenMode, setLastSeenAccountValues, setShowLiquidationSymbols, setLiquidationZoneColors, setLiquidationHighlightColor, setTooltipDelay,
+    setColumnOrder, setVisibleColumns, setColumnWidths, setSelectedCoins, setRankingLimit, setColorMaxLev, setChartHighLevSplit, setChartMode, setBubbleScale, setBubbleOpacity, setLineThickness, setAggregationFactor, setPriceMode, setShowSymbols, setPriceUpdateInterval, setDecimalPlaces, setFontSize, setFontSizeKnown, setLeverageColors, setColumnWidth, setGridSpacing, setMinBtcVolume, setAggInterval, setLiquidationTableHeight, setAggVolumeUnit, setLiquidationMinPriceFull, setLiquidationMaxPriceFull, setUseCompactFormat, setIsZenMode, setLastSeenAccountValues, setShowLiquidationSymbols, setLiquidationZoneColors, setLiquidationHighlightColor, setTooltipDelay,
     setLiquidationMinPriceSummary, setLiquidationMaxPriceSummary, setLiquidationVolumeUnitSummary
 } from '../state.js';
 import { COLUMN_DEFS } from '../config.js';
 import { cbSetValue, updateCoinSearchLabel } from '../ui/combobox.js';
 import {
     applyColumnVisibility,
+    applyColumnWidths,
     updateColumnSelectDisplay
 } from '../events/handlers.js';
 import { renderQuotesPanel, updatePriceModeUI } from '../ui/panels.js';
@@ -32,7 +33,13 @@ const debouncedSave = debounce((settings) => {
     showToast('Configurações salvas', 'success', 2500);
 }, 1000);
 
-export function saveSettings(getChartState = null, savedScatterState = null, savedLiqState = null, scatterChart = null, liqChartInstance = null) {
+// Immediate save function for critical settings like sort and column order
+function saveSettingsImmediate(settings) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+    console.log('Settings saved immediately');
+}
+
+export function saveSettings(getChartState = null, savedScatterState = null, savedLiqState = null, scatterChart = null, liqChartInstance = null, immediate = false) {
     // Helper to get chart state
     function getChartStateHelper(chart) {
         if (!chart) return null;
@@ -125,8 +132,13 @@ export function saveSettings(getChartState = null, savedScatterState = null, sav
         maxValueCcy: settings.maxValueCcy
     });
 
-    // Use debounced save to reduce localStorage writes
-    debouncedSave(settings);
+    if (immediate) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+        console.log('Settings saved immediately');
+    }
+    else {
+        debouncedSave(settings);
+    }
 }
 
 export function loadSettings() {
@@ -395,8 +407,8 @@ export function loadSettings() {
         priceIntervalRanges.forEach(el => el.value = s.priceUpdateInterval / 1000);
     }
     if (s.columnWidths) {
-        // columnWidths = s.columnWidths;
-        // applyColumnWidths();
+        setColumnWidths(s.columnWidths);
+        applyColumnWidths();
     }
     if (s.rankingLimit) {
         const rankingLimits = document.querySelectorAll('.js-ranking-limit');

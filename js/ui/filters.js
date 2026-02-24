@@ -16,17 +16,27 @@ export function sortBy(key, renderTable) {
         setSortDir(-1);
     }
 
+    updateSortIndicators();
+    saveSettings(null, null, null, null, null, true); // Save immediately for sort changes
+    renderTable();
+}
+
+// Função para atualizar os indicadores visuais de ordenação nos cabeçalhos
+export function updateSortIndicators() {
+    const sortKey = getSortKey();
+    const sortDir = getSortDir();
+
+    // Remove all sort classes from all headers
     document.querySelectorAll('th[id^="th-"]').forEach(th => {
         th.classList.remove('sorted', 'sorted-asc', 'sorted-desc');
     });
-    const th = document.getElementById(`th-${key}`);
+
+    // Add sort class to the current sort column
+    const th = document.getElementById(`th-${sortKey}`);
     if (th) {
         th.classList.add('sorted');
-        th.classList.add(getSortDir() === 1 ? 'sorted-asc' : 'sorted-desc');
+        th.classList.add(sortDir === 1 ? 'sorted-asc' : 'sorted-desc');
     }
-
-    saveSettings();
-    renderTable();
 }
 
 export function getPnlForWindow(row, window) {

@@ -85,26 +85,8 @@ export async function updateRankingPanel() {
 
         const rankingLimit = getRankingLimit();
         const selectedCoins = getSelectedCoins();
-
-        // Get market cap data
-        const marketCapData = await fetchMarketCapRanking();
-
-        // If market cap data failed, show fallback message
-        if (marketCapData.length === 0) {
-            panel.innerHTML = `
-                <div style="display: flex; align-items: center; gap: 8px; padding: 10px; color: var(--muted); font-size: 12px;">
-                    <span>⚠️</span>
-                    <span>Market cap data unavailable - showing whale positions instead</span>
-                </div>
-            `;
-
-            // Fallback to whale position ranking
-            updateWhalePositionRanking();
-            return;
-        }
-
-
-        // Get whale position data for additional info
+        
+        // Get whale position data first (this is our primary data source)
         const allRows = getAllRows();
         const whaleStats = {};
         allRows.forEach(row => {
@@ -119,6 +101,21 @@ export async function updateRankingPanel() {
             whaleStats[row.coin].count++;
             whaleStats[row.coin].whales.add(row.address);
         });
+
+        // Try to get market cap data
+        let marketCapData = [];
+        try {
+            marketCapData = await fetchMarketCapRanking();
+        } catch (e) {
+            console.warn('Failed to fetch market cap data:', e);
+        }
+
+        // If we have whale data but no market cap data, use whale ranking
+        if (marketCapData.length === 0) {
+            console.log('Using whale position ranking (no market cap data)');
+            renderWhalePositionRanking(panel, whaleStats, rankingLimit, selectedCoins);
+            return;
+        }
 
         // Combine market cap with whale position data
         const combinedData = marketCapData
@@ -136,7 +133,7 @@ export async function updateRankingPanel() {
         console.log('Market cap ranking updated:', combinedData.length, 'coins');
 
         panel.innerHTML = `
-            <div style="display: flex; align-items: center; gap: 8px; margin-right: 10px; color: var(--muted); font-size: 11px;">
+            <div style="display: flex; align-items: center; gap: 8px; margin-right: 10px; color: var(--muted); font-size: 11px; flex-shrink: 0;">
                 <span>🌍</span>
                 <span>Global Market Cap Ranking</span>
             </div>
@@ -175,7 +172,54 @@ export async function updateRankingPanel() {
     }, RANKING_PANEL_DEBOUNCE_MS);
 }
 
-// Fallback function for whale position ranking
+// Helper function to render whale position ranking
+function renderWhalePositionRanking(panel, whaleStats, rankingLimit, selectedCoins) {
+    const sortedCoins = Object.entries(whaleStats)
+        .sort((a, b) => b[1].totalPositionValue - a[1].totalPositionValue)
+        .slice(0, rankingLimit);
+
+    if (sortedCoins.length === 0) {
+        panel.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 8px; padding: 10px; color: var(--muted); font-size: 12px; flex-shrink: 0;">
+                <span>📊</span>
+                <span>No whale positions loaded yet. Start scanning to see data.</span>
+            </div>
+        `;
+        return;
+    }
+
+    panel.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 8px; margin-right: 10px; color: var(--muted); font-size: 11px; flex-shrink: 0;">
+            <span>🐋</span>
+            <span>Whale Position Ranking</span>
+        </div>
+        ${sortedCoins.map(([coin, stats], i) => {
+        const rank = i + 1;
+        const totalPositionValue = stats.totalPositionValue;
+        const whaleMarketCapStr = fmtCcy(totalPositionValue, null, 'USD', true);
+        const isSelected = selectedCoins.includes(coin);
+        const whaleInfo = `${stats.count} whales • $${(totalPositionValue / 1000000).toFixed(1)}M positions`;
+
+        return `
+                <div class="ranking-card ${isSelected ? 'selected' : ''}" 
+                     onclick="selectCoin('${coin}')" 
+                     title="${coin}\nWhale Market Cap: ${whaleMarketCapStr}\n${whaleInfo}">
+                    <div class="ranking-rank">#${rank}</div>
+                    <div class="ranking-coin">${coin}</div>
+                    <div class="ranking-mcap">${whaleMarketCapStr}</div>
+                    <div class="ranking-change">—</div>
+                    <div class="whale-market-cap" title="${whaleInfo}">${stats.whales.size} 🐋</div>
+                    <div class="whale-indicator" title="${whaleInfo}">🐋</div>
+                    ${isSelected ? '<div class="ranking-selected-indicator">✓</div>' : ''}
+                </div>
+            `;
+    }).join('')}
+    `;
+    
+    console.log('Whale position ranking rendered with', sortedCoins.length, 'coins');
+}
+
+// Fallback function for whale position ranking (kept for compatibility)
 function updateWhalePositionRanking() {
     const panel = document.getElementById('holdingsPanel');
     if (!panel) return;
@@ -199,38 +243,7 @@ function updateWhalePositionRanking() {
         coinStats[row.coin].whales.add(row.address);
     });
 
-    const sortedCoins = Object.entries(coinStats)
-        .sort((a, b) => b[1].totalPositionValue - a[1].totalPositionValue)
-        .slice(0, rankingLimit);
-
-    panel.innerHTML += `
-        <div style="display: flex; align-items: center; gap: 8px; margin-right: 10px; color: var(--muted); font-size: 11px;">
-            <span>🐋</span>
-            <span>Whale Market Cap Ranking (Fallback)</span>
-        </div>
-        ${sortedCoins.map(([coin, stats], i) => {
-        const rank = i + 1;
-        const totalPositionValue = stats.totalPositionValue;
-        const whaleMarketCapStr = fmtCcy(totalPositionValue, null, 'USD', true);
-        const change = '0%';
-        const isSelected = selectedCoins.includes(coin);
-        const whaleInfo = `${stats.count} whales • $${(totalPositionValue / 1000000).toFixed(1)}M positions`;
-
-        return `
-                <div class="ranking-card ${isSelected ? 'selected' : ''}" 
-                     onclick="selectCoin('${coin}')" 
-                     title="${coin}\nWhale Market Cap: ${whaleMarketCapStr}\n${whaleInfo}">
-                    <div class="ranking-rank">#${rank}</div>
-                    <div class="ranking-coin">${coin}</div>
-                    <div class="ranking-mcap">${whaleMarketCapStr}</div>
-                    <div class="ranking-change">${change}</div>
-                    <div class="whale-market-cap" title="${whaleInfo}">Global: —</div>
-                    <div class="whale-indicator" title="${whaleInfo}">🐋</div>
-                    ${isSelected ? '<div class="ranking-selected-indicator">✓</div>' : ''}
-                </div>
-            `;
-    }).join('')}
-    `;
+    renderWhalePositionRanking(panel, coinStats, rankingLimit, selectedCoins);
 }
 
 export function renderQuotesPanel() {

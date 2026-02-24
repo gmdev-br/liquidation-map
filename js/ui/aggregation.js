@@ -323,12 +323,20 @@ function buildBands(rows, currentPrices, fxRates, activeEntryCurrency, bandSize,
     let totalShortNotional = 0;
     let bandsWithPosCount = 0;
 
-    // Determine the range - include BOTH entry prices AND liquidation prices
-    let minEntryBand = minPriceSetting;
-    let maxEntryBand = maxPriceSetting;
+    // Check if user has set valid price range settings
+    const hasUserMinPrice = minPriceSetting > 0;
+    const hasUserMaxPrice = maxPriceSetting > 0;
+    const hasValidUserRange = hasUserMinPrice && hasUserMaxPrice && minPriceSetting < maxPriceSetting;
 
-    // Calculate dynamic range if no user settings exist
-    if (!minEntryBand || !maxEntryBand || minEntryBand <= 0 || maxEntryBand <= 0 || minEntryBand >= maxEntryBand) {
+    // Determine the range based on user settings OR dynamic calculation
+    let minEntryBand, maxEntryBand;
+
+    if (hasValidUserRange) {
+        // Use user-defined range
+        minEntryBand = minPriceSetting;
+        maxEntryBand = maxPriceSetting;
+    } else {
+        // Calculate dynamic range if no valid user settings exist
         minEntryBand = Infinity;
         maxEntryBand = -Infinity;
 
@@ -340,16 +348,16 @@ function buildBands(rows, currentPrices, fxRates, activeEntryCurrency, bandSize,
                 if (b > maxEntryBand) maxEntryBand = b;
             }
         }
-    }
 
-    // ALWAYS include liquidation prices in the band range (regardless of user settings)
-    for (const r of rows) {
-        if (r.liquidationPx > 0) {
-            const liqPriceCorr = getCorrelatedPrice(r, r.liquidationPx, activeEntryCurrency, currentPrices, fxRates);
-            if (isFinite(liqPriceCorr) && liqPriceCorr > 0) {
-                const liqB = Math.floor(liqPriceCorr / bandSize) * bandSize;
-                if (liqB < minEntryBand) minEntryBand = liqB;
-                if (liqB > maxEntryBand) maxEntryBand = liqB;
+        // Also consider liquidation prices when no user range is set
+        for (const r of rows) {
+            if (r.liquidationPx > 0) {
+                const liqPriceCorr = getCorrelatedPrice(r, r.liquidationPx, activeEntryCurrency, currentPrices, fxRates);
+                if (isFinite(liqPriceCorr) && liqPriceCorr > 0) {
+                    const liqB = Math.floor(liqPriceCorr / bandSize) * bandSize;
+                    if (liqB < minEntryBand) minEntryBand = liqB;
+                    if (liqB > maxEntryBand) maxEntryBand = liqB;
+                }
             }
         }
     }
@@ -396,10 +404,16 @@ function buildBands(rows, currentPrices, fxRates, activeEntryCurrency, bandSize,
         };
     }
 
-    // Populate volumes
+    // Helper to check if price is within user-defined range
+    const isInUserRange = (price) => {
+        if (!hasValidUserRange) return true; // No filter applied if no valid user range
+        return price >= minPriceSetting && price <= maxPriceSetting;
+    };
+
+    // Populate volumes - only include entries within user-defined range
     for (const r of rows) {
         const entryCcy = getCorrelatedEntry(r, activeEntryCurrency, currentPrices, fxRates);
-        if (!isNaN(entryCcy) && entryCcy > 0) {
+        if (!isNaN(entryCcy) && entryCcy > 0 && isInUserRange(entryCcy)) {
             const bandDown = Math.floor(entryCcy / bandSize) * bandSize;
             const b = bands[bandDown];
             if (b) {
@@ -429,10 +443,10 @@ function buildBands(rows, currentPrices, fxRates, activeEntryCurrency, bandSize,
             }
         }
 
-        // Liquidation Volume logic
+        // Liquidation Volume logic - only include liquidations within user-defined range
         if (r.liquidationPx > 0) {
             const liqPriceCorr = getCorrelatedPrice(r, r.liquidationPx, activeEntryCurrency, currentPrices, fxRates);
-            if (isFinite(liqPriceCorr) && liqPriceCorr > 0) {
+            if (isFinite(liqPriceCorr) && liqPriceCorr > 0 && isInUserRange(liqPriceCorr)) {
                 const liqBand = Math.floor(liqPriceCorr / bandSize) * bandSize;
                 const lb = bands[liqBand];
                 if (lb) {

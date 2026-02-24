@@ -158,6 +158,14 @@
     margin-top: 4px;
 }
 
+.ranking-change.green {
+    color: var(--green);
+}
+
+.ranking-change.red {
+    color: var(--red);
+}
+
 .whale-market-cap {
     font-family: var(--mono);
     font-size: 9px;

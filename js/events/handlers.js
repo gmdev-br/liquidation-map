@@ -1,6 +1,6 @@
-// ═══════════════════════════════════════════════════════════
+// ═════════════════════════════════════════════
 // LIQUID GLASS — Events Handlers
-// ═══════════════════════════════════════════════════════════
+// ═════════════════════════════════════════════
 
 // Helper function to synchronize controls with same value
 function syncControls(valueSelectors, value) {
@@ -728,7 +728,7 @@ function initResize(e, tableType) {
         const storageKey = `${tableType}_${colKey}`;
         columnWidths[storageKey] = parseInt(th.style.width);
         setColumnWidths(columnWidths);
-        saveSettings();
+        saveSettings(null, null, null, null, null, true); // Save immediately for column resize
     };
 
     document.addEventListener('mousemove', onMouseMove);
@@ -752,6 +752,7 @@ export function setupColumnDragAndDrop() {
     let draggedTh = null;
     let dragGhost = null;
     let sourceTable = null;
+    let draggedColumnIndex = -1;
 
     // Remove draggable from all headers (we handle manually)
     tableHeaders.forEach(th => {
@@ -776,11 +777,11 @@ export function setupColumnDragAndDrop() {
         dragStartX = e.clientX;
         dragStartY = e.clientY;
         sourceTable = th.closest('table');
+        draggedColumnIndex = Array.from(th.parentElement.children).indexOf(th);
 
         th.classList.add('dragging');
 
         // Highlight entire column being dragged
-        const draggedColumnIndex = Array.from(th.parentElement.children).indexOf(th);
         const columnSelector = `td:nth-child(${draggedColumnIndex + 1})`;
         sourceTable.querySelectorAll(columnSelector).forEach(td => {
             td.classList.add('column-dragging');
@@ -798,17 +799,77 @@ export function setupColumnDragAndDrop() {
         if (Math.abs(deltaX) > 5 || Math.abs(deltaY) > 5) {
             draggedTh.style.opacity = '0.5';
 
-            // Create ghost element if not exists
+            // Create ghost element with entire column if not exists
             if (!dragGhost) {
                 dragGhost = document.createElement('div');
-                dragGhost.className = 'column-drag-ghost';
-                dragGhost.textContent = draggedTh.querySelector('.th-label')?.textContent || draggedTh.textContent.trim().split('\n')[0];
+                dragGhost.className = 'column-drag-ghost-full';
+                
+                // Get column width
+                const columnWidth = draggedTh.offsetWidth;
+                
+                // Create header part
+                const headerContent = draggedTh.querySelector('.th-label')?.textContent || draggedTh.textContent.trim().split('\n')[0];
+                
+                // Get visible cells from the column (limit to avoid performance issues)
+                const columnSelector = `td:nth-child(${draggedColumnIndex + 1})`;
+                const cells = sourceTable.querySelectorAll(columnSelector);
+                const visibleCells = Array.from(cells).slice(0, 10); // Limit to 10 rows for performance
+                
+                // Build ghost HTML
+                let ghostHTML = `
+                    <div class="ghost-header" style="
+                        background: linear-gradient(180deg, rgba(30, 41, 59, 0.98) 0%, rgba(20, 30, 50, 0.95) 100%);
+                        padding: 8px 12px;
+                        font-size: 11px;
+                        font-weight: 600;
+                        text-transform: uppercase;
+                        color: var(--text);
+                        border-bottom: 1px solid var(--glass-border);
+                        white-space: nowrap;
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                    ">${headerContent}</div>
+                    <div class="ghost-body" style="max-height: 200px; overflow: hidden;">
+                `;
+                
+                visibleCells.forEach(cell => {
+                    const cellText = cell.textContent.trim();
+                    ghostHTML += `<div class="ghost-cell" style="
+                        padding: 6px 12px;
+                        font-size: 11px;
+                        color: var(--muted);
+                        white-space: nowrap;
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                        border-bottom: 1px solid rgba(255,255,255,0.05);
+                    ">${cellText}</div>`;
+                });
+                
+                ghostHTML += '</div>';
+                
+                dragGhost.innerHTML = ghostHTML;
+                dragGhost.style.cssText = `
+                    position: fixed;
+                    pointer-events: none;
+                    z-index: 10000;
+                    width: ${columnWidth}px;
+                    background: rgba(15, 23, 42, 0.95);
+                    border: 2px solid var(--accent);
+                    border-radius: var(--r-sm);
+                    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 20px rgba(96, 165, 250, 0.2);
+                    backdrop-filter: blur(12px);
+                    -webkit-backdrop-filter: blur(12px);
+                    opacity: 0.9;
+                    transform: rotate(2deg);
+                    transition: transform 0.1s ease;
+                `;
+                
                 document.body.appendChild(dragGhost);
             }
 
             // Position ghost element
-            dragGhost.style.left = `${e.clientX + 10}px`;
-            dragGhost.style.top = `${e.clientY + 10}px`;
+            dragGhost.style.left = `${e.clientX + 15}px`;
+            dragGhost.style.top = `${e.clientY + 15}px`;
         }
 
         // Find potential drop target
@@ -867,7 +928,7 @@ export function setupColumnDragAndDrop() {
 
                         // Update state and save
                         setColumnOrder(newOrder);
-                        saveSettings();
+                        saveSettings(null, null, null, null, null, true); // Save immediately for column reorder
                         console.log('Order saved');
 
                         // Re-render table to apply new column order
@@ -877,17 +938,41 @@ export function setupColumnDragAndDrop() {
                 } else {
                     // For aggregation tables, reorder DOM elements directly
                     const thead = sourceTable.querySelector('thead tr');
+                    const tbody = sourceTable.querySelector('tbody');
+                    
                     if (thead) {
                         const allThs = Array.from(thead.querySelectorAll('th'));
                         const draggedIdx = allThs.indexOf(draggedTh);
                         const targetIdx = allThs.indexOf(targetTh);
                         
                         if (draggedIdx !== -1 && targetIdx !== -1) {
+                            // Move the header
                             if (draggedIdx < targetIdx) {
                                 targetTh.after(draggedTh);
                             } else {
                                 targetTh.before(draggedTh);
                             }
+                            
+                            // Move all corresponding td cells in each row
+                            if (tbody) {
+                                const rows = tbody.querySelectorAll('tr');
+                                rows.forEach(row => {
+                                    const allTds = Array.from(row.querySelectorAll('td'));
+                                    // Verify indices are valid for this row
+                                    if (draggedIdx < allTds.length && targetIdx < allTds.length) {
+                                        const draggedTd = allTds[draggedIdx];
+                                        const targetTd = allTds[targetIdx];
+                                        if (draggedTd && targetTd) {
+                                            if (draggedIdx < targetIdx) {
+                                                targetTd.after(draggedTd);
+                                            } else {
+                                                targetTd.before(draggedTd);
+                                            }
+                                        }
+                                    }
+                                });
+                            }
+                            
                             saveSettings();
                         }
                     }
@@ -902,11 +987,12 @@ export function setupColumnDragAndDrop() {
             draggedTh.style.opacity = '';
 
             // Remove column highlighting
-            const draggedColumnIndex = Array.from(draggedTh.parentElement.children).indexOf(draggedTh);
-            const columnSelector = `td:nth-child(${draggedColumnIndex + 1})`;
-            sourceTable?.querySelectorAll(columnSelector).forEach(td => {
-                td.classList.remove('column-dragging');
-            });
+            if (sourceTable && draggedColumnIndex >= 0) {
+                const columnSelector = `td:nth-child(${draggedColumnIndex + 1})`;
+                sourceTable.querySelectorAll(columnSelector).forEach(td => {
+                    td.classList.remove('column-dragging');
+                });
+            }
 
             draggedTh = null;
         }

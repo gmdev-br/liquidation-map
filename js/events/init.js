@@ -30,7 +30,7 @@ import {
 } from './handlers.js';
 import { initColumnWidthControl, applyColumnWidth } from '../ui/columnWidth.js';
 import { setWindow, setStatus, setProgress } from '../ui/status.js';
-import { sortBy } from '../ui/filters.js';
+import { sortBy, updateSortIndicators } from '../ui/filters.js';
 import { CURRENCY_META } from '../config.js';
 
 // ── Swipe Gestures for Navigation ──
@@ -800,6 +800,9 @@ async function loadInitialState() {
 
     console.log('loadInitialState: Loading settings...');
     loadSettings();
+    
+    // Apply sort indicators after loading settings
+    updateSortIndicators();
 
     // Carregar preços atuais e taxas de câmbio antes de renderizar a tabela
     try {
