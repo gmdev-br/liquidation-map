@@ -8,6 +8,10 @@ import { enableVirtualScroll } from '../utils/virtualScroll.js';
 import { saveSettings } from '../storage/settings.js';
 import { CURRENCY_META } from '../config.js';
 
+// Performance tracking
+let aggRenderCount = 0;
+let lastAggRenderTime = 0;
+
 // ═════════════════════════════════════════════
 // State Management - Unified for both tables
 // ═════════════════════════════════════════════

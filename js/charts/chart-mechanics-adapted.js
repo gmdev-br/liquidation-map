@@ -11,7 +11,7 @@ export const crosshairPlugin = {
     id: 'crosshair',
     defaults: {
         width: 1,
-        color: 'rgba(255, 255, 255, 0.15)',
+        color: 'rgba(255, 255, 255, 0.18)',
         dash: [4, 4]
     },
     afterInit: (chart, _args, _options) => {
@@ -143,11 +143,11 @@ export const btcPriceLabelPlugin = {
         }
 
 
-        ctx.font = '9px sans-serif';
+        ctx.font = '12px Inter, sans-serif';
         const text = opts.text;
-        const textWidth = ctx.measureText(text).width + 16;
-        const textHeight = 20;
-        const r = 4;
+        const textWidth = ctx.measureText(text).width + 20;
+        const textHeight = 24;
+        const r = 6;
 
         if (isVertical) {
             // Price is on Y axis
@@ -171,12 +171,12 @@ export const btcPriceLabelPlugin = {
             // Arrow pointing to the right
             ctx.beginPath();
             ctx.moveTo(xPos + textWidth, yVal);
-            ctx.lineTo(xPos + textWidth - 4, yVal - 4);
-            ctx.lineTo(xPos + textWidth - 4, yVal + 4);
-            ctx.fillStyle = 'rgba(255, 165, 0, 0.85)';
+            ctx.lineTo(xPos + textWidth - 6, yVal - 5);
+            ctx.lineTo(xPos + textWidth - 6, yVal + 5);
+            ctx.fillStyle = 'rgba(245, 158, 11, 0.90)';
             ctx.fill();
 
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.9)';
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.95)';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText(text, xPos + textWidth / 2, yVal);
@@ -203,12 +203,12 @@ export const btcPriceLabelPlugin = {
             // Arrow pointing up
             ctx.beginPath();
             ctx.moveTo(xVal, yPos);
-            ctx.lineTo(xVal - 4, yPos + 4);
-            ctx.lineTo(xVal + 4, yPos + 4);
-            ctx.fillStyle = 'rgba(255, 165, 0, 0.85)';
+            ctx.lineTo(xVal - 6, yPos + 5);
+            ctx.lineTo(xVal + 6, yPos + 5);
+            ctx.fillStyle = 'rgba(245, 158, 11, 0.90)';
             ctx.fill();
 
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.9)';
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.95)';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText(text, xVal, yPos + textHeight / 2);
@@ -238,8 +238,8 @@ export const originalZoomConfig = {
         pinch: { enabled: true },
         drag: {
             enabled: true,
-            backgroundColor: 'rgba(255, 255, 255, 0.08)',
-            borderColor: 'rgba(255, 255, 255, 0.15)',
+            backgroundColor: 'rgba(156, 163, 175, 0.12)',
+            borderColor: 'rgba(156, 163, 175, 0.25)',
             borderWidth: 1,
             modifierKey: 'shift',
         },
@@ -647,11 +647,11 @@ export const btcGridPlugin = {
     defaults: {
         minorInterval: 500, // Will be overridden by user input
         majorInterval: 2500, // Will be calculated as 5x minor
-        minorColor: 'rgba(255, 255, 255, 0.03)',
+        minorColor: 'rgba(255, 255, 255, 0.05)',
         minorWidth: 1,
-        majorColor: 'rgba(255, 255, 255, 0.10)',
+        majorColor: 'rgba(255, 255, 255, 0.12)',
         majorWidth: 1.5,
-        horizontalColor: 'rgba(255, 255, 255, 0.03)',
+        horizontalColor: 'rgba(255, 255, 255, 0.05)',
         horizontalWidth: 1
     },
     afterDraw: (chart, _args, options) => {

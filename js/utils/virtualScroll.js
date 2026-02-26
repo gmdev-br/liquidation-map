@@ -57,7 +57,10 @@ export class VirtualScroll {
 
         // Only render if visible range changed
         if (this.visibleStart !== oldStart || this.visibleEnd !== oldEnd) {
-            this.render();
+            // Use requestAnimationFrame for smoother rendering
+            requestAnimationFrame(() => {
+                this.render();
+            });
         }
     }
 

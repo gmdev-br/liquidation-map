@@ -1,4 +1,10 @@
 {
+  "name": "liquidation-map",
+  "version": "1.0.0",
+  "description": "Liquidation Map Application",
+  "scripts": {
+    "start": "npx http-server -p 8000 -o"
+  },
   "devDependencies": {
     "eslint": "^9.39.2",
     "eslint-formatter-compact": "^9.0.1"

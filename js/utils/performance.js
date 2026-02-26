@@ -19,6 +19,31 @@ export function debounce(func, wait = 300) {
 }
 
 /**
+ * Creates an adaptive debounced function with different delays based on system state
+ * @param {Function} func - Function to debounce
+ * @param {Object} options - Configuration options
+ * @param {number} options.scanDelay - Delay during scanning (default: 100ms)
+ * @param {number} options.idleDelay - Delay when idle (default: 300ms)
+ * @param {Function} options.getState - Function to get current state (should return 'scanning' or 'idle')
+ */
+export function adaptiveDebounce(func, options = {}) {
+    const { scanDelay = 100, idleDelay = 300, getState } = options;
+    let timeout;
+
+    return function executedFunction(...args) {
+        clearTimeout(timeout);
+
+        // Determine current delay based on state
+        const currentState = getState ? getState() : 'idle';
+        const delay = currentState === 'scanning' ? scanDelay : idleDelay;
+
+        timeout = setTimeout(() => {
+            func(...args);
+        }, delay);
+    };
+}
+
+/**
  * Creates a throttled function that only invokes func at most once per every wait milliseconds.
  */
 export function throttle(func, wait = 100) {

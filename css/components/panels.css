@@ -70,6 +70,27 @@
     -webkit-transform: translateZ(0);
     -webkit-tap-highlight-color: transparent;
     overflow: hidden;
+    will-change: transform, box-shadow;
+}
+
+.ranking-card.primary {
+    background: linear-gradient(135deg, rgba(156, 163, 175, 0.15) 0%, rgba(156, 163, 175, 0.10) 100%);
+    border-color: var(--glass-border-hi);
+    box-shadow: 0 4px 16px rgba(156, 163, 175, 0.15);
+}
+
+.ranking-card.secondary {
+    opacity: 0.85;
+}
+
+.ranking-card.primary .ranking-coin {
+    color: #fff;
+    font-weight: 800;
+}
+
+.ranking-card.primary .ranking-mcap {
+    color: var(--gold);
+    font-weight: 700;
 }
 
 .ranking-card::before {
@@ -96,7 +117,16 @@
     background: var(--glass-bg-strong);
     transform: translateY(-2px);
     border-color: var(--glass-border-hi);
-    box-shadow: var(--glass-shadow);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+}
+
+.ranking-card.primary:hover {
+    background: linear-gradient(135deg, rgba(156, 163, 175, 0.25) 0%, rgba(156, 163, 175, 0.20) 100%);
+    box-shadow: 0 8px 24px rgba(156, 163, 175, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.08) inset;
+}
+
+.ranking-card:active {
+    transform: translateY(0) scale(0.98);
 }
 
 .ranking-card.selected {
@@ -104,6 +134,16 @@
     background: linear-gradient(135deg, rgba(255, 191, 0, 0.12) 0%, rgba(255, 191, 0, 0.08) 100%);
     box-shadow: 0 0 20px rgba(255, 191, 0, 0.25), 0 4px 12px rgba(0, 0, 0, 0.3);
     transform: translateY(-1px);
+    animation: selectedPulse 2s ease-in-out infinite;
+}
+
+@keyframes selectedPulse {
+    0%, 100% {
+        box-shadow: 0 0 20px rgba(255, 191, 0, 0.25), 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+    50% {
+        box-shadow: 0 0 28px rgba(255, 191, 0, 0.35), 0 4px 16px rgba(0, 0, 0, 0.35);
+    }
 }
 
 .ranking-selected-indicator {

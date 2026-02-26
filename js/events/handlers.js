@@ -2,6 +2,290 @@
 // LIQUID GLASS — Events Handlers
 // ═════════════════════════════════════════════
 
+// Performance utilities
+let debounceTimeouts = new Map();
+let throttleLastRun = new Map();
+
+/**
+ * Debounce function to limit execution rate
+ * @param {string} key - Unique identifier for the debounced function
+ * @param {Function} func - Function to debounce
+ * @param {number} delay - Delay in milliseconds
+ */
+export function debounce(key, func, delay = 100) {
+    return (...args) => {
+        if (debounceTimeouts.has(key)) {
+            clearTimeout(debounceTimeouts.get(key));
+        }
+        debounceTimeouts.set(key, setTimeout(() => {
+            func(...args);
+            debounceTimeouts.delete(key);
+        }, delay));
+    };
+}
+
+/**
+ * Throttle function to limit execution rate
+ * @param {string} key - Unique identifier for the throttled function
+ * @param {Function} func - Function to throttle
+ * @param {number} limit - Minimum time between executions in milliseconds
+ */
+export function throttle(key, func, limit = 100) {
+    return (...args) => {
+        const now = Date.now();
+        const lastRun = throttleLastRun.get(key) || 0;
+        if (now - lastRun >= limit) {
+            func(...args);
+            throttleLastRun.set(key, now);
+        }
+    };
+}
+
+/**
+ * Enhanced touch event handler with passive option for better performance
+ * @param {HTMLElement} element - Element to attach handler to
+ * @param {string} event - Event name
+ * @param {Function} handler - Event handler function
+ * @param {Object} options - Event listener options
+ */
+export function addTouchHandler(element, event, handler, options = { passive: true }) {
+    if (element) {
+        element.addEventListener(event, handler, options);
+    }
+}
+
+/**
+ * Focus management utility
+ * @param {HTMLElement} element - Element to focus
+ * @param {boolean} preventScroll - Whether to prevent scroll on focus
+ */
+export function focusElement(element, preventScroll = false) {
+    if (element) {
+        element.focus({ preventScroll });
+        element.setAttribute('tabindex', '0');
+    }
+}
+
+/**
+ * Keyboard navigation handler
+ * @param {KeyboardEvent} event - Keyboard event
+ * @param {Object} handlers - Map of key codes to handler functions
+ */
+export function handleKeyboardNavigation(event, handlers = {}) {
+    const key = event.key;
+    if (handlers[key]) {
+        event.preventDefault();
+        handlers[key](event);
+    }
+}
+
+/**
+ * Enhanced accessibility utilities
+ */
+export const accessibility = {
+    /**
+     * Set ARIA attributes on an element
+     * @param {HTMLElement} element - Element to modify
+     * @param {Object} attributes - ARIA attributes to set
+     */
+    setAria(element, attributes) {
+        if (element) {
+            Object.entries(attributes).forEach(([key, value]) => {
+                element.setAttribute(`aria-${key}`, value);
+            });
+        }
+    },
+
+    /**
+     * Set role on an element
+     * @param {HTMLElement} element - Element to modify
+     * @param {string} role - Role to set
+     */
+    setRole(element, role) {
+        if (element) {
+            element.setAttribute('role', role);
+        }
+    },
+
+    /**
+     * Make element focusable
+     * @param {HTMLElement} element - Element to modify
+     * @param {number} tabIndex - Tab index value
+     */
+    makeFocusable(element, tabIndex = 0) {
+        if (element) {
+            element.setAttribute('tabindex', tabIndex);
+        }
+    }
+};
+
+/**
+ * Error handling utilities
+ */
+export const errorHandler = {
+    /**
+     * Handle errors with logging and user feedback
+     * @param {Error} error - Error object
+     * @param {string} context - Context where error occurred
+     * @param {boolean} showUserMessage - Whether to show user-friendly message
+     */
+    handleError(error, context = 'Unknown', showUserMessage = true) {
+        console.error(`[Error in ${context}]:`, error);
+        
+        if (showUserMessage) {
+            // Show user-friendly error message
+            this.showUserError(error);
+        }
+    },
+
+    /**
+     * Show user-friendly error message
+     * @param {Error} error - Error object
+     */
+    showUserError(error) {
+        const toast = document.createElement('div');
+        toast.className = 'toast error';
+        toast.innerHTML = `<span class="toast-icon">⚠</span><span class="toast-message">${this.getUserFriendlyMessage(error)}</span>`;
+        document.getElementById('toast-container').appendChild(toast);
+        
+        // Trigger animation
+        requestAnimationFrame(() => toast.classList.add('show'));
+        
+        // Auto-hide after 5 seconds
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => toast.remove(), 400);
+        }, 5000);
+    },
+
+    /**
+     * Get user-friendly error message
+     * @param {Error} error - Error object
+     * @returns {string} User-friendly message
+     */
+    getUserFriendlyMessage(error) {
+        if (error.message.includes('Network')) {
+            return 'Network error. Please check your connection.';
+        }
+        if (error.message.includes('timeout')) {
+            return 'Request timed out. Please try again.';
+        }
+        return 'An error occurred. Please try again.';
+    }
+};
+
+/**
+ * Retry utility for failed operations
+ * @param {Function} operation - Function to retry
+ * @param {number} maxRetries - Maximum number of retries
+ * @param {number} delay - Delay between retries in ms
+ * @returns {Promise} Result of operation
+ */
+export async function retry(operation, maxRetries = 3, delay = 1000) {
+    for (let i = 0; i < maxRetries; i++) {
+        try {
+            return await operation();
+        } catch (error) {
+            if (i === maxRetries - 1) throw error;
+            await new Promise(resolve => setTimeout(resolve, delay * (i + 1)));
+        }
+    }
+}
+
+/**
+ * Graceful degradation utilities
+ */
+export const gracefulDegradation = {
+    /**
+     * Fallback to simpler version if feature fails
+     * @param {Function} primary - Primary function to try
+     * @param {Function} fallback - Fallback function
+     * @returns {any} Result of primary or fallback
+     */
+    async fallback(primary, fallback) {
+        try {
+            return await primary();
+        } catch (error) {
+            console.warn('[Graceful Degradation] Primary failed, using fallback:', error);
+            return await fallback();
+        }
+    },
+
+    /**
+     * Check if feature is supported
+     * @param {string} feature - Feature to check
+     * @returns {boolean} Whether feature is supported
+     */
+    isSupported(feature) {
+        switch (feature) {
+            case 'webgl':
+                return !!window.WebGLRenderingContext;
+            case 'webworker':
+                return !!window.Worker;
+            case 'intersectionobserver':
+                return !!window.IntersectionObserver;
+            case 'requestidlecallback':
+                return typeof requestIdleCallback === 'function';
+            default:
+                return true;
+        }
+    }
+};
+
+/**
+ * Performance monitoring utilities
+ */
+export const performanceMonitor = {
+    metrics: new Map(),
+
+    /**
+     * Start measuring performance
+     * @param {string} label - Label for the measurement
+     */
+    start(label) {
+        this.metrics.set(label, { start: performance.now() });
+    },
+
+    /**
+     * End measuring performance
+     * @param {string} label - Label for the measurement
+     * @returns {number} Duration in milliseconds
+     */
+    end(label) {
+        const metric = this.metrics.get(label);
+        if (metric) {
+            const duration = performance.now() - metric.start;
+            this.metrics.delete(label);
+            
+            // Log slow operations
+            if (duration > 100) {
+                console.warn(`[Performance] ${label} took ${duration.toFixed(2)}ms`);
+            }
+            
+            return duration;
+        }
+        return 0;
+    },
+
+    /**
+     * Measure async operation
+     * @param {string} label - Label for the measurement
+     * @param {Function} fn - Async function to measure
+     * @returns {Promise} Result of the function
+     */
+    async measure(label, fn) {
+        this.start(label);
+        try {
+            const result = await fn();
+            this.end(label);
+            return result;
+        } catch (error) {
+            this.end(label);
+            throw error;
+        }
+    }
+};
+
 // Helper function to synchronize controls with same value
 function syncControls(valueSelectors, value) {
     valueSelectors.forEach(selector => {

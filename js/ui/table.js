@@ -18,17 +18,25 @@ import { renderLiqScatterPlot } from '../charts/liquidation.js';
 import { setupColumnDragAndDrop, applyColumnWidths, setupColumnResizing } from '../events/handlers.js';
 import { updateRankingPanel } from './panels.js';
 import { applyColumnWidth } from './columnWidth.js';
-import { debounce, Cache } from '../utils/performance.js';
+import { debounce, Cache, adaptiveDebounce } from '../utils/performance.js';
 import { enableVirtualScroll } from '../utils/virtualScroll.js';
 import { renderAggregationTable, renderAggregationTableResumida } from './aggregation.js';
 
 // Cache for filtered data to avoid recomputing
 const filterCache = new Cache(5000);
 
-// Debounced render function to reduce DOM updates
-const debouncedRenderTable = debounce(() => {
+// Performance tracking
+let lastRenderTime = 0;
+let renderCount = 0;
+
+// Debounced render function to reduce DOM updates - use adaptive debounce
+const debouncedRenderTable = adaptiveDebounce(() => {
     _renderTableInternal();
-}, 300);
+}, {
+    scanDelay: 100,
+    idleDelay: 300,
+    getState: () => getScanning() ? 'scanning' : 'idle'
+});
 
 // Virtual scroll instance
 let virtualScrollManager = null;

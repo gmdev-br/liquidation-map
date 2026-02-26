@@ -138,12 +138,18 @@ body::after {
 }
 
 ::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.10);
+    background: rgba(255, 255, 255, 0.15);
     border-radius: 3px;
+    border: 1px solid rgba(0, 0, 0, 0.3);
+    transition: background 0.2s ease;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.18);
+    background: rgba(255, 255, 255, 0.25);
+}
+
+::-webkit-scrollbar-thumb:active {
+    background: rgba(255, 255, 255, 0.35);
 }
 
 /* iOS scrollbar styling */
@@ -151,8 +157,100 @@ body::after {
     -webkit-appearance: none;
 }
 
+/* ── Focus Styles ── */
+:focus-visible {
+    outline: 2px solid rgba(156, 163, 175, 0.5);
+    outline-offset: 2px;
+    border-radius: 2px;
+}
+
 /* ── Selection ── */
 ::selection {
     background: rgba(156, 163, 175, 0.3);
     color: #fff;
+}
+
+/* ── Smooth Scrolling ── */
+html {
+    scroll-behavior: smooth;
+}
+
+/* ── Loading Skeleton Animation ── */
+@keyframes skeleton {
+    0% {
+        background-position: -200% 0;
+    }
+    100% {
+        background-position: 200% 0;
+    }
+}
+
+.skeleton {
+    background: linear-gradient(90deg,
+        rgba(255, 255, 255, 0.05) 0%,
+        rgba(255, 255, 255, 0.1) 50%,
+        rgba(255, 255, 255, 0.05) 100%);
+    background-size: 200% 100%;
+    animation: skeleton 1s infinite;
+    border-radius: var(--r-sm);
+}
+
+/* ── Micro-interactions ── */
+@keyframes microBounce {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.02);
+    }
+}
+
+.micro-bounce:hover {
+    animation: microBounce 0.3s ease-out;
+}
+
+/* ── Entrance Animations ── */
+@keyframes slideInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeInScale {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.entrance-up {
+    animation: slideInUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.entrance-down {
+    animation: slideInDown 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.entrance-scale {
+    animation: fadeInScale 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }

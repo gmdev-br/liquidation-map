@@ -11,10 +11,29 @@
     border-bottom: 1px solid var(--glass-border);
     display: none;
     min-height: 200px;
+    max-height: 400px;
+    overflow: hidden;
     z-index: 50;
     backdrop-filter: var(--glass-blur-sm);
     -webkit-backdrop-filter: var(--glass-blur-sm);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+    will-change: transform, opacity;
+}
+
+/* Add subtle grid background for data points */
+#chart-section::after,
+#liq-chart-section::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+        linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+    background-size: 20px 20px;
+    pointer-events: none;
+    opacity: 0.5;
 }
 
 #chart-section::before,
@@ -108,7 +127,8 @@
 
 .chart-resizer:hover,
 .chart-resizer.active {
-    background: rgba(156, 163, 175, 0.1);
+    background: rgba(156, 163, 175, 0.10);
+    cursor: ns-resize;
 }
 
 .chart-resizer-handle {

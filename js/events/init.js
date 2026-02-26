@@ -32,6 +32,8 @@ import { initColumnWidthControl, applyColumnWidth } from '../ui/columnWidth.js';
 import { setWindow, setStatus, setProgress } from '../ui/status.js';
 import { sortBy, updateSortIndicators } from '../ui/filters.js';
 import { CURRENCY_META } from '../config.js';
+import { eventManager } from '../utils/eventManager.js';
+import { getElement, getElements } from '../utils/domCache.js';
 
 // ── Swipe Gestures for Navigation ──
 function setupSwipeGestures() {
@@ -77,9 +79,9 @@ function setupSwipeGestures() {
         touchStartY = 0;
     }
 
-    // Use passive listeners for better scroll performance
-    document.addEventListener('touchstart', handleTouchStart, { passive: true });
-    document.addEventListener('touchend', handleTouchEnd);
+    // Use eventManager for better cleanup
+    eventManager.on(document, 'touchstart', handleTouchStart, { passive: true });
+    eventManager.on(document, 'touchend', handleTouchEnd);
 }
 
 // ── Pull-to-Refresh ──
@@ -87,7 +89,7 @@ function setupPullToRefresh() {
     let startY = 0;
     let isPulling = false;
     const pullThreshold = 100;
-    const pullToRefresh = document.getElementById('pullToRefresh');
+    const pullToRefresh = getElement('pullToRefresh');
 
     if (!pullToRefresh) return;
 
@@ -138,15 +140,15 @@ function setupPullToRefresh() {
         startY = 0;
     }
 
-    // Use passive listeners for better scroll performance
-    document.addEventListener('touchstart', handleTouchStart, { passive: true });
-    document.addEventListener('touchmove', handleTouchMove, { passive: false });
-    document.addEventListener('touchend', handleTouchEnd);
+    // Use eventManager for better cleanup
+    eventManager.on(document, 'touchstart', handleTouchStart, { passive: true });
+    eventManager.on(document, 'touchmove', handleTouchMove, { passive: false });
+    eventManager.on(document, 'touchend', handleTouchEnd);
 }
 
 // ── Splash Screen ──
 function setupSplashScreen() {
-    const splashScreen = document.getElementById('splashScreen');
+    const splashScreen = getElement('splashScreen');
     if (!splashScreen) return;
 
     // Hide splash screen - handle both cases: already loaded or still loading
@@ -164,7 +166,7 @@ function setupSplashScreen() {
         hideSplashScreen();
     } else {
         // Page still loading, wait for load event
-        window.addEventListener('load', hideSplashScreen);
+        eventManager.on(window, 'load', hideSplashScreen);
     }
 }
 
@@ -183,10 +185,10 @@ function setupEventListeners() {
     setupSwipeGestures();
 
     // Mobile menu toggle
-    const menuToggle = document.getElementById('menuToggle');
-    const mobileMenu = document.getElementById('mobileMenu');
-    const mobileMenuOverlay = document.getElementById('mobileMenuOverlay');
-    const mobileMenuClose = document.getElementById('mobileMenuClose');
+    const menuToggle = getElement('menuToggle');
+    const mobileMenu = getElement('mobileMenu');
+    const mobileMenuOverlay = getElement('mobileMenuOverlay');
+    const mobileMenuClose = getElement('mobileMenuClose');
 
     function openMobileMenu() {
         mobileMenu.classList.add('active');
@@ -201,19 +203,19 @@ function setupEventListeners() {
     }
 
     if (menuToggle) {
-        menuToggle.addEventListener('click', openMobileMenu);
+        eventManager.on(menuToggle, 'click', openMobileMenu);
     }
 
     if (mobileMenuClose) {
-        mobileMenuClose.addEventListener('click', closeMobileMenu);
+        eventManager.on(mobileMenuClose, 'click', closeMobileMenu);
     }
 
     if (mobileMenuOverlay) {
-        mobileMenuOverlay.addEventListener('click', closeMobileMenu);
+        eventManager.on(mobileMenuOverlay, 'click', closeMobileMenu);
     }
 
     // Close menu on escape key
-    document.addEventListener('keydown', (e) => {
+    eventManager.on(document, 'keydown', (e) => {
         if (e.key === 'Escape') {
             closeMobileMenu();
             closeSettings();
@@ -221,10 +223,10 @@ function setupEventListeners() {
     });
 
     // Settings Drawer and Advanced Filters
-    const settingsToggle = document.getElementById('settingsToggle');
-    const settingsDrawer = document.getElementById('settingsDrawer');
-    const settingsOverlay = document.getElementById('settingsOverlay');
-    const settingsDrawerClose = document.getElementById('settingsDrawerClose');
+    const settingsToggle = getElement('settingsToggle');
+    const settingsDrawer = getElement('settingsDrawer');
+    const settingsOverlay = getElement('settingsOverlay');
+    const settingsDrawerClose = getElement('settingsDrawerClose');
 
     function openSettings() {
         if (settingsDrawer) settingsDrawer.classList.add('active');
@@ -236,14 +238,14 @@ function setupEventListeners() {
         if (settingsOverlay) settingsOverlay.classList.remove('active');
     }
 
-    if (settingsToggle) settingsToggle.addEventListener('click', openSettings);
-    if (settingsDrawerClose) settingsDrawerClose.addEventListener('click', closeSettings);
-    if (settingsOverlay) settingsOverlay.addEventListener('click', closeSettings);
+    if (settingsToggle) eventManager.on(settingsToggle, 'click', openSettings);
+    if (settingsDrawerClose) eventManager.on(settingsDrawerClose, 'click', closeSettings);
+    if (settingsOverlay) eventManager.on(settingsOverlay, 'click', closeSettings);
 
-    const toggleFiltersBtn = document.getElementById('toggleFiltersBtn');
-    const advancedFiltersRow = document.getElementById('advancedFiltersRow');
+    const toggleFiltersBtn = getElement('toggleFiltersBtn');
+    const advancedFiltersRow = getElement('advancedFiltersRow');
     if (toggleFiltersBtn && advancedFiltersRow) {
-        toggleFiltersBtn.addEventListener('click', () => {
+        eventManager.on(toggleFiltersBtn, 'click', () => {
             const isHidden = advancedFiltersRow.style.display === 'none';
             advancedFiltersRow.style.display = isHidden ? 'table-row' : 'none';
             toggleFiltersBtn.classList.toggle('active', isHidden);
@@ -254,8 +256,8 @@ function setupEventListeners() {
         });
     }
 
-    // Collapsible sections
-    const collapseToggles = document.querySelectorAll('.js-collapse-toggle');
+    // Collapsible sections - use event delegation
+    const collapseToggles = getElements('.js-collapse-toggle');
     collapseToggles.forEach(toggle => {
         const targetId = toggle.getAttribute('data-target');
         const wrapper = toggle.closest('.section-wrapper');
@@ -266,7 +268,7 @@ function setupEventListeners() {
             wrapper.classList.add('collapsed');
         }
 
-        toggle.addEventListener('click', () => {
+        eventManager.on(toggle, 'click', () => {
             if (wrapper) {
                 wrapper.classList.toggle('collapsed');
                 const currentlyCollapsed = wrapper.classList.contains('collapsed');
@@ -276,9 +278,9 @@ function setupEventListeners() {
     });
 
     // Scan controls
-    const scanBtn = document.getElementById('scanBtn');
+    const scanBtn = getElement('scanBtn');
     if (scanBtn) {
-        scanBtn.addEventListener('click', () => startScan({
+        eventManager.on(scanBtn, 'click', () => startScan({
             setStatus,
             setProgress,
             fetchAllMids,
@@ -292,232 +294,225 @@ function setupEventListeners() {
         }));
     }
 
-    const stopBtn = document.getElementById('stopBtn');
+    const stopBtn = getElement('stopBtn');
     if (stopBtn) {
-        stopBtn.addEventListener('click', () => stopScan(setStatus));
+        eventManager.on(stopBtn, 'click', () => stopScan(setStatus));
     }
 
-    const pauseBtn = document.getElementById('pauseBtn');
+    const pauseBtn = getElement('pauseBtn');
     if (pauseBtn) {
-        pauseBtn.addEventListener('click', () => togglePause(setStatus));
+        eventManager.on(pauseBtn, 'click', () => togglePause(setStatus));
     }
 
-    // Speed control - attach to both mobile and desktop
-    const speedRanges = document.querySelectorAll('.js-speed-range');
+    // Speed control - attach to both mobile and desktop - use event delegation
+    const speedRanges = getElements('.js-speed-range');
     speedRanges.forEach(range => {
-        range.addEventListener('input', (e) => {
+        eventManager.on(range, 'input', (e) => {
             updateSpeed(e.target.value);
         });
     });
 
-    // Price update interval control - attach to both mobile and desktop
-    const priceIntervalRanges = document.querySelectorAll('.js-price-interval-range');
+    // Price update interval control - attach to both mobile and desktop - use event delegation
+    const priceIntervalRanges = getElements('.js-price-interval-range');
     priceIntervalRanges.forEach(range => {
-        range.addEventListener('input', (e) => {
+        eventManager.on(range, 'input', (e) => {
             updatePriceInterval(e.target.value);
         });
     });
 
-    // Window tabs
-    document.querySelectorAll('.tab[data-window]').forEach(tab => {
-        tab.addEventListener('click', (e) => {
-            setWindow(e.target, getActiveWindow(), setActiveWindow, saveSettings, renderTable);
-        });
+    // Window tabs - use event delegation
+    eventManager.delegate(document, 'click', '.tab[data-window]', (e, target) => {
+        setWindow(target, getActiveWindow(), setActiveWindow, saveSettings, renderTable);
     });
 
-    // Price mode tabs - handle duplicate IDs (desktop/mobile)
-    document.querySelectorAll('.tab[data-mode]').forEach(tab => {
-        tab.addEventListener('click', (e) => {
-            handlePriceModeClick(e.target);
-        });
+    // Price mode tabs - use event delegation
+    eventManager.delegate(document, 'click', '.tab[data-mode]', (e, target) => {
+        handlePriceModeClick(target);
     });
 
     // Column sorting - use event delegation
-    const table = document.querySelector('table');
+    const table = getElement('positionsTable');
     if (table) {
-        table.addEventListener('click', (e) => {
+        eventManager.delegate(table, 'click', 'th[id^="th-"]', (e, target) => {
             // Skip if currently resizing
             if (document.body.classList.contains('resizing')) return;
 
-            const th = e.target.closest('th[id^="th-"]');
-            if (!th) return;
-
-            const resizer = th.querySelector('.resizer');
+            const resizer = target.querySelector('.resizer');
             if (resizer && (e.target === resizer || resizer.contains(e.target))) return;
 
-            const key = th.id.replace('th-', '');
+            const key = target.id.replace('th-', '');
             sortBy(key, renderTable);
         });
     }
 
-    // Filter inputs
+    // Filter inputs - use getElement and eventManager
     const filterInputs = ['minValue', 'coinFilter', 'sideFilter', 'minLev', 'maxLev', 'minSize',
         'minSzi', 'maxSzi', 'minValueCcy', 'maxValueCcy', 'minEntryCcy', 'maxEntryCcy',
-        'minUpnl', 'maxUpnl', 'minFunding', 'levTypeFilter', 'addressFilter']; // Removed minBtcVolume as it is handled separately
+        'minUpnl', 'maxUpnl', 'minFunding', 'levTypeFilter', 'addressFilter'];
 
     filterInputs.forEach(id => {
-        const el = document.getElementById(id);
+        const el = getElement(id);
         if (el) {
-            el.addEventListener('change', () => {
+            eventManager.on(el, 'change', () => {
                 saveSettings();
                 renderTable();
             });
 
             // Also add input event listener for number inputs to save as user types
             if (el.type === 'number') {
-                el.addEventListener('input', () => {
+                eventManager.on(el, 'input', () => {
                     saveSettings();
                 });
             }
         }
     });
 
-    // Compact format toggle
-    const compactToggles = document.querySelectorAll('.js-compact-toggle');
+    // Compact format toggle - use getElements and eventManager
+    const compactToggles = getElements('.js-compact-toggle');
     compactToggles.forEach(toggle => {
-        toggle.addEventListener('change', updateCompactFormat);
+        eventManager.on(toggle, 'change', updateCompactFormat);
     });
 
-    // Show symbols toggle
-    const btnShowSymMobile = document.getElementById('btnShowSymMobile');
-    const btnShowSymDesktop = document.getElementById('btnShowSymDesktop');
+    // Show symbols toggle - use getElement and eventManager
+    const btnShowSymMobile = getElement('btnShowSymMobile');
+    const btnShowSymDesktop = getElement('btnShowSymDesktop');
     if (btnShowSymMobile) {
-        btnShowSymMobile.addEventListener('click', toggleShowSymbols);
+        eventManager.on(btnShowSymMobile, 'click', toggleShowSymbols);
     }
     if (btnShowSymDesktop) {
-        btnShowSymDesktop.addEventListener('click', toggleShowSymbols);
+        eventManager.on(btnShowSymDesktop, 'click', toggleShowSymbols);
     }
 
-    // Aggregation symbols toggle
-    const showAggSymbolsDrawer = document.getElementById('showAggSymbolsDrawer');
+    // Aggregation symbols toggle - use getElement and eventManager
+    const showAggSymbolsDrawer = getElement('showAggSymbolsDrawer');
     if (showAggSymbolsDrawer) {
-        showAggSymbolsDrawer.addEventListener('change', toggleShowAggSymbols);
+        eventManager.on(showAggSymbolsDrawer, 'change', toggleShowAggSymbols);
     }
 
-    // Aggregation color pickers
+    // Aggregation color pickers - use getElement and eventManager
     const aggColors = [
         'colorLiquidationBuyStrong', 'colorLiquidationBuyNormal',
         'colorLiquidationSellStrong', 'colorLiquidationSellNormal'
     ];
     aggColors.forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.addEventListener('input', updateAggZoneColors);
+        const el = getElement(id);
+        if (el) eventManager.on(el, 'input', updateAggZoneColors);
     });
 
-    // Highlight color picker
-    const highlightColorEl = document.getElementById('colorLiquidationHighlight');
+    // Highlight color picker - use getElement and eventManager
+    const highlightColorEl = getElement('colorLiquidationHighlight');
     if (highlightColorEl) {
-        highlightColorEl.addEventListener('input', updateAggHighlightColor);
+        eventManager.on(highlightColorEl, 'input', updateAggHighlightColor);
     }
 
-    // Ranking limit - attach to both mobile and desktop
-    const rankingLimits = document.querySelectorAll('.js-ranking-limit');
+    // Ranking limit - attach to both mobile and desktop - use getElements and eventManager
+    const rankingLimits = getElements('.js-ranking-limit');
     rankingLimits.forEach(limit => {
-        limit.addEventListener('change', updateRankingLimit);
+        eventManager.on(limit, 'change', updateRankingLimit);
     });
 
-    // Color settings - attach to both mobile and desktop
-    const colorMaxLevs = document.querySelectorAll('.js-color-max-lev');
+    // Color settings - attach to both mobile and desktop - use getElements and eventManager
+    const colorMaxLevs = getElements('.js-color-max-lev');
     colorMaxLevs.forEach(el => {
-        el.addEventListener('change', updateColorSettings);
+        eventManager.on(el, 'change', updateColorSettings);
     });
 
-    const chartHighLevSplits = document.querySelectorAll('.js-chart-high-lev-split');
+    const chartHighLevSplits = getElements('.js-chart-high-lev-split');
     chartHighLevSplits.forEach(el => {
-        el.addEventListener('change', updateChartFilters);
+        eventManager.on(el, 'change', updateChartFilters);
     });
 
-    // Bubble size - attach to both mobile and desktop
-    const bubbleSizeRanges = document.querySelectorAll('.js-bubble-size-range');
+    // Bubble size - attach to both mobile and desktop - use getElements and eventManager
+    const bubbleSizeRanges = getElements('.js-bubble-size-range');
     bubbleSizeRanges.forEach(range => {
-        range.addEventListener('input', (e) => {
+        eventManager.on(range, 'input', (e) => {
             updateBubbleSize(e.target.value);
         });
     });
 
-    // Bubble opacity - attach to both mobile and desktop
-    const bubbleOpacityRanges = document.querySelectorAll('.js-bubble-opacity-range');
+    // Bubble opacity - attach to both mobile and desktop - use getElements and eventManager
+    const bubbleOpacityRanges = getElements('.js-bubble-opacity-range');
     bubbleOpacityRanges.forEach(range => {
-        range.addEventListener('input', (e) => {
+        eventManager.on(range, 'input', (e) => {
             updateBubbleOpacity(e.target.value);
         });
     });
 
-    // Line thickness - attach to both mobile and desktop
-    const lineThicknessRanges = document.querySelectorAll('.js-line-thickness-range');
+    // Line thickness - attach to both mobile and desktop - use getElements and eventManager
+    const lineThicknessRanges = getElements('.js-line-thickness-range');
     lineThicknessRanges.forEach(range => {
-        range.addEventListener('input', (e) => {
+        eventManager.on(range, 'input', (e) => {
             updateLineThickness(e.target.value);
         });
     });
 
-    // Aggregation mode - attach to both mobile and desktop
-    const aggregationRanges = document.querySelectorAll('.js-aggregation-range');
+    // Aggregation mode - attach to both mobile and desktop - use getElements and eventManager
+    const aggregationRanges = getElements('.js-aggregation-range');
     aggregationRanges.forEach(range => {
-        range.addEventListener('input', (e) => {
+        eventManager.on(range, 'input', (e) => {
             updateAggregation(e.target.value);
         });
     });
 
-    // Aggregation Table Interval - attach to both mobile and desktop
-    const aggIntervalInputs = document.querySelectorAll('.js-agg-interval');
+    // Aggregation Table Interval - attach to both mobile and desktop - use getElements and eventManager
+    const aggIntervalInputs = getElements('.js-agg-interval');
     aggIntervalInputs.forEach(input => {
-        input.addEventListener('input', (e) => {
+        eventManager.on(input, 'input', (e) => {
             updateAggInterval(e.target.value);
         });
     });
 
-    // Decimal places control - attach to both mobile and desktop
-    const decimalPlacesRanges = document.querySelectorAll('.js-decimal-places-range');
+    // Decimal places control - attach to both mobile and desktop - use getElements and eventManager
+    const decimalPlacesRanges = getElements('.js-decimal-places-range');
     decimalPlacesRanges.forEach(range => {
-        range.addEventListener('input', (e) => {
+        eventManager.on(range, 'input', (e) => {
             updateDecimalPlaces(e.target.value);
         });
     });
 
-    // Font size control - attach to both mobile and desktop
-    const fontSizeRanges = document.querySelectorAll('.js-font-size-range');
+    // Font size control - attach to both mobile and desktop - use getElements and eventManager
+    const fontSizeRanges = getElements('.js-font-size-range');
     fontSizeRanges.forEach(range => {
-        range.addEventListener('input', (e) => {
+        eventManager.on(range, 'input', (e) => {
             updateFontSize(e.target.value);
         });
-        range.addEventListener('change', (e) => {
+        eventManager.on(range, 'change', (e) => {
             updateFontSize(e.target.value);
         });
-        range.addEventListener('keyup', (e) => {
+        eventManager.on(range, 'keyup', (e) => {
             updateFontSize(e.target.value);
         });
     });
 
-    // Font size for known addresses control - attach to both mobile and desktop
-    const fontSizeKnownRanges = document.querySelectorAll('.js-font-size-known-range');
+    // Font size for known addresses control - attach to both mobile and desktop - use getElements and eventManager
+    const fontSizeKnownRanges = getElements('.js-font-size-known-range');
     fontSizeKnownRanges.forEach(range => {
-        range.addEventListener('input', (e) => {
+        eventManager.on(range, 'input', (e) => {
             updateFontSizeKnown(e.target.value);
         });
-        range.addEventListener('change', (e) => {
+        eventManager.on(range, 'change', (e) => {
             updateFontSizeKnown(e.target.value);
         });
-        range.addEventListener('keyup', (e) => {
+        eventManager.on(range, 'keyup', (e) => {
             updateFontSizeKnown(e.target.value);
         });
     });
 
-    // Row height control - attach to both mobile and desktop
-    const rowHeightRanges = document.querySelectorAll('.js-row-height-range');
+    // Row height control - attach to both mobile and desktop - use getElements and eventManager
+    const rowHeightRanges = getElements('.js-row-height-range');
     rowHeightRanges.forEach(range => {
-        range.addEventListener('input', (e) => {
+        eventManager.on(range, 'input', (e) => {
             updateRowHeight(e.target.value);
         });
-        range.addEventListener('change', (e) => {
+        eventManager.on(range, 'change', (e) => {
             updateRowHeight(e.target.value);
         });
-        range.addEventListener('keyup', (e) => {
+        eventManager.on(range, 'keyup', (e) => {
             updateRowHeight(e.target.value);
         });
     });
 
-    // Leverage color inputs - attach to both mobile and desktop
+    // Leverage color inputs - attach to both mobile and desktop - use getElements and eventManager
     const colorInputs = [
         { id: 'colorLongLow', class: 'js-color-long-low' },
         { id: 'colorLongHigh', class: 'js-color-long-high' },
@@ -525,62 +520,60 @@ function setupEventListeners() {
         { id: 'colorShortHigh', class: 'js-color-short-high' }
     ];
     colorInputs.forEach(item => {
-        const elements = document.querySelectorAll(`.${item.class}`);
+        const elements = getElements(`.${item.class}`);
         elements.forEach(el => {
-            el.addEventListener('change', updateLeverageColors);
+            eventManager.on(el, 'change', updateLeverageColors);
         });
     });
 
-    // Chart mode tabs
-    document.querySelectorAll('.tab[data-chart]').forEach(tab => {
-        tab.addEventListener('click', (e) => {
-            setChartModeHandler(e.target.dataset.chart);
-        });
+    // Chart mode tabs - use event delegation
+    eventManager.delegate(document, 'click', '.tab[data-chart]', (e, target) => {
+        setChartModeHandler(target.dataset.chart);
     });
 
     // Chart height controls
-    const chartSection = document.getElementById('chart-section');
+    const chartSection = getElement('chart-section');
     if (chartSection) {
         setupResizable(chartSection, updateChartHeight);
     }
 
-    const liqChartSection = document.getElementById('liq-chart-section');
+    const liqChartSection = getElement('liq-chart-section');
     if (liqChartSection) {
         setupResizable(liqChartSection, updateLiqChartHeight);
     }
 
-    const aggTableSection = document.getElementById('liquidationTableFullSection');
+    const aggTableSection = getElement('liquidationTableFullSection');
     if (aggTableSection) {
         setupResizable(aggTableSection, updateAggTableHeight);
     }
 
-    const aggTableSectionResumida = document.getElementById('liquidationTableSummarySection');
+    const aggTableSectionResumida = getElement('liquidationTableSummarySection');
     if (aggTableSectionResumida) {
         setupResizable(aggTableSectionResumida, updateAggTableHeight);
     }
 
-    // Grid spacing control - attach to both mobile and desktop
-    const gridSpacingRanges = document.querySelectorAll('.js-grid-spacing-range');
+    // Grid spacing control - attach to both mobile and desktop - use getElements and eventManager
+    const gridSpacingRanges = getElements('.js-grid-spacing-range');
     gridSpacingRanges.forEach(range => {
-        range.addEventListener('input', (e) => {
+        eventManager.on(range, 'input', (e) => {
             updateGridSpacing(e.target.value);
         });
     });
 
-    // Min BTC Volume control - attach to both mobile and desktop
-    const minBtcVolumeInputs = document.querySelectorAll('.js-min-btc-volume');
+    // Min BTC Volume control - attach to both mobile and desktop - use getElements and eventManager
+    const minBtcVolumeInputs = getElements('.js-min-btc-volume');
     minBtcVolumeInputs.forEach(input => {
-        input.addEventListener('input', (e) => {
+        eventManager.on(input, 'input', (e) => {
             updateMinBtcVolume(e.target.value);
         });
     });
 
-    // Price filter controls for chart scale
-    const minEntryCcy = document.getElementById('minEntryCcy');
-    const maxEntryCcy = document.getElementById('maxEntryCcy');
+    // Price filter controls for chart scale - use getElement and eventManager
+    const minEntryCcy = getElement('minEntryCcy');
+    const maxEntryCcy = getElement('maxEntryCcy');
 
     if (minEntryCcy) {
-        minEntryCcy.addEventListener('input', () => {
+        eventManager.on(minEntryCcy, 'input', () => {
             // Re-render charts to update scale
             const scatterChart = window.getScatterChart ? window.getScatterChart() : null;
             const liqChart = window.getLiqChartInstance ? window.getLiqChartInstance() : null;
@@ -596,7 +589,7 @@ function setupEventListeners() {
     }
 
     if (maxEntryCcy) {
-        maxEntryCcy.addEventListener('input', () => {
+        eventManager.on(maxEntryCcy, 'input', () => {
             // Re-render charts to update scale
             const scatterChart = window.getScatterChart ? window.getScatterChart() : null;
             const liqChart = window.getLiqChartInstance ? window.getLiqChartInstance() : null;
@@ -611,21 +604,21 @@ function setupEventListeners() {
         });
     }
 
-    // Currency selectors
-    const currencySelect = document.getElementById('currencySelect');
-    const entryCurrencySelect = document.getElementById('entryCurrencySelect');
+    // Currency selectors - use getElement and eventManager
+    const currencySelect = getElement('currencySelect');
+    const entryCurrencySelect = getElement('entryCurrencySelect');
     if (currencySelect) {
-        currencySelect.addEventListener('change', onCurrencyChange);
+        eventManager.on(currencySelect, 'change', onCurrencyChange);
     }
     if (entryCurrencySelect) {
-        entryCurrencySelect.addEventListener('change', onCurrencyChange);
+        eventManager.on(entryCurrencySelect, 'change', onCurrencyChange);
     }
 
-    // Column combobox
-    const columnSelectDisplays = document.querySelectorAll('.js-column-select-display');
+    // Column combobox - use getElements and eventManager
+    const columnSelectDisplays = getElements('.js-column-select-display');
     columnSelectDisplays.forEach(display => {
-        display.addEventListener('focus', openColumnCombobox);
-        display.addEventListener('blur', (e) => {
+        eventManager.on(display, 'focus', openColumnCombobox);
+        eventManager.on(display, 'blur', (e) => {
             // Only close if the related target is not within the combobox
             // Check closest combobox wrapper
             const combobox = display.closest('.js-column-combobox');
@@ -633,22 +626,22 @@ function setupEventListeners() {
                 closeColumnComboboxDelayed();
             }
         });
-        display.addEventListener('input', (e) => {
+        eventManager.on(display, 'input', (e) => {
             renderColumnDropdownFn(e.target.value);
         });
     });
 
-    // Generic comboboxes - click to open
+    // Generic comboboxes - click to open - use getElement and eventManager
     const comboboxIds = ['cb-sideFilter', 'cb-levTypeFilter', 'cb-currencySelect', 'cb-entryCurrencySelect'];
 
     // Use DOMContentLoaded to ensure elements exist
     function setupComboboxListeners() {
         console.log('Setting up combobox listeners, readyState:', document.readyState);
         comboboxIds.forEach(fullId => {
-            const combobox = document.getElementById(fullId);
+            const combobox = getElement(fullId);
             console.log(`Combobox ${fullId} found:`, !!combobox);
             if (combobox) {
-                combobox.addEventListener('click', (e) => {
+                eventManager.on(combobox, 'click', (e) => {
                     console.log('Combobox clicked:', fullId);
                     e.preventDefault();
                     e.stopPropagation();
@@ -661,50 +654,46 @@ function setupEventListeners() {
     }
 
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', setupComboboxListeners);
+        eventManager.on(document, 'DOMContentLoaded', setupComboboxListeners);
     } else {
         setupComboboxListeners();
     }
 
-    // Coin combobox
-    const coinSearch = document.getElementById('coinSearch');
+    // Coin combobox - use getElement and eventManager
+    const coinSearch = getElement('coinSearch');
     if (coinSearch) {
-        coinSearch.addEventListener('click', openCombobox);
+        eventManager.on(coinSearch, 'click', openCombobox);
     }
 
-    // Zen Mode toggles
-    const zenToggleHeader = document.getElementById('zenToggleHeader');
+    // Zen Mode toggles - use getElement and eventManager
+    const zenToggleHeader = getElement('zenToggleHeader');
     if (zenToggleHeader) {
-        zenToggleHeader.addEventListener('click', toggleZenMode);
+        eventManager.on(zenToggleHeader, 'click', toggleZenMode);
     }
 
-    const zenToggleMobile = document.getElementById('zenToggleMobile');
+    const zenToggleMobile = getElement('zenToggleMobile');
     if (zenToggleMobile) {
-        zenToggleMobile.addEventListener('click', toggleZenMode);
+        eventManager.on(zenToggleMobile, 'click', toggleZenMode);
     }
 
-    const zenToggleDrawer = document.getElementById('zenToggleDrawer');
+    const zenToggleDrawer = getElement('zenToggleDrawer');
     if (zenToggleDrawer) {
-        zenToggleDrawer.addEventListener('change', toggleZenMode);
+        eventManager.on(zenToggleDrawer, 'change', toggleZenMode);
     }
 
-    const exitZenBtn = document.getElementById('exitZenBtn');
+    const exitZenBtn = getElement('exitZenBtn');
     if (exitZenBtn) {
-        exitZenBtn.addEventListener('click', toggleZenMode);
+        eventManager.on(exitZenBtn, 'click', toggleZenMode);
     }
 
-    // Aggregation Volume Unit tabs - only for main table (not Resumida)
-    // Resumida table has its own handler in aggregation.js
-    // Main table tabs are in: drawer (.ctrl .tabs) and liquidationSectionFullWrapper (.agg-unit-toggle)
-    document.querySelectorAll('#liquidationSectionFullWrapper .js-agg-volume-unit-tab, #settingsDrawer .js-agg-volume-unit-tab').forEach(tab => {
-        tab.addEventListener('click', (e) => {
-            updateAggVolumeUnit(e.target.dataset.unit);
-        });
+    // Aggregation Volume Unit tabs - use event delegation
+    eventManager.delegate(document, 'click', '#liquidationSectionFullWrapper .js-agg-volume-unit-tab, #settingsDrawer .js-agg-volume-unit-tab', (e, target) => {
+        updateAggVolumeUnit(target.dataset.unit);
     });
 
-    const scrollToCurrentBtn = document.getElementById('scrollToCurrentBtn');
+    const scrollToCurrentBtn = getElement('scrollToCurrentBtn');
     if (scrollToCurrentBtn) {
-        scrollToCurrentBtn.addEventListener('click', scrollToCurrentPrice);
+        eventManager.on(scrollToCurrentBtn, 'click', scrollToCurrentPrice);
     }
 
     // Make cbSelect, selectCoin, and toggleColumn globally accessible for inline onmousedown handlers
@@ -750,7 +739,7 @@ function setupResizable(element, callback) {
     let isResizing = false;
     let startY, startHeight;
 
-    resizer.addEventListener('mousedown', (e) => {
+    eventManager.on(resizer, 'mousedown', (e) => {
         isResizing = true;
         startY = e.clientY;
         startHeight = element.offsetHeight;
@@ -758,14 +747,14 @@ function setupResizable(element, callback) {
         e.preventDefault();
     });
 
-    document.addEventListener('mousemove', (e) => {
+    eventManager.on(document, 'mousemove', (e) => {
         if (!isResizing) return;
         const deltaY = e.clientY - startY;
         const newHeight = Math.max(200, startHeight + deltaY);
         callback(newHeight);
     });
 
-    document.addEventListener('mouseup', () => {
+    eventManager.on(document, 'mouseup', () => {
         isResizing = false;
         resizer.classList.remove('active');
     });
@@ -806,11 +795,13 @@ async function loadInitialState() {
     cbInit('currencySelect', currencyOptions, onCurrencyChange);
     cbInit('entryCurrencySelect', currencyOptions, onCurrencyChange);
 
+    // Load settings FIRST so that initializePanels uses correct saved values
     console.log('loadInitialState: Loading settings...');
     loadSettings();
-    
-    // Apply sort indicators after loading settings
-    updateSortIndicators();
+
+    // THEN initialize panels with the loaded settings values
+    console.log('loadInitialState: Initializing panels...');
+    initializePanels();
 
     // Carregar preços atuais e taxas de câmbio antes de renderizar a tabela
     try {
@@ -822,6 +813,9 @@ async function loadInitialState() {
     } catch (e) {
         console.error('Error fetching initial data:', e);
     }
+
+    // Apply sort indicators after loading settings
+    updateSortIndicators();
 
     // Apply column visibility first
     applyColumnVisibility();

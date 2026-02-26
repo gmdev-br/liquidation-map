@@ -25,6 +25,7 @@
     min-width: 44px;
     position: relative;
     overflow: hidden;
+    will-change: transform, box-shadow;
 }
 
 .btn::before {
@@ -68,6 +69,7 @@
     cursor: not-allowed;
     transform: none;
     box-shadow: none;
+    pointer-events: none;
 }
 
 /* ── Stop Button ── */
@@ -89,6 +91,26 @@
     -webkit-tap-highlight-color: transparent;
     position: relative;
     overflow: hidden;
+    will-change: transform, box-shadow;
+}
+
+.btn-stop:hover {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.95), rgba(220, 38, 38, 0.95));
+    box-shadow: 0 0 24px rgba(239, 68, 68, 0.45), 0 4px 20px rgba(239, 68, 68, 0.35);
+    transform: translateY(-2px);
+    border-color: rgba(255, 100, 100, 0.40);
+}
+
+.btn-stop:active {
+    transform: translateY(0) scale(0.97);
+}
+
+.btn-stop:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+    pointer-events: none;
 }
 
 .btn-stop::before {
@@ -160,18 +182,23 @@
 .btn:focus-visible,
 .btn-stop:focus-visible,
 .btn-pause:focus-visible {
-    outline: none;
-    box-shadow: 0 0 0 3px rgba(156, 163, 175, 0.4), 0 4px 20px rgba(156, 163, 175, 0.5);
+    outline: 2px solid rgba(255, 255, 255, 0.9);
+    outline-offset: 2px;
+    box-shadow: 0 0 0 4px rgba(156, 163, 175, 0.3), 0 4px 20px rgba(156, 163, 175, 0.5);
     border-color: rgba(255, 255, 255, 0.8);
     transform: translateY(-1px);
 }
 
 .btn-stop:focus-visible {
-    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.4), 0 4px 20px rgba(239, 68, 68, 0.5);
+    outline: 2px solid rgba(255, 100, 100, 0.9);
+    outline-offset: 2px;
+    box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.3), 0 4px 20px rgba(239, 68, 68, 0.5);
     border-color: rgba(255, 100, 100, 0.8);
 }
 
 .btn-pause:focus-visible {
-    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.4), 0 4px 20px rgba(245, 158, 11, 0.5);
+    outline: 2px solid rgba(251, 191, 36, 0.9);
+    outline-offset: 2px;
+    box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.3), 0 4px 20px rgba(245, 158, 11, 0.5);
     border-color: rgba(251, 191, 36, 0.8);
 }

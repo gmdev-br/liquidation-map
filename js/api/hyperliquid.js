@@ -6,25 +6,76 @@ import {
 } from '../state.js';
 import { saveSettings } from '../storage/settings.js';
 
-// ── Rate Limiter ──────────────────────────────────────────────────────
-class RateLimiter {
-    constructor(requestsPerSecond) {
-        this.delay = 1000 / requestsPerSecond;
+// ── Adaptive Rate Limiter ─────────────────────────────────────────
+class AdaptiveRateLimiter {
+    constructor(baseRequestsPerSecond = 9.5) {
+        this.baseDelay = 1000 / baseRequestsPerSecond;
+        this.minDelay = 1000 / 20; // Max 20 req/s
+        this.maxDelay = 1000 / 2;  // Min 2 req/s
         this.lastCall = 0;
+        this.successCount = 0;
+        this.failureCount = 0;
+        this.currentDelay = this.baseDelay;
+        this.consecutiveFailures = 0;
+        this.consecutiveSuccesses = 0;
     }
 
     async acquire() {
         const now = Date.now();
-        const nextCall = Math.max(now, this.lastCall + this.delay);
+        const nextCall = Math.max(now, this.lastCall + this.currentDelay);
         const waitTime = nextCall - now;
         this.lastCall = nextCall;
+
         if (waitTime > 0) {
             await new Promise(r => setTimeout(r, waitTime));
         }
     }
+
+    reportSuccess() {
+        this.successCount++;
+        this.consecutiveSuccesses++;
+        this.consecutiveFailures = 0;
+
+        // Gradually increase rate after consistent success
+        if (this.consecutiveSuccesses > 10) {
+            this.currentDelay = Math.max(
+                this.minDelay,
+                this.currentDelay * 0.95
+            );
+            this.consecutiveSuccesses = 0;
+        }
+    }
+
+    reportFailure() {
+        this.failureCount++;
+        this.consecutiveFailures++;
+        this.consecutiveSuccesses = 0;
+
+        // Slow down immediately on failure
+        this.currentDelay = Math.min(
+            this.maxDelay,
+            this.currentDelay * 2
+        );
+
+        // Reset to base delay after 5 consecutive failures
+        if (this.consecutiveFailures > 5) {
+            this.currentDelay = this.baseDelay;
+            this.consecutiveFailures = 0;
+        }
+    }
+
+    getCurrentRate() {
+        return 1000 / this.currentDelay;
+    }
+
+    reset() {
+        this.currentDelay = this.baseDelay;
+        this.consecutiveFailures = 0;
+        this.consecutiveSuccesses = 0;
+    }
 }
 
-const apiRateLimiter = new RateLimiter(9.5); // Stay safe under 10 req/s
+const apiRateLimiter = new AdaptiveRateLimiter(9.5);
 
 // ── Concurrency-limited streaming loader ──────────────────────────────
 // Fires MAX_CONCURRENCY requests at a time. As each resolves, the next
@@ -41,15 +92,23 @@ export async function fetchWithRetry(whale, retries = 3) {
                 body: JSON.stringify({ type: 'clearinghouseState', user: whale.ethAddress })
             });
             if (resp.status === 429) {
+                apiRateLimiter.reportFailure();
                 const wait = RETRY_DELAY_MS * Math.pow(2, attempt);
                 console.warn(`Rate limited, retrying in ${wait}ms…`);
                 await new Promise(r => setTimeout(r, wait));
                 continue;
             }
-            if (!resp.ok) return null;
+            if (!resp.ok) {
+                apiRateLimiter.reportFailure();
+                return null;
+            }
+            apiRateLimiter.reportSuccess();
             return await resp.json();
-        } catch (e) {
-            if (attempt === retries - 1) return null;
+        } catch (error) {
+            if (attempt === retries - 1) {
+                apiRateLimiter.reportFailure();
+                return null;
+            }
             await new Promise(r => setTimeout(r, 500));
         }
     }

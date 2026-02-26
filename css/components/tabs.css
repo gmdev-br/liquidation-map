@@ -31,6 +31,7 @@
     min-width: 44px;
     position: relative;
     overflow: hidden;
+    will-change: transform, background-color;
 }
 
 .tab::before {
@@ -59,6 +60,12 @@
 
 .tab:active {
     transform: scale(0.95);
+}
+
+.tab:focus-visible {
+    outline: 2px solid rgba(156, 163, 175, 0.8);
+    outline-offset: 2px;
+    box-shadow: 0 0 0 4px rgba(156, 163, 175, 0.2);
 }
 
 .tab.active {

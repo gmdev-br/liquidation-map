@@ -9,19 +9,61 @@
     background: transparent;
     -webkit-overflow-scrolling: touch;
     /* Subtle border for definition */
-    border: 1px solid rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.06);
     border-radius: var(--r-sm, 8px);
+    /* Subtle inner shadow for depth */
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04),
+                0 1px 3px rgba(0, 0, 0, 0.2);
+    /* GPU acceleration for smooth scrolling */
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+    will-change: transform;
 }
 
 /* ── Table ── */
 table {
     width: max-content;
-    /* Respect column widths, don't stretch */
     border-collapse: collapse;
-    min-width: auto;
-    /* Let content dictate width */
     table-layout: fixed;
-    /* Fixed layout for resizing */
+}
+
+/* ARIA attributes for table headers */
+th[scope="col"] {
+    position: relative;
+}
+
+th[scope="col"][aria-sort]::after {
+    content: attr(aria-sort);
+    position: absolute;
+    right: 8px;
+    font-size: 10px;
+}
+
+th[aria-sort="ascending"]::after {
+    content: '▲';
+}
+
+th[aria-sort="descending"]::after {
+    content: '▼';
+}
+
+/* Enhanced focus for keyboard navigation */
+table a:focus,
+table button:focus,
+table input:focus {
+    outline: 2px solid rgba(156, 163, 175, 0.5);
+    outline-offset: 2px;
+    z-index: 10;
+}
+
+/* Row focus for keyboard navigation */
+tr:focus-visible {
+    outline: 2px solid rgba(156, 163, 175, 0.5);
+    outline-offset: -2px;
+}
+
+tr:focus {
+    background: rgba(156, 163, 175, 0.1);
 }
 
 /* Default column width if not set inline */
@@ -66,6 +108,9 @@ thead tr {
     border-bottom: 1px solid var(--glass-border);
     /* Subtle shadow for depth - GPU accelerated */
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    /* GPU acceleration hint */
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
 }
 
 /* thead tr::before removido para prevenir bug de injeção de coluna no thead */
@@ -125,7 +170,7 @@ th {
     height: 100%;
     cursor: col-resize;
     z-index: 1;
-    transition: background 0.2s;
+    transition: background 0.2s, width 0.15s ease;
     user-select: none;
     -moz-user-select: none;
     -ms-user-select: none;
@@ -135,7 +180,7 @@ th {
 /* Thinner resizer on mobile */
 @media (max-width: 767px) {
     .resizer {
-        width: 4px;
+        width: 10px;
     }
 }
 
@@ -147,11 +192,18 @@ th:hover .resizer {
 .resizer:hover,
 .resizing .resizer {
     background: rgba(156, 163, 175, 0.4);
+    width: 8px;
 }
 
 .resizing {
     cursor: col-resize;
     user-select: none;
+}
+
+/* Column resizing active state */
+th.resizing-active {
+    background: rgba(96, 165, 250, 0.1);
+    transition: background 0.15s ease;
 }
 
 /* ── Drag & Drop ── */
@@ -237,12 +289,18 @@ th.sorted .sort-icon {
 /* ── Table Body ── */
 tbody tr {
     border-bottom: 1px solid rgba(255, 255, 255, 0.03);
-    transition: background-color 0.15s ease;
+    transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+                box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+                transform 0.15s ease;
     position: relative;
     /* Subtle gradient for depth - GPU only */
     background: linear-gradient(90deg,
         rgba(10, 14, 26, 0.6) 0%,
         rgba(10, 14, 26, 0.4) 100%);
+    will-change: background-color, box-shadow;
+    /* GPU acceleration hint */
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
 }
 
 /* Zebra striping - very subtle */
@@ -251,21 +309,23 @@ tbody tr:nth-child(even) {
 }
 
 tbody tr:active {
-    background: rgba(255, 255, 255, 0.08);
-    transform: scale(1.001); /* Subtle feedback - GPU accelerated */
+    background: rgba(255, 255, 255, 0.12);
+    transform: scale(1.002);
+    box-shadow: inset 3px 0 0 var(--accent, #9ca3af);
 }
 
 tbody tr:hover {
     background: linear-gradient(90deg,
-        rgba(156, 163, 175, 0.08) 0%,
-        rgba(156, 163, 175, 0.05) 100%);
+        rgba(156, 163, 175, 0.12) 0%,
+        rgba(156, 163, 175, 0.08) 100%);
     /* Left border indicator - no repaint */
-    box-shadow: inset 3px 0 0 var(--accent, #9ca3af);
+    box-shadow: inset 3px 0 0 var(--accent, #9ca3af),
+                0 0 20px rgba(156, 163, 175, 0.1);
 }
 
 /* ── Table Body Cells ── */
 td {
-    padding: 10px 14px;
+    padding: 12px 14px;
     vertical-align: middle;
     white-space: nowrap;
     overflow: hidden;
@@ -273,6 +333,8 @@ td {
     /* Monospace for numbers - tabular nums prevent layout shift */
     font-variant-numeric: tabular-nums;
     -webkit-font-smoothing: antialiased;
+    /* Subtle text shadow for better readability */
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.3);
 }
 
 /* Currency/number cells - better alignment */
@@ -287,6 +349,7 @@ td.positive,
 td.up,
 td[data-change="positive"] {
     color: #4ade80;
+    text-shadow: 0 0 8px rgba(74, 222, 128, 0.3);
 }
 
 /* Negative values - red */
@@ -294,6 +357,7 @@ td.negative,
 td.down,
 td[data-change="negative"] {
     color: #f87171;
+    text-shadow: 0 0 8px rgba(248, 113, 113, 0.3);
 }
 
 /* Neutral/small values */
@@ -311,9 +375,9 @@ td.col-asset {
 /* Mobile cell adjustments */
 @media (max-width: 767px) {
     td {
-        padding: 12px 10px;
-        font-size: 12px;
-        min-width: 80px;
+        padding: 10px 8px;
+        font-size: 11px;
+        min-width: 60px;
     }
 
     td.numeric {
@@ -336,6 +400,24 @@ td.col-asset {
         box-shadow: inset 3px 0 0 var(--accent, #9ca3af),
                     inset -1px 0 0 rgba(255, 255, 255, 0.05);
     }
+}
+
+/* Horizontal scroll indicator for tables */
+.table-wrap::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 40px;
+    background: linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.3));
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.table-wrap.overflowing::after {
+    opacity: 1;
 }
 
 /* ── Expand Row ── */
@@ -708,6 +790,57 @@ td.col-asset {
     background: rgba(96, 165, 250, 0.1);
 }
 
+/* ── Empty States ── */
+.empty-cell {
+    padding: 40px 20px;
+    text-align: center;
+    color: var(--muted, #6b7280);
+    font-size: 14px;
+}
+
+.empty-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+    opacity: 0.5;
+}
+
+/* ── Loading States ── */
+.loading-row {
+    background: linear-gradient(90deg,
+        rgba(30, 41, 59, 0.3) 0%,
+        rgba(30, 41, 59, 0.1) 50%,
+        rgba(30, 41, 59, 0.3) 100%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    /* GPU accelerated loading animation */
+    will-change: background-position;
+}
+
+@keyframes shimmer {
+    0% {
+        background-position: 200% 0;
+    }
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+/* ── Row Highlight Animation ── */
+.row-highlight {
+    animation: rowHighlight 0.6s ease-out;
+    /* GPU accelerated animation */
+    will-change: background-color;
+}
+
+@keyframes rowHighlight {
+    0% {
+        background-color: rgba(96, 165, 250, 0.2);
+    }
+    100% {
+        background-color: transparent;
+    }
+}
+
 /* ── Column Drag Ghost ── */
 .column-drag-ghost {
     position: fixed;
@@ -725,4 +858,5 @@ td.col-asset {
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
     opacity: 0.5;
+    transform: rotate(-2deg);
 }

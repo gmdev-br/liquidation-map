@@ -19,16 +19,19 @@ export const liqChartOptions = {
         },
         tooltip: {
             enabled: true,
-            backgroundColor: 'rgba(7, 12, 26, 0.98)',
+            backgroundColor: 'rgba(7, 12, 26, 0.95)',
             titleColor: '#e2e8f4',
+            titleFont: { size: 12, weight: '600' },
             bodyColor: '#e2e8f4',
-            borderColor: 'rgba(255, 255, 255, 0.12)',
+            bodyFont: { size: 12 },
+            borderColor: 'rgba(255, 255, 255, 0.15)',
             borderWidth: 1,
-            padding: 12,
+            padding: 14,
             displayColors: false,
-            backdropFilter: 'blur(16px)',
-            WebkitBackdropFilter: 'blur(16px)',
-            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
+            cornerRadius: 8,
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
+            boxShadow: '0 12px 40px rgba(0, 0, 0, 0.5)',
             callbacks: {
                 label: function (context) {
                     if (context.chart.config.type === 'bar') {
@@ -72,26 +75,28 @@ export const liqChartOptions = {
     scales: {
         x: {
             grid: {
-                color: 'rgba(255, 255, 255, 0.04)',
+                color: 'rgba(255, 255, 255, 0.06)',
                 drawBorder: false
             },
             ticks: {
-                color: '#6b7280',
+                color: '#9ca3af',
                 font: {
-                    size: 11
+                    size: 12,
+                    family: 'Inter'
                 }
             },
             min: 0
         },
         y: {
             grid: {
-                color: 'rgba(255, 255, 255, 0.04)',
+                color: 'rgba(255, 255, 255, 0.06)',
                 drawBorder: false
             },
             ticks: {
-                color: '#6b7280',
+                color: '#9ca3af',
                 font: {
-                    size: 11
+                    size: 12,
+                    family: 'Inter'
                 }
             },
             min: 0
