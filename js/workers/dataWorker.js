@@ -83,6 +83,27 @@ self.onmessage = function (e) {
         minEntryCcy, maxEntryCcy, minUpnl, maxUpnl
     } = filterState;
 
+    // DEBUG: Log all received data
+    console.log(`[Worker] Received message:`);
+    console.log(`[Worker] allRows count: ${allRows?.length || 0}`);
+    console.log(`[Worker] selectedCoins:`, selectedCoins);
+
+    // FIX: Validate selectedCoins against actual data coins
+    // If selectedCoins has values but none match the data, ignore the filter
+    let effectiveSelectedCoins = selectedCoins;
+    if (allRows?.length > 0 && selectedCoins?.length > 0) {
+        const uniqueCoins = [...new Set(allRows.map(r => r.coin))];
+        const matchingCoins = selectedCoins.filter(sc => uniqueCoins.includes(sc));
+
+        if (matchingCoins.length === 0) {
+            console.warn(`[Worker] selectedCoins has ${selectedCoins.length} coins but none match data. Ignoring coin filter.`);
+            effectiveSelectedCoins = []; // Clear to show all rows
+        } else if (matchingCoins.length !== selectedCoins.length) {
+            console.log(`[Worker] Filtering to ${matchingCoins.length}/${selectedCoins.length} selected coins`);
+            effectiveSelectedCoins = matchingCoins;
+        }
+    }
+
     const { activeCurrency, activeEntryCurrency, currentPrices, fxRates } = currencyState;
 
     const addressFilterRegex = addressFilter ? new RegExp(addressFilter, 'i') : null;
@@ -130,7 +151,11 @@ self.onmessage = function (e) {
 
     // 1. Filter rows
     let rows = updatedRows.filter(r => {
-        if (selectedCoins.length > 0 && !selectedCoins.includes(r.coin)) return false;
+        if (effectiveSelectedCoins.length > 0 && !effectiveSelectedCoins.includes(r.coin)) {
+            // DEBUG: Log why rows are being filtered out
+            // console.log(`[Worker] Filtering out row with coin: ${r.coin}, not in selectedCoins`);
+            return false;
+        }
 
         if (addressFilterRegex) {
             const addr = r.address;

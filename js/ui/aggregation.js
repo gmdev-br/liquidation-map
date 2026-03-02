@@ -321,6 +321,11 @@ function initializeControls(isResumida, state, minPriceInputId, maxPriceInputId,
 /**
  * Build bands data structure
  */
+
+// Maximum reasonable price to prevent extreme band calculations
+// Prices above this are likely data errors and would cause billions of bands
+const MAX_REASONABLE_PRICE = 10000000; // $10 million - well above any realistic crypto price
+
 function buildBands(rows, currentPrices, fxRates, activeEntryCurrency, bandSize, minPriceSetting, maxPriceSetting, currentBand) {
     const bands = {};
     let totalLongNotional = 0;
@@ -346,7 +351,8 @@ function buildBands(rows, currentPrices, fxRates, activeEntryCurrency, bandSize,
 
         for (const r of rows) {
             const entryCcy = getCorrelatedEntry(r, activeEntryCurrency, currentPrices, fxRates);
-            if (!isNaN(entryCcy) && entryCcy > 0) {
+            // Validate entry price is within reasonable bounds to prevent extreme band calculations
+            if (!isNaN(entryCcy) && entryCcy > 0 && entryCcy <= MAX_REASONABLE_PRICE) {
                 const b = Math.floor(entryCcy / bandSize) * bandSize;
                 if (b < minEntryBand) minEntryBand = b;
                 if (b > maxEntryBand) maxEntryBand = b;
@@ -357,7 +363,8 @@ function buildBands(rows, currentPrices, fxRates, activeEntryCurrency, bandSize,
         for (const r of rows) {
             if (r.liquidationPx > 0) {
                 const liqPriceCorr = getCorrelatedPrice(r, r.liquidationPx, activeEntryCurrency, currentPrices, fxRates);
-                if (isFinite(liqPriceCorr) && liqPriceCorr > 0) {
+                // Validate liquidation price is within reasonable bounds
+                if (isFinite(liqPriceCorr) && liqPriceCorr > 0 && liqPriceCorr <= MAX_REASONABLE_PRICE) {
                     const liqB = Math.floor(liqPriceCorr / bandSize) * bandSize;
                     if (liqB < minEntryBand) minEntryBand = liqB;
                     if (liqB > maxEntryBand) maxEntryBand = liqB;
@@ -378,9 +385,13 @@ function buildBands(rows, currentPrices, fxRates, activeEntryCurrency, bandSize,
 
     // Safety Truncate (Anti-Freeze)
     const MAX_ALLOWED_BANDS = 5000;
+    const WARNING_BANDS_THRESHOLD = 500000; // Only warn for truly excessive ranges
     let totalBandsCount = Math.floor((maxEntryBand - minEntryBand) / bandSize) + 1;
     if (totalBandsCount > MAX_ALLOWED_BANDS) {
-        console.warn(`[AggTable] Excessive range detected (${totalBandsCount} bands). Truncating around current price.`);
+        // Only warn for truly excessive ranges, not normal large ranges that truncate fine
+        if (totalBandsCount > WARNING_BANDS_THRESHOLD) {
+            console.warn(`[AggTable] Excessive range detected (${totalBandsCount} bands). Truncating around current price.`);
+        }
         const centerBand = currentBand > 0 ? currentBand : (maxEntryBand + minEntryBand) / 2;
         const halfRange = Math.floor(MAX_ALLOWED_BANDS / 2) * bandSize;
         minEntryBand = Math.max(minEntryBand, Math.floor((centerBand - halfRange) / bandSize) * bandSize);

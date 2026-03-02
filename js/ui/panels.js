@@ -421,7 +421,21 @@ export function startPriceTicker() {
                     console.log(`[ChartUpdate] Scatter refPrice: ${refPrice} (Entry Currency: ${activeEntryCurrency})`);
                 }
 
-                scatterChart.update(); // Use default animation mode to ensure full redraw if needed
+                // DEBUG: Check chart validity before update
+                const canvas = document.getElementById('scatterChart');
+                const section = document.getElementById('chart-section');
+                console.log(`[ChartUpdate] scatterChart exists: ${!!scatterChart}, canvas exists: ${!!canvas}, canvas in DOM: ${canvas?.isConnected}, section display: ${section?.style.display}, chart.ctx: ${!!scatterChart?.ctx}, chart.canvas: ${!!scatterChart?.canvas}`);
+
+                // Only update if chart is valid and visible
+                if (scatterChart.ctx && scatterChart.canvas && canvas && canvas.isConnected && section && section.style.display !== 'none') {
+                    try {
+                        scatterChart.update(); // Use default animation mode to ensure full redraw if needed
+                    } catch (e) {
+                        console.warn('[ChartUpdate] scatterChart.update() failed:', e.message);
+                    }
+                } else {
+                    console.warn('[ChartUpdate] Skipping scatterChart update - chart invalid or hidden');
+                }
             }
 
             if (liqChart) {
@@ -458,7 +472,21 @@ export function startPriceTicker() {
                     console.log(`[ChartUpdate] LiqChart refPrice: ${refPrice}`);
                 }
 
-                liqChart.update(); // Use default animation mode
+                // DEBUG: Check liqChart validity before update
+                const liqCanvas = document.getElementById('liqScatterChart');
+                const liqSection = document.getElementById('liq-chart-section');
+                console.log(`[ChartUpdate] liqChart exists: ${!!liqChart}, canvas exists: ${!!liqCanvas}, canvas in DOM: ${liqCanvas?.isConnected}, section display: ${liqSection?.style.display}, chart.ctx: ${!!liqChart?.ctx}, chart.canvas: ${!!liqChart?.canvas}`);
+
+                // Only update if chart is valid and visible
+                if (liqChart.ctx && liqChart.canvas && liqCanvas && liqCanvas.isConnected && liqSection && liqSection.style.display !== 'none') {
+                    try {
+                        liqChart.update(); // Use default animation mode
+                    } catch (e) {
+                        console.warn('[ChartUpdate] liqChart.update() failed:', e.message);
+                    }
+                } else {
+                    console.warn('[ChartUpdate] Skipping liqChart update - chart invalid or hidden');
+                }
             }
 
             // Update aggregation table highlight if active

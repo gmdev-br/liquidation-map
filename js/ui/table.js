@@ -44,7 +44,8 @@ let virtualScrollManager = null;
 // Initialize Web Worker
 let dataWorker = null;
 if (window.Worker) {
-    dataWorker = new Worker('js/workers/dataWorker.js');
+    // Add cache-busting to force reload when code changes
+    dataWorker = new Worker(`js/workers/dataWorker.js?v=${Date.now()}`);
 }
 
 // Cache for headers to prevent loss during reordering
@@ -282,7 +283,20 @@ function _renderTableInternal() {
             return; // Exit here, the rest is handled by finalizeTableRender
         } else {
             // Fallback for browsers without Worker support
-            
+
+            // FIX: Validate selectedCoins against actual data coins
+            let effectiveSelectedCoins = selectedCoins;
+            if (allRows?.length > 0 && selectedCoins?.length > 0) {
+                const uniqueCoins = [...new Set(allRows.map(r => r.coin))];
+                const matchingCoins = selectedCoins.filter(sc => uniqueCoins.includes(sc));
+                if (matchingCoins.length === 0) {
+                    console.warn(`[Table] selectedCoins has ${selectedCoins.length} coins but none match data. Ignoring coin filter.`);
+                    effectiveSelectedCoins = [];
+                } else if (matchingCoins.length !== selectedCoins.length) {
+                    effectiveSelectedCoins = matchingCoins;
+                }
+            }
+
             // 0. Update rows with current prices
             const updatedRows = allRows.map(r => {
                 const currentPrice = parseFloat(currentPrices[r.coin]);
@@ -305,7 +319,7 @@ function _renderTableInternal() {
             });
 
             rows = updatedRows.filter(r => {
-                if (selectedCoins.length > 0 && !selectedCoins.includes(r.coin)) return false;
+                if (effectiveSelectedCoins.length > 0 && !effectiveSelectedCoins.includes(r.coin)) return false;
                 if (addressFilterRegex) {
                     const addr = r.address;
                     const meta = whaleMeta[addr];

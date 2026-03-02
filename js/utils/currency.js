@@ -4,6 +4,11 @@
 
 import { getCurrentPrices } from '../state.js';
 
+// Minimum valid coin price to prevent extreme correlation ratios
+// Prices below this threshold (e.g., due to data errors or extremely low-value tokens)
+// can cause division that produces billions of bands in aggregation calculations
+const MIN_VALID_COIN_PRICE = 0.0001; // $0.0001 minimum to prevent extreme ratios
+
 export function convertToActiveCcy(valUSD, overrideCcy = null, activeCurrency, fxRates) {
     const ccy = overrideCcy || activeCurrency;
     if (ccy === 'USD') return valUSD;
@@ -28,7 +33,11 @@ export function getCorrelatedPrice(row, rawPrice, activeEntryCurrency, currentPr
 
     let correlatedVal = rawPrice; // Default to raw price if data missing
 
-    if (row.coin !== 'BTC' && btcPrice > 0 && coinPrice > 0) {
+    // Validate coinPrice is above minimum threshold to prevent extreme correlation ratios
+    // that can cause billions of bands to be calculated (e.g., 14479482838 bands error)
+    const isValidCoinPrice = coinPrice >= MIN_VALID_COIN_PRICE;
+
+    if (row.coin !== 'BTC' && btcPrice > 0 && isValidCoinPrice) {
         correlatedVal = rawPrice * (btcPrice / coinPrice);
     } else if (row.coin === 'BTC') {
         correlatedVal = rawPrice;

@@ -134,6 +134,8 @@ export function processState(whale, state, allRows) {
 
     // Check for account value consistency
     let accountValue = parseFloat(whale.accountValue);
+    const positionCount = (state.assetPositions || []).filter(p => parseFloat(p.position.szi) !== 0).length;
+
     if (state.marginSummary && state.marginSummary.accountValue) {
         const chAccountValue = parseFloat(state.marginSummary.accountValue);
         const diff = Math.abs(accountValue - chAccountValue);
@@ -141,7 +143,11 @@ export function processState(whale, state, allRows) {
 
         // If significant difference, use clearinghouse value
         if (pctDiff > 20) {
-            console.warn(`Account value mismatch for ${whale.ethAddress}: LB $${accountValue.toLocaleString()} vs CH $${chAccountValue.toLocaleString()} (${pctDiff.toFixed(1)}% diff)`);
+            // Only warn for meaningful mismatches (not closed accounts)
+            // CH=$0 means account closed positions - this is normal, not an error
+            if (chAccountValue > 0) {
+                console.warn(`[ACCOUNT_MISMATCH] ${whale.displayName || whale.ethAddress.slice(0, 12)}: LB $${(accountValue/1e6).toFixed(1)}M vs CH $${(chAccountValue/1e6).toFixed(1)}M (${pctDiff.toFixed(1)}% diff), positions: ${positionCount}`);
+            }
             accountValue = chAccountValue;
         }
     }
