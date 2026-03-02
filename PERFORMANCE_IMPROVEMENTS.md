@@ -2,6 +2,42 @@
 
 Este documento resume todas as otimizações de performance implementadas no projeto Liquidation Map.
 
+## Otimizações de Scan - Março 2026
+
+Otimizações focadas em melhorar a performance durante o scan do dashboard, reduzindo renderizações desnecessárias e bloqueios da thread principal.
+
+### Problemas Identificados
+
+1. **Debounce de 1s muito agressivo durante scan** - Causando renderizações constantes e consumo excessivo de CPU
+2. **Headers sendo destruídos/recriados a cada renderização** - Uso de `innerHTML = ''` causando reflows desnecessários
+3. **Gráficos renderizados sincronamente no caminho crítico** - Bloqueando a thread principal durante atualizações
+4. **Virtual Scroll com calibração excessiva** - Timeout de 250ms causando delays na renderização inicial
+5. **Cache busting no Worker recriando-o a cada carregamento** - Perda de performance por recriação desnecessária
+6. **Múltiplas renderizações redundantes na inicialização** - Chamadas duplicadas de funções de render
+7. **Processamento síncrono no Worker bloqueando com grandes datasets** - Falta de chunking assíncrono
+
+### Soluções Implementadas
+
+| Problema | Arquivo | Solução |
+|----------|---------|---------|
+| Debounce agressivo | `js/api/hyperliquid.js` | Debounce durante scan aumentado para 3000ms |
+| Headers destrutivos | `js/ui/table.js` | Headers otimizados usando DocumentFragment em vez de innerHTML destrutivo |
+| Gráficos síncronos | `js/ui/table.js` | Gráficos renderizados assincronamente com `requestIdleCallback` durante scan |
+| Cache busting | `js/ui/table.js` | Cache busting removido do Worker |
+| Timeout excessivo | `js/utils/virtualScroll.js` | Timeout de calibração reduzido de 250ms para 50ms |
+| Renderizações redundantes | `js/events/init.js` | Renderizações redundantes consolidadas em uma única chamada |
+| Processamento síncrono | `js/workers/dataWorker.js` | Processamento em chunks assíncronos de 1000 itens |
+
+### Resultados Esperados
+
+- **Scan 3x mais reativo** - Debounce maior reduz atualizações desnecessárias
+- **Menos reflows de DOM** - DocumentFragment evita destruição/recriação de headers
+- **Thread principal menos bloqueada** - `requestIdleCallback` e processamento em chunks
+- **Scroll mais suave** - Timeout reduzido melhora responsividade do Virtual Scroll
+- **Carregamento inicial mais rápido** - Consolidação de renderizações e cache do Worker preservado
+
+---
+
 ## Melhorias Implementadas
 
 ### 1. Cache de Queries DOM ✅

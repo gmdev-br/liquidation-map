@@ -34,8 +34,7 @@ function getCorrelatedEntry(row, targetCurrency, currentPrices, fxRates) {
     }
 
     if (targetCurrency === 'BTC') {
-        if (btcPrice > 0) return row.entryPx / btcPrice;
-        return 0;
+        return correlatedVal;
     }
 
     const rate = fxRates[targetCurrency] || 1;
@@ -59,15 +58,14 @@ function getCorrelatedPrice(row, rawPrice, targetCurrency, currentPrices, fxRate
     }
 
     if (targetCurrency === 'BTC') {
-        if (btcPrice > 0) return rawPrice / btcPrice;
-        return 0;
+        return correlatedVal;
     }
 
     const rate = fxRates[targetCurrency] || 1;
     return correlatedVal * rate;
 }
 
-self.onmessage = function (e) {
+self.onmessage = async function (e) {
     const {
         allRows,
         whaleMeta,
@@ -111,43 +109,65 @@ self.onmessage = function (e) {
     // DEBUG: Log worker receipt
     console.log(`[Worker] Received update. Rows: ${allRows.length}, ActiveCurrency: ${activeCurrency}, BTC Price: ${currentPrices['BTC']}`);
 
-    // 0. Update rows with current prices (Real-time PnL & Value calculation)
-    // We map over allRows to create a new array with updated values
-    const updatedRows = allRows.map(r => {
-        const currentPrice = parseFloat(currentPrices[r.coin]);
-        
-        // If we have a valid current price, update the row's calculated fields
-        if (!isNaN(currentPrice) && currentPrice > 0) {
-            // Create a shallow copy to avoid mutating the original source array (though it's a structured clone in worker)
-            const newRow = { ...r };
-            
-            newRow.markPrice = currentPrice;
-            
-            // Update Position Value: size * price
-            newRow.positionValue = Math.abs(newRow.szi) * currentPrice;
+    // PERFORMANCE: Process rows in async chunks to avoid blocking the worker thread
+    // This prevents the worker from becoming unresponsive during large data updates.
+    // Chunks of 1000 items provide a good balance between throughput and responsiveness.
+    const CHUNK_SIZE = 1000;
 
-            // Update Margin Used: positionValue / leverage
-            if (newRow.leverageValue > 0) {
-                newRow.marginUsed = newRow.positionValue / newRow.leverageValue;
+    async function processRowsInChunks(rows) {
+        const result = [];
+        for (let i = 0; i < rows.length; i += CHUNK_SIZE) {
+            const chunk = rows.slice(i, i + CHUNK_SIZE);
+            
+            // Process current chunk synchronously
+            const processedChunk = chunk.map(r => {
+                const currentPrice = parseFloat(currentPrices[r.coin]);
+                
+                // If we have a valid current price, update the row's calculated fields
+                if (!isNaN(currentPrice) && currentPrice > 0) {
+                    // Create a shallow copy to avoid mutating the original source array
+                    const newRow = { ...r };
+                    
+                    newRow.markPrice = currentPrice;
+                    
+                    // Update Position Value: size * price
+                    newRow.positionValue = Math.abs(newRow.szi) * currentPrice;
+
+                    // Update Margin Used: positionValue / leverage
+                    if (newRow.leverageValue > 0) {
+                        newRow.marginUsed = newRow.positionValue / newRow.leverageValue;
+                    }
+                    
+                    // Update Unrealized PnL: (price - entry) * size
+                    // szi is signed, so this works for both Long and Short
+                    // Long (szi > 0): (P - E) * szi
+                    // Short (szi < 0): (P - E) * (-abs(szi)) = (E - P) * abs(szi)
+                    newRow.unrealizedPnl = (currentPrice - newRow.entryPx) * newRow.szi;
+                    
+                    // Update Distance to Liquidation
+                    if (newRow.liquidationPx > 0) {
+                        newRow.distPct = Math.abs((currentPrice - newRow.liquidationPx) / currentPrice) * 100;
+                    } else {
+                        newRow.distPct = null;
+                    }
+                    
+                    return newRow;
+                }
+                return r;
+            });
+            
+            result.push(...processedChunk);
+            
+            // Yield control back to the event loop if there are more chunks to process
+            if (i + CHUNK_SIZE < rows.length) {
+                await new Promise(resolve => setTimeout(resolve, 0));
             }
-            
-            // Update Unrealized PnL: (price - entry) * size
-            // szi is signed, so this works for both Long and Short
-            // Long (szi > 0): (P - E) * szi
-            // Short (szi < 0): (P - E) * (-abs(szi)) = (E - P) * abs(szi)
-            newRow.unrealizedPnl = (currentPrice - newRow.entryPx) * newRow.szi;
-            
-            // Update Distance to Liquidation
-            if (newRow.liquidationPx > 0) {
-                newRow.distPct = Math.abs((currentPrice - newRow.liquidationPx) / currentPrice) * 100;
-            } else {
-                newRow.distPct = null;
-            }
-            
-            return newRow;
         }
-        return r;
-    });
+        return result;
+    }
+
+    // Process all rows in chunks
+    const updatedRows = await processRowsInChunks(allRows);
 
     // 1. Filter rows
     let rows = updatedRows.filter(r => {

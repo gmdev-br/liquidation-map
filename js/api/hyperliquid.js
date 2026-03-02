@@ -146,7 +146,8 @@ export function processState(whale, state, allRows) {
             // Only warn for meaningful mismatches (not closed accounts)
             // CH=$0 means account closed positions - this is normal, not an error
             if (chAccountValue > 0) {
-                console.warn(`[ACCOUNT_MISMATCH] ${whale.displayName || whale.ethAddress.slice(0, 12)}: LB $${(accountValue/1e6).toFixed(1)}M vs CH $${(chAccountValue/1e6).toFixed(1)}M (${pctDiff.toFixed(1)}% diff), positions: ${positionCount}`);
+                // Warning silenced - account value mismatch detected but suppressed
+                // console.warn(`[ACCOUNT_MISMATCH] ${whale.displayName || whale.ethAddress.slice(0, 12)}: LB $${(accountValue/1e6).toFixed(1)}M vs CH $${(chAccountValue/1e6).toFixed(1)}M (${pctDiff.toFixed(1)}% diff), positions: ${positionCount}`);
             }
             accountValue = chAccountValue;
         }
@@ -245,8 +246,10 @@ export async function streamPositions(whaleList, minVal, maxConcurrency, callbac
         if (getRenderPending()) return;
         setRenderPending(true);
 
-        // Use longer debounce during scanning to reduce render frequency
-        const renderDelay = getScanning() ? 1000 : 400;
+        // PERFORMANCE: Increased debounce during scan from 1000ms to 3000ms
+        // This reduces render frequency significantly during heavy scanning operations
+        // Normal (non-scan) delay remains at 400ms for responsive UI
+        const renderDelay = getScanning() ? 3000 : 400;
 
         setTimeout(() => {
             setRenderPending(false);

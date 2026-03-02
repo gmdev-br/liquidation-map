@@ -834,14 +834,12 @@ async function loadInitialState() {
         ctrl.style.display = (chartMode === 'column') ? 'block' : 'none';
     });
 
-    console.log('loadInitialState: Rendering table...');
-    renderTableImmediate(); // Use immediate render to bypass debounce on page load
-
-    // Safety net: loadSettings triggers async onCurrencyChange which may call renderTable
-    // and reset the filter cache with a different cache key, causing a blank table.
-    // After 350ms, all async effects from loadSettings will have settled, so we force a final render.
+    // PERFORMANCE: Consolidated redundant renders into single render
+    // Previously there were two renderTableImmediate() calls - one immediate and one after 350ms timeout.
+    // This caused unnecessary double rendering on page load. Now we render once after all async effects settle.
+    // The safety net delay is kept to ensure all async effects from loadSettings/onCurrencyChange have completed.
     setTimeout(() => {
-        console.log('loadInitialState: Safety net render after async effects...');
+        console.log('loadInitialState: Consolidated render after async effects...');
         renderTableImmediate();
     }, 350);
 

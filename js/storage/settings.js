@@ -409,11 +409,11 @@ export function loadSettings() {
         priceIntervalRanges.forEach(el => el.value = s.priceUpdateInterval / 1000);
     }
     if (s.columnWidths) {
-        console.log('[DEBUG] Loaded columnWidths from storage:', JSON.stringify(s.columnWidths));
+        //console.log('[DEBUG] Loaded columnWidths from storage:', JSON.stringify(s.columnWidths));
         setColumnWidths(s.columnWidths);
         applyColumnWidths();
     } else {
-        console.log('[DEBUG] No columnWidths found in storage, using defaults');
+        //console.log('[DEBUG] No columnWidths found in storage, using defaults');
     }
     if (s.rankingLimit) {
         const rankingLimits = document.querySelectorAll('.js-ranking-limit');

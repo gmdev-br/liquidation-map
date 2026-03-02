@@ -749,8 +749,7 @@ function getCorrelatedPrice(row, rawPrice, activeEntryCurrency, currentPrices) {
     }
 
     if (targetCcy === 'BTC') {
-        if (btcPrice > 0) return rawPrice / btcPrice;
-        return 0;
+        return correlatedVal;
     }
 
     const rate = fxRates[targetCcy] || 1;

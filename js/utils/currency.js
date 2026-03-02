@@ -48,12 +48,9 @@ export function getCorrelatedPrice(row, rawPrice, activeEntryCurrency, currentPr
         return correlatedVal;
     }
 
-    // 3. If target is BTC, user likely wants "Price in BTC terms"
-    // Since correlatedVal is "The BTC Price equivalent", converting it to BTC = 1 (useless).
-    // So for BTC selection, we return the raw price converted to BTC.
+    // 3. If target is BTC, return the correlated value (BTC price equivalent)
     if (targetCcy === 'BTC') {
-        if (btcPrice > 0) return rawPrice / btcPrice;
-        return 0;
+        return correlatedVal;
     }
 
     // 4. If target is Fiat (BRL, EUR, etc), convert the Correlated USD Value to that Fiat

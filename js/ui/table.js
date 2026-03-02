@@ -44,8 +44,11 @@ let virtualScrollManager = null;
 // Initialize Web Worker
 let dataWorker = null;
 if (window.Worker) {
-    // Add cache-busting to force reload when code changes
-    dataWorker = new Worker(`js/workers/dataWorker.js?v=${Date.now()}`);
+    // PERFORMANCE: Removed cache-busting (?v=${Date.now()})
+    // Cache busting forces the browser to re-download the worker on every page load,
+    // which is unnecessary for a production environment and slows down initial load.
+    // The service worker handles proper cache invalidation for updates.
+    dataWorker = new Worker('js/workers/dataWorker.js');
 }
 
 // Cache for headers to prevent loss during reordering
@@ -97,21 +100,30 @@ function reorderTableHeadersAndFilters(columnOrder) {
         return;
     }
 
-    // Clear header row
-    headerRow.innerHTML = '';
-    if (filterRow) {
-        filterRow.innerHTML = '';
-    }
+    // PERFORMANCE: Use DocumentFragment to batch DOM updates
+    // Instead of clearing innerHTML (which is destructive and causes reflows),
+    // we use DocumentFragment to batch append operations in memory,
+    // then perform a single DOM update. This reduces reflows and improves performance.
+    const headerFragment = document.createDocumentFragment();
+    const filterFragment = filterRow ? document.createDocumentFragment() : null;
 
     // Reorder headers based on columnOrder
     columnOrder.forEach(colKey => {
         if (cachedHeaders[colKey]) {
-            headerRow.appendChild(cachedHeaders[colKey]);
+            headerFragment.appendChild(cachedHeaders[colKey]);
         }
-        if (filterRow && cachedFilterHeaders && cachedFilterHeaders[colKey]) {
-            filterRow.appendChild(cachedFilterHeaders[colKey]);
+        if (filterFragment && cachedFilterHeaders && cachedFilterHeaders[colKey]) {
+            filterFragment.appendChild(cachedFilterHeaders[colKey]);
         }
     });
+
+    // Clear and append in single batch operation
+    headerRow.innerHTML = '';
+    headerRow.appendChild(headerFragment);
+    if (filterRow) {
+        filterRow.innerHTML = '';
+        filterRow.appendChild(filterFragment);
+    }
 }
 
 export function updateStats(showSymbols, allRows) {
@@ -393,13 +405,26 @@ function _renderTableInternal() {
 
         setDisplayedRows(rows);
 
-        // Only update charts if not scanning
+        // PERFORMANCE: Render charts asynchronously when scanning to avoid blocking the main thread
+        // During scanning operations, we defer chart rendering using requestIdleCallback (if available)
+        // or setTimeout(..., 0) as a fallback. This keeps the UI responsive during heavy data processing.
         if (!getScanning()) {
             try {
                 renderCharts(); // Update chart with filtered rows
             } catch (err) {
                 console.error('renderCharts error (non-fatal):', err);
             }
+        } else if (window.isScanning) {
+            // Async chart rendering during scan
+            const scheduleChartRender = window.requestIdleCallback ||
+                ((cb) => setTimeout(cb, 0));
+            scheduleChartRender(() => {
+                try {
+                    renderCharts();
+                } catch (err) {
+                    console.error('renderCharts async error (non-fatal):', err);
+                }
+            });
         }
 
         // Update statistics with filtered rows

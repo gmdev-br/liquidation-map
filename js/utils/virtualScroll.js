@@ -90,24 +90,24 @@ export class VirtualScroll {
         // Only run calibration passes if we haven't successfully measured the row height yet!
         // Doing this on every setData in a real-time table causes severe scroll jumping.
         if (!this.rowHeightMeasured) {
-            // First pass: re-render after next animation frame
-            requestAnimationFrame(() => {
+            // PERFORMANCE: Consolidated multiple requestAnimationFrame calls into one
+            // and reduced timeout from 250ms to 50ms for faster calibration.
+            // This reduces layout thrashing and improves responsiveness during data updates.
+            let calibrationPass = 0;
+            const runCalibration = () => {
+                calibrationPass++;
                 this._calibrateRowHeight();
                 if (this.rowHeightMeasured) {
                     this.updateVisibleRange();
                     this.render(true);
+                } else if (calibrationPass < 2) {
+                    // Schedule second pass with shorter delay (50ms instead of 250ms)
+                    setTimeout(() => {
+                        requestAnimationFrame(runCalibration);
+                    }, 50);
                 }
-            });
-            // Second pass: CSS fonts and custom styles can take slightly longer
-            setTimeout(() => {
-                if (!this.rowHeightMeasured) {
-                    this._calibrateRowHeight();
-                    if (this.rowHeightMeasured) {
-                        this.updateVisibleRange();
-                        this.render(true);
-                    }
-                }
-            }, 250);
+            };
+            requestAnimationFrame(runCalibration);
         }
     }
 
