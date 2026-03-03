@@ -141,7 +141,6 @@ self.onmessage = async function (e) {
     const fullBands = {};
     const resBands = {};
 
-    // PERFORMANCE: Pre-allocate chart data arrays to avoid UI-thread O(N) mapping
     const scatterPoints = [];
     const liqPoints = [];
     const bubbleScale = filterState.bubbleScale || 1.0;
@@ -153,30 +152,13 @@ self.onmessage = async function (e) {
         totalCap: 0, capLong: 0, capShort: 0,
         largest: 0, coinStats: {}, uniqueCoins: [],
         aggFull: null, aggRes: null,
-        scatterPoints, liqPoints // Pre-calculated chart data
+        scatterPoints, liqPoints
     };
 
     const whalesWithPosSet = new Set();
     const whalesLongSet = new Set();
     const whalesShortSet = new Set();
-    const processedWhalesForCap = new Set(); // Track whales already counted in totalCap pass
-
-    const createBand = (priceVal) => ({
-        faixaDe: priceVal, faixaAte: priceVal + (bandSize || 0),
-        qtdLong: 0, notionalLong: 0,
-        qtdShort: 0, notionalShort: 0,
-        sumLiqNotionalLong: 0, sumLiqNotionalShort: 0,
-        liqVolLong: 0, liqVolShort: 0,
-        ativosLong: new Set(), ativosShort: new Set(),
-        positionsLong: [], positionsShort: [],
-        whalesLong: new Set(), whalesShort: new Set(),
-        isEmpty: true
-    });
-
-    const isInRange = (price, min, max) => (min <= 0 || max <= 0) || (price >= min && price <= max);
-
-    let totalLongNotional = 0;
-    let totalShortNotional = 0;
+    const processedWhalesForCap = new Set();
 
     const createBand = (priceVal) => ({
         faixaDe: priceVal, faixaAte: priceVal + (bandSize || 0),
@@ -199,7 +181,6 @@ self.onmessage = async function (e) {
         const r = rows[i];
         const addr = r.address;
 
-        // General Stats
         whalesWithPosSet.add(addr);
         stats.totalUpnl += r.unrealizedPnl;
         if (r.side === 'long') {
@@ -212,7 +193,6 @@ self.onmessage = async function (e) {
             stats.positionsShortCount++;
         }
 
-        // PERFORMANCE: Consolidate whale market cap into main pass
         if (!processedWhalesForCap.has(addr)) {
             const meta = cachedWhaleMeta[addr];
             const val = meta?.accountValue || 0;
@@ -232,24 +212,18 @@ self.onmessage = async function (e) {
             cs._whales.add(addr);
         }
 
-        // PERFORMANCE: Pre-calculate chart points
         if (r._volBTC > 0) {
             const commonPointData = {
                 y: r._volBTC,
                 r: r._sqrtPosVal / 1000 * bubbleScale,
                 _raw: r
             };
-
-            // Scatter points (x = entry price)
             scatterPoints.push({ x: r._entCcy, ...commonPointData });
-
-            // Liquidation points (x = liq price)
             if (r._liqPxCcy > 0) {
                 liqPoints.push({ x: r._liqPxCcy, ...commonPointData });
             }
         }
 
-        // Aggregation logic
         if (aggParams) {
             const entryCcy = r._entCcy;
             const val = r.positionValue;
@@ -314,7 +288,6 @@ self.onmessage = async function (e) {
         }
     }
 
-    // Finalize Stats
     const coins = Object.keys(stats.coinStats).sort();
     stats.uniqueCoins = coins;
     for (let i = 0; i < coins.length; i++) {
@@ -325,7 +298,6 @@ self.onmessage = async function (e) {
     stats.whalesLong = whalesLongSet.size;
     stats.whalesShort = whalesShortSet.size;
 
-    // Finalize Aggregation
     if (aggParams) {
         const finalize = (bandsMap) => {
             const arr = Object.values(bandsMap).sort((a, b) => b.faixaDe - a.faixaDe);
@@ -348,41 +320,6 @@ self.onmessage = async function (e) {
         stats.aggFull = finalize(fullBands);
         const aggRes = finalize(resBands);
 
-        // Summary filtering
-        if (aggRes.bandArray) {
-            aggRes.bandArray = aggRes.bandArray.filter(b => {
-                if (b.isEmpty) return false;
-                return (b.notionalLong + b.notionalShort >= 10_000_000) ||
-                    (b.liqVolLong >= 10_000_000 || b.liqVolShort >= 10_000_000);
-            });
-        }
-        stats.aggRes = aggRes;
-    }
-
-    // Finalize Aggregation
-    if (aggParams) {
-        const finalize = (bandsMap) => {
-            const arr = Object.values(bandsMap).sort((a, b) => b.faixaDe - a.faixaDe);
-            for (let i = 0; i < arr.length; i++) {
-                const b = arr[i];
-                if (!b.isEmpty) {
-                    b.positionsLong.sort((x, y) => y.positionValue - x.positionValue);
-                    b.positionsShort.sort((x, y) => y.positionValue - x.positionValue);
-                    b.ativosLong = Array.from(b.ativosLong);
-                    b.ativosShort = Array.from(b.ativosShort);
-                    b.whalesLongCount = b.whalesLong.size;
-                    b.whalesShortCount = b.whalesShort.size;
-                    delete b.whalesLong;
-                    delete b.whalesShort;
-                }
-            }
-            return { bandArray: arr, totalLongNotional, totalShortNotional, bandsWithPosCount: arr.filter(x => !x.isEmpty).length };
-        };
-
-        stats.aggFull = finalize(fullBands);
-        const aggRes = finalize(resBands);
-
-        // Summary filtering
         if (aggRes.bandArray) {
             aggRes.bandArray = aggRes.bandArray.filter(b => {
                 if (b.isEmpty) return false;

@@ -60,7 +60,7 @@ if (window.Worker) {
     // Cache busting forces the browser to re-download the worker on every page load,
     // which is unnecessary for a production environment and slows down initial load.
     // The service worker handles proper cache invalidation for updates.
-    dataWorker = new Worker('js/workers/dataWorker.js');
+    dataWorker = new Worker(new URL('../workers/dataWorker.js', import.meta.url), { type: 'module' });
 }
 
 // Cache for headers to prevent loss during reordering
@@ -404,7 +404,8 @@ function reorderTableHeadersAndFilters(columnOrder) {
                 const orderToUse = columnOrder.filter(colKey => cellMap.has(colKey));
 
                 if (orderToUse.length === 0) {
-                    console.warn('[reorderTableHeadersAndFilters] No matching cells found for row', rowIndex, '- skipping');
+                    // This is expected during initial render when rows are being asynchronously populated by the virtual scroll
+                    // console.log('[reorderTableHeadersAndFilters] Timing: No matching cells found for row', rowIndex, '- skipping');
                     return;
                 }
 
@@ -477,7 +478,7 @@ export function updateStats(showSymbols, allRows, fastUPnL = null) {
      * PERFORMANCE: O(N_coins) fast path for global UPnL.
      * Use the pre-calculated stats summary to calculate global UPnL instantly.
      */
-    if (fastUPnL !== null || (allRows && allRows._isAllPos)) {
+    if (fastUPnL !== null || (allRows && allRows._isAllPos) || allRows === null) {
         let totalUpnl = fastUPnL;
         if (totalUpnl === null) {
             const summary = getStatsSummary();
@@ -503,6 +504,7 @@ export function updateStats(showSymbols, allRows, fastUPnL = null) {
     }
 
     // FALLBACK: Calculate full stats if needed
+    if (!allRows) return;
     const whalesWithPos = new Set();
     const whalesLong = new Set();
     const whalesShort = new Set();
@@ -689,7 +691,7 @@ function _renderTableInternal() {
                     renderCharts(stats.scatterPoints, stats.liqPoints);
 
                     // PERFORMANCE: Skip rebuilding map if hash hasn't changed
-                    const currentLookupHash = `${processedRows.length}|${priceUpdateVersion}`;
+                    const currentLookupHash = `${processedRows.length}|${getPriceUpdateVersion()}`;
                     if (currentLookupHash !== _lastLookupRowsHash) {
                         _rowLookupMap = new Map();
                         for (let i = 0; i < processedRows.length; i++) {

@@ -15,7 +15,9 @@ import { CURRENCY_META } from '../config.js';
 // Cache for market cap data
 let marketCapCache = null;
 let marketCapCacheTime = 0;
+let lastFetchErrorTime = 0;
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+const ERROR_BACKOFF = 2 * 60 * 1000; // 2 minutes backoff after error
 
 // Ranking panel state for change detection
 let rankingPanelDebounceTimer = null;
@@ -31,6 +33,12 @@ export async function fetchMarketCapRanking() {
         return marketCapCache;
     }
 
+    // Don't retry too quickly after an error (e.g. 429 Too Many Requests)
+    if (lastFetchErrorTime && (now - lastFetchErrorTime) < ERROR_BACKOFF) {
+        // console.log('CoinGecko API in backoff mode, using cached/empty data');
+        return marketCapCache || [];
+    }
+
     try {
         // Using CoinGecko API for market cap data
         const response = await fetch('https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=50&page=1&sparkline=false', {
@@ -38,7 +46,13 @@ export async function fetchMarketCapRanking() {
         });
 
         if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
+            if (response.status === 429) {
+                console.warn('CoinGecko API rate limit reached (429). Backing off.');
+            } else {
+                console.warn(`CoinGecko API error: HTTP ${response.status}`);
+            }
+            lastFetchErrorTime = now;
+            return marketCapCache || [];
         }
 
         const data = await response.json();
@@ -55,14 +69,15 @@ export async function fetchMarketCapRanking() {
         }));
 
         marketCapCacheTime = now;
+        lastFetchErrorTime = 0; // Reset error timer on success
         //console.log('Market cap data fetched and cached:', marketCapCache.length, 'coins');
 
         return marketCapCache;
 
     } catch (error) {
         console.warn('Failed to fetch market cap data:', error);
-        // Fallback to empty array
-        return [];
+        lastFetchErrorTime = now;
+        return marketCapCache || [];
     }
 }
 

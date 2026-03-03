@@ -5,11 +5,15 @@
   "homepage": ".",
   "scripts": {
     "start": "npx http-server -p 8000 -o",
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
     "predeploy": "npm install gh-pages --save-dev",
     "deploy": "gh-pages -d ."
   },
   "devDependencies": {
     "eslint": "^9.39.2",
-    "eslint-formatter-compact": "^9.0.1"
+    "eslint-formatter-compact": "^9.0.1",
+    "vite": "^6.4.1"
   }
 }
