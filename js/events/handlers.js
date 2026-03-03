@@ -131,7 +131,7 @@ export const errorHandler = {
      */
     handleError(error, context = 'Unknown', showUserMessage = true) {
         console.error(`[Error in ${context}]:`, error);
-        
+
         if (showUserMessage) {
             // Show user-friendly error message
             this.showUserError(error);
@@ -147,10 +147,10 @@ export const errorHandler = {
         toast.className = 'toast error';
         toast.innerHTML = `<span class="toast-icon">⚠</span><span class="toast-message">${this.getUserFriendlyMessage(error)}</span>`;
         document.getElementById('toast-container').appendChild(toast);
-        
+
         // Trigger animation
         requestAnimationFrame(() => toast.classList.add('show'));
-        
+
         // Auto-hide after 5 seconds
         setTimeout(() => {
             toast.classList.remove('show');
@@ -256,12 +256,12 @@ export const performanceMonitor = {
         if (metric) {
             const duration = performance.now() - metric.start;
             this.metrics.delete(label);
-            
+
             // Log slow operations
             if (duration > 100) {
                 console.warn(`[Performance] ${label} took ${duration.toFixed(2)}ms`);
             }
-            
+
             return duration;
         }
         return 0;
@@ -606,6 +606,11 @@ export function updateChartHeight(height) {
     const section = document.getElementById('chart-section');
     if (section) {
         section.style.height = height + 'px';
+        const chart = window.getScatterChart ? window.getScatterChart() : null;
+        if (chart) {
+            chart.resize();
+            chart.update();
+        }
     }
 }
 
@@ -615,6 +620,11 @@ export function updateLiqChartHeight(height) {
     const section = document.getElementById('liq-chart-section');
     if (section) {
         section.style.height = height + 'px';
+        const chart = window.getLiqChartInstance ? window.getLiqChartInstance() : null;
+        if (chart) {
+            chart.resize();
+            chart.update();
+        }
     }
 }
 
@@ -1095,11 +1105,11 @@ export function setupColumnDragAndDrop() {
     console.log('%c[DRAG-DROP:INIT] ═══ setupColumnDragAndDrop CALLED ═══', 'background: #673AB7; color: white; font-weight: bold; font-size: 12px;');
     console.log('[DRAG-DROP:INIT] Timestamp:', new Date().toISOString());
     console.log('[DRAG-DROP:INIT] dragAndDropInitialized flag:', dragAndDropInitialized);
-    
+
     // Check both the JS variable AND the DOM marker (for backwards compatibility)
     const existingMarker = document.querySelector('.dragging-initialized');
     console.log('[DRAG-DROP:INIT] .dragging-initialized marker found?', !!existingMarker);
-    
+
     if (dragAndDropInitialized) {
         console.log('%c[DRAG-DROP:INIT] ✗ EARLY RETURN - Drag and drop already initialized (JS flag)', 'background: #f44336; color: white; font-weight: bold;');
         return;
@@ -1154,12 +1164,12 @@ export function setupColumnDragAndDrop() {
         // ═══════════════════════════════════════════════════════════
         const tableId = sourceTable?.id;
         const isAggTable = tableId === 'liquidationTableFull' || tableId === 'liquidationTableSummary';
-        
+
         console.log('%c[DRAG-DROP:START] ═══ DRAG START ═══', 'background: #2196F3; color: white; font-weight: bold; font-size: 12px;');
         console.log('%c[DRAG-DROP:START] Dragged column:', 'color: #2196F3; font-weight: bold;', th.id);
         console.log('%c[DRAG-DROP:START] Table ID:', 'color: #2196F3; font-weight: bold;', tableId);
         console.log('%c[DRAG-DROP:START] Is Aggregation Table?', 'color: #2196F3; font-weight: bold;', isAggTable);
-        
+
         if (isAggTable) {
             console.log('%c[DRAG-DROP:START] ═══ AGGREGATION TABLE DRAG ═══', 'background: #FF9800; color: white; font-weight: bold;');
             console.log('%c[DRAG-DROP:START] aggColumnOrder (Full):', 'color: #FF9800;', JSON.stringify(getAggColumnOrder()));
@@ -1167,7 +1177,7 @@ export function setupColumnDragAndDrop() {
         } else {
             console.log('%c[DRAG-DROP:START] ColumnOrder (Positions):', 'color: #2196F3;', JSON.stringify(getColumnOrder()));
         }
-        
+
         const headers = Array.from(th.parentElement.children).map(h => h.id);
         console.log('%c[DRAG-DROP:START] Current DOM headers order:', 'color: #2196F3;', JSON.stringify(headers));
 
@@ -1195,18 +1205,18 @@ export function setupColumnDragAndDrop() {
             if (!dragGhost) {
                 dragGhost = document.createElement('div');
                 dragGhost.className = 'column-drag-ghost-full';
-                
+
                 // Get column width
                 const columnWidth = draggedTh.offsetWidth;
-                
+
                 // Create header part
                 const headerContent = draggedTh.querySelector('.th-label')?.textContent || draggedTh.textContent.trim().split('\n')[0];
-                
+
                 // Get visible cells from the column (limit to avoid performance issues)
                 const columnSelector = `td:nth-child(${draggedColumnIndex + 1})`;
                 const cells = sourceTable.querySelectorAll(columnSelector);
                 const visibleCells = Array.from(cells).slice(0, 10); // Limit to 10 rows for performance
-                
+
                 // Build ghost HTML
                 let ghostHTML = `
                     <div class="ghost-header" style="
@@ -1223,7 +1233,7 @@ export function setupColumnDragAndDrop() {
                     ">${headerContent}</div>
                     <div class="ghost-body" style="max-height: 200px; overflow: hidden;">
                 `;
-                
+
                 visibleCells.forEach(cell => {
                     const cellText = cell.textContent.trim();
                     ghostHTML += `<div class="ghost-cell" style="
@@ -1236,9 +1246,9 @@ export function setupColumnDragAndDrop() {
                         border-bottom: 1px solid rgba(255,255,255,0.05);
                     ">${cellText}</div>`;
                 });
-                
+
                 ghostHTML += '</div>';
-                
+
                 dragGhost.innerHTML = ghostHTML;
                 dragGhost.style.cssText = `
                     position: fixed;
@@ -1255,7 +1265,7 @@ export function setupColumnDragAndDrop() {
                     transform: rotate(2deg);
                     transition: transform 0.1s ease;
                 `;
-                
+
                 document.body.appendChild(dragGhost);
             }
 
@@ -1288,7 +1298,7 @@ export function setupColumnDragAndDrop() {
         console.log('[DRAG-DROP:DROP] isDragging:', isDragging);
         console.log('[DRAG-DROP:DROP] draggedTh:', draggedTh ? draggedTh.id : 'null');
         console.log('[DRAG-DROP:DROP] sourceTable:', sourceTable ? sourceTable.id : 'null');
-        
+
         if (!isDragging || !draggedTh) {
             console.log('%c[DRAG-DROP:DROP] ✗ Early return - not dragging or no draggedTh', 'color: #f44336;');
             return;
@@ -1297,17 +1307,17 @@ export function setupColumnDragAndDrop() {
         // Find drop target
         const targetElement = document.elementFromPoint(e.clientX, e.clientY);
         const targetTh = targetElement?.closest('th[id^="th-"]');
-        
+
         console.log('[DRAG-DROP:DROP] targetElement:', targetElement ? targetElement.tagName : 'null');
         console.log('[DRAG-DROP:DROP] targetTh:', targetTh ? targetTh.id : 'null');
 
         if (targetTh && targetTh !== draggedTh) {
             const targetTable = targetTh.closest('table');
-            
+
             console.log('[DRAG-DROP:DROP] targetTable:', targetTable ? targetTable.id : 'null');
             console.log('[DRAG-DROP:DROP] sourceTable:', sourceTable ? sourceTable.id : 'null');
             console.log('[DRAG-DROP:DROP] Tables match?', targetTable === sourceTable);
-            
+
             // Only allow drop within the same table
             if (targetTable === sourceTable) {
                 console.log('%c[DRAG-DROP:DROP] ✓ Drop completed: ' + draggedTh.id + ' -> ' + targetTh.id, 'background: #4CAF50; color: white; font-weight: bold;');
@@ -1320,7 +1330,7 @@ export function setupColumnDragAndDrop() {
                 console.log('%c[DRAG-DROP:DROP] Checking table type...', 'background: #9C27B0; color: white; font-weight: bold;');
                 console.log('%c[DRAG-DROP:DROP] sourceTable.id:', 'color: #9C27B0;', sourceTable.id);
                 console.log('%c[DRAG-DROP:DROP] Is positionsTable?', 'color: #9C27B0;', sourceTable.id === 'positionsTable');
-                
+
                 if (sourceTable.id === 'positionsTable') {
                     // Get current column order
                     const currentOrder = getColumnOrder();
@@ -1376,10 +1386,10 @@ export function setupColumnDragAndDrop() {
                     console.log('%c[PERSISTENCE:AGG-DROP] Table ID:', 'color: #FF9800; font-weight: bold;', sourceTable.id);
                     console.log('%c[PERSISTENCE:AGG-DROP] Dragged:', 'color: #FF9800;', draggedTh.id);
                     console.log('%c[PERSISTENCE:AGG-DROP] Target:', 'color: #FF9800;', targetTh.id);
-                    
+
                     const thead = sourceTable.querySelector('thead tr');
                     const tbody = sourceTable.querySelector('tbody');
-                    
+
                     console.log('%c[PERSISTENCE:AGG-DROP] thead found:', 'color: #FF9800;', !!thead);
                     console.log('%c[PERSISTENCE:AGG-DROP] tbody found:', 'color: #FF9800;', !!tbody);
 
@@ -1411,7 +1421,7 @@ export function setupColumnDragAndDrop() {
                                     if (row.classList.contains('vs-top-spacer') || row.classList.contains('vs-bottom-spacer')) {
                                         return;
                                     }
-                                    
+
                                     const allTds = Array.from(row.querySelectorAll('td'));
                                     // Verify indices are valid for this row
                                     if (draggedIdx < allTds.length && targetIdx < allTds.length) {
@@ -1441,7 +1451,7 @@ export function setupColumnDragAndDrop() {
                             console.log('%c[PERSISTENCE:AGG-DROP] sourceTable.id:', 'color: #FF9800;', sourceTable.id);
                             console.log('%c[PERSISTENCE:AGG-DROP] Is liquidationTableFull?', 'color: #FF9800;', sourceTable.id === 'liquidationTableFull');
                             console.log('%c[PERSISTENCE:AGG-DROP] Is liquidationTableSummary?', 'color: #FF9800;', sourceTable.id === 'liquidationTableSummary');
-                            
+
                             if (sourceTable.id === 'liquidationTableFull') {
                                 console.log('%c[PERSISTENCE:AGG-DROP] Calling setAggColumnOrder()...', 'background: #ff0000; color: white; font-weight: bold;');
                                 setAggColumnOrder(newHeaderOrder);
@@ -1500,7 +1510,7 @@ export function setupColumnDragAndDrop() {
     // Mark as initialized using both JS flag AND DOM marker
     dragAndDropInitialized = true;
     console.log('%c[DRAG-DROP:INIT] ✓ JS flag set to true', 'background: #4CAF50; color: white; font-weight: bold;');
-    
+
     // Keep DOM marker for backwards compatibility and debugging
     const marker = document.createElement('div');
     marker.className = 'dragging-initialized';
@@ -1592,11 +1602,11 @@ export function applyColumnWidths() {
         ths.forEach(th => {
             const colKey = th.id.replace('th-', '').replace('agg-', '');
             const storageKey = `aggregation_${colKey}`;
-            
+
             // Use stored width or default
             let width = columnWidths[storageKey] || th.getAttribute('data-default-width') || 100;
             width = parseInt(width);
-            
+
             // Enforce limits for aggregation tables
             width = Math.max(60, Math.min(300, width));
 

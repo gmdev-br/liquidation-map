@@ -735,6 +735,17 @@ function setupResizable(element, callback) {
         startY = e.clientY;
         startHeight = element.offsetHeight;
         resizer.classList.add('active');
+        element.classList.add('resizing');
+        document.body.style.cursor = 'ns-resize';
+        
+        // Disable chart responsiveness during resize to prevent intermediate redraws
+        if (element.id === 'chart-section' || element.id === 'liq-chart-section') {
+            const chart = element.id === 'chart-section' 
+                ? (window.getScatterChart ? window.getScatterChart() : null)
+                : (window.getLiqChartInstance ? window.getLiqChartInstance() : null);
+            if (chart) chart.options.responsive = false;
+        }
+        
         e.preventDefault();
     });
 
@@ -742,12 +753,30 @@ function setupResizable(element, callback) {
         if (!isResizing) return;
         const deltaY = e.clientY - startY;
         const newHeight = Math.max(200, startHeight + deltaY);
-        callback(newHeight);
+        // Only update the style during the move - NO REDRAW
+        element.style.height = newHeight + 'px';
     });
 
     eventManager.on(document, 'mouseup', () => {
+        if (!isResizing) return;
         isResizing = false;
         resizer.classList.remove('active');
+        element.classList.remove('resizing');
+        document.body.style.cursor = '';
+
+        // Re-enable responsiveness
+        if (element.id === 'chart-section' || element.id === 'liq-chart-section') {
+            const chart = element.id === 'chart-section' 
+                ? (window.getScatterChart ? window.getScatterChart() : null)
+                : (window.getLiqChartInstance ? window.getLiqChartInstance() : null);
+            if (chart) chart.options.responsive = true;
+        }
+
+        // Trigger the final update and save
+        if (callback) {
+            const finalHeight = element.offsetHeight;
+            callback(finalHeight);
+        }
     });
 }
 

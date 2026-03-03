@@ -15,12 +15,12 @@
     border-bottom: 1px solid var(--glass-border);
     display: none;
     min-height: 200px;
-    max-height: 400px;
+    /* max-height: 400px;  -- Removed to allow manual resizing */
     overflow: hidden;
     z-index: 50;
     backdrop-filter: var(--glass-blur);
     -webkit-backdrop-filter: var(--glass-blur);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    /* transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); -- Removed for better resize performance */
     transform: translateZ(0);
     -webkit-transform: translateZ(0);
     will-change: transform, opacity;

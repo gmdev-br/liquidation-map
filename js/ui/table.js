@@ -79,9 +79,9 @@ function areHeadersValid() {
     // If it's detached, all are likely detached
     const sampleHeader = headers[0];
     const isConnected = sampleHeader.isConnected || document.body.contains(sampleHeader);
-    
+
     console.log('[areHeadersValid] Sample header:', sampleHeader.id, 'isConnected:', isConnected);
-    
+
     return isConnected;
 }
 
@@ -94,25 +94,25 @@ function areHeadersValid() {
 function isDOMHeaderOrderCorrect(columnOrder) {
     const table = document.getElementById('positionsTable');
     if (!table) return true; // Can't check, assume correct
-    
+
     const headerRow = table.querySelector('thead tr');
     if (!headerRow) return true;
-    
+
     const domHeaders = Array.from(headerRow.querySelectorAll('th'));
     const domOrder = domHeaders.map(th => `col-${th.id.replace('th-', '')}`);
-    
+
     // Filter to only compare columns that exist in both
     const expectedOrder = (columnOrder || []).filter(col => domOrder.includes(col));
     const actualOrder = domOrder.filter(col => (columnOrder || []).includes(col));
-    
+
     const matches = JSON.stringify(expectedOrder) === JSON.stringify(actualOrder);
-    
+
     if (!matches) {
         console.log('[isDOMHeaderOrderCorrect] ⚠️ DOM order does NOT match expected!');
         console.log('[isDOMHeaderOrderCorrect] Expected:', JSON.stringify(expectedOrder));
         console.log('[isDOMHeaderOrderCorrect] Actual DOM:', JSON.stringify(actualOrder));
     }
-    
+
     return matches;
 }
 
@@ -124,7 +124,7 @@ function rebuildHeaderCache() {
     console.log('[rebuildHeaderCache] ════════════════════════════════════════');
     console.log('[rebuildHeaderCache] CALLED at', new Date().toLocaleTimeString());
     console.trace('[rebuildHeaderCache] Stack trace:');
-    
+
     const table = document.getElementById('positionsTable');
     if (!table) {
         console.warn('[rebuildHeaderCache] Table not found');
@@ -179,7 +179,7 @@ function rebuildHeaderCache() {
 function hasColumnConfigChanged(columnOrder, visibleColumns) {
     const orderChanged = JSON.stringify(columnOrder) !== JSON.stringify(lastColumnOrder);
     const visibilityChanged = JSON.stringify(visibleColumns) !== JSON.stringify(lastVisibleColumns);
-    
+
     console.log('[hasColumnConfigChanged] DEBUG:', {
         columnOrder: JSON.stringify(columnOrder),
         lastColumnOrder: JSON.stringify(lastColumnOrder),
@@ -189,7 +189,7 @@ function hasColumnConfigChanged(columnOrder, visibleColumns) {
         visibilityChanged,
         result: orderChanged || visibilityChanged
     });
-    
+
     return orderChanged || visibilityChanged;
 }
 
@@ -222,7 +222,7 @@ function reorderTableHeadersAndFilters(columnOrder) {
     const headersValid = areHeadersValid();
     const configChanged = hasColumnConfigChanged(columnOrder, visibleColumns);
     const domOrderCorrect = isDOMHeaderOrderCorrect(columnOrder);
-    
+
     console.log('[reorderTableHeadersAndFilters] areHeadersValid():', headersValid);
     console.log('[reorderTableHeadersAndFilters] hasColumnConfigChanged():', configChanged);
     console.log('[reorderTableHeadersAndFilters] isDOMHeaderOrderCorrect():', domOrderCorrect);
@@ -237,7 +237,7 @@ function reorderTableHeadersAndFilters(columnOrder) {
         applyColumnWidth(columnWidth);
         return;
     }
-    
+
     if (!domOrderCorrect) {
         console.log('[reorderTableHeadersAndFilters] DOM order mismatch detected - forcing reorder');
     }
@@ -366,77 +366,77 @@ function reorderTableHeadersAndFilters(columnOrder) {
             !row.classList.contains('vs-bottom-spacer') &&
             row.querySelectorAll('td').length > 0
         );
-        
+
         if (!hasDataRows) {
             console.log('[reorderTableHeadersAndFilters] No data rows found yet. Skipping cell reorder - rowRenderer will handle ordering during generation.');
         } else {
             // Only reorder cells if data rows exist
-        rows.forEach((row, rowIndex) => {
-            // SKIP virtual scroll spacer rows - they have only 1 cell with colspan
-            if (row.classList.contains('vs-top-spacer') || row.classList.contains('vs-bottom-spacer')) {
-                console.log('[reorderTableHeadersAndFilters] Skipping spacer row', rowIndex);
-                return;
-            }
-            
-            const cells = Array.from(row.querySelectorAll('td'));
-            if (cells.length === 0) {
-                console.log('[reorderTableHeadersAndFilters] Row', rowIndex, 'has no cells, skipping');
-                return; // Skip empty rows - rowRenderer hasn't populated them yet
-            }
-            console.log('[reorderTableHeadersAndFilters] Row', rowIndex, 'has', cells.length, 'cells');
-
-            // Create a map of colKey to cell based on cell class
-            const cellMap = new Map();
-            cells.forEach((cell, cellIndex) => {
-                // Find the col- class on the cell
-                const colClass = Array.from(cell.classList).find(cls => cls.startsWith('col-'));
-                if (colClass) {
-                    cellMap.set(colClass, cell);
+            rows.forEach((row, rowIndex) => {
+                // SKIP virtual scroll spacer rows - they have only 1 cell with colspan
+                if (row.classList.contains('vs-top-spacer') || row.classList.contains('vs-bottom-spacer')) {
+                    console.log('[reorderTableHeadersAndFilters] Skipping spacer row', rowIndex);
+                    return;
                 }
-            });
 
-            // FIX: Use intersection of columnOrder and available cells
-            // This handles cases where visibleColumns filters which cells are rendered
-            const availableCellKeys = Array.from(cellMap.keys());
-            const orderToUse = columnOrder.filter(colKey => cellMap.has(colKey));
-            
-            if (orderToUse.length === 0) {
-                console.warn('[reorderTableHeadersAndFilters] No matching cells found for row', rowIndex, '- skipping');
-                return;
-            }
-            
-            console.log('[reorderTableHeadersAndFilters] Row', rowIndex, 'reordering', orderToUse.length, 'of', columnOrder.length, 'columns');
-
-            // Create fragment with cells in new order
-            const cellFragment = document.createDocumentFragment();
-            let cellsReordered = 0;
-            orderToUse.forEach(colKey => {
-                const cell = cellMap.get(colKey);
-                if (cell) {
-                    cellFragment.appendChild(cell);
-                    cellsReordered++;
+                const cells = Array.from(row.querySelectorAll('td'));
+                if (cells.length === 0) {
+                    console.log('[reorderTableHeadersAndFilters] Row', rowIndex, 'has no cells, skipping');
+                    return; // Skip empty rows - rowRenderer hasn't populated them yet
                 }
-            });
+                console.log('[reorderTableHeadersAndFilters] Row', rowIndex, 'has', cells.length, 'cells');
 
-            console.log('[reorderTableHeadersAndFilters] Reordered', cellsReordered, 'cells for row', rowIndex);
-
-            // Clear row and append cells in new order (only for available cells)
-            if (cellsReordered > 0) {
-                // Keep any cells that aren't in columnOrder (append at end)
-                const extraCells = cells.filter(cell => {
+                // Create a map of colKey to cell based on cell class
+                const cellMap = new Map();
+                cells.forEach((cell, cellIndex) => {
+                    // Find the col- class on the cell
                     const colClass = Array.from(cell.classList).find(cls => cls.startsWith('col-'));
-                    return colClass && !columnOrder.includes(colClass);
+                    if (colClass) {
+                        cellMap.set(colClass, cell);
+                    }
                 });
-                
-                // Clear row and append reordered cells
-                row.innerHTML = '';
-                row.appendChild(cellFragment);
-                
-                // Append any extra cells at the end
-                extraCells.forEach(cell => row.appendChild(cell));
-            }
-        });
-        console.log('[reorderTableHeadersAndFilters] ✓ Finished reordering cells for all rows');
+
+                // FIX: Use intersection of columnOrder and available cells
+                // This handles cases where visibleColumns filters which cells are rendered
+                const availableCellKeys = Array.from(cellMap.keys());
+                const orderToUse = columnOrder.filter(colKey => cellMap.has(colKey));
+
+                if (orderToUse.length === 0) {
+                    console.warn('[reorderTableHeadersAndFilters] No matching cells found for row', rowIndex, '- skipping');
+                    return;
+                }
+
+                console.log('[reorderTableHeadersAndFilters] Row', rowIndex, 'reordering', orderToUse.length, 'of', columnOrder.length, 'columns');
+
+                // Create fragment with cells in new order
+                const cellFragment = document.createDocumentFragment();
+                let cellsReordered = 0;
+                orderToUse.forEach(colKey => {
+                    const cell = cellMap.get(colKey);
+                    if (cell) {
+                        cellFragment.appendChild(cell);
+                        cellsReordered++;
+                    }
+                });
+
+                console.log('[reorderTableHeadersAndFilters] Reordered', cellsReordered, 'cells for row', rowIndex);
+
+                // Clear row and append cells in new order (only for available cells)
+                if (cellsReordered > 0) {
+                    // Keep any cells that aren't in columnOrder (append at end)
+                    const extraCells = cells.filter(cell => {
+                        const colClass = Array.from(cell.classList).find(cls => cls.startsWith('col-'));
+                        return colClass && !columnOrder.includes(colClass);
+                    });
+
+                    // Clear row and append reordered cells
+                    row.innerHTML = '';
+                    row.appendChild(cellFragment);
+
+                    // Append any extra cells at the end
+                    extraCells.forEach(cell => row.appendChild(cell));
+                }
+            });
+            console.log('[reorderTableHeadersAndFilters] ✓ Finished reordering cells for all rows');
         } // Close hasDataRows else block
     } else {
         console.warn('[reorderTableHeadersAndFilters] tbody not found!');
@@ -812,10 +812,10 @@ function _renderTableInternal() {
         if (!virtualScrollManager) {
             virtualScrollManager = enableVirtualScroll('positionsTableBody', { threshold: 100, rowHeight: rowHeight });
         } else {
-             // Update row height in case it changed
-             if (typeof virtualScrollManager.setRowHeight === 'function') {
-                 virtualScrollManager.setRowHeight(rowHeight);
-             }
+            // Update row height in case it changed
+            if (typeof virtualScrollManager.setRowHeight === 'function') {
+                virtualScrollManager.setRowHeight(rowHeight);
+            }
         }
 
         // Row renderer function
@@ -941,7 +941,7 @@ function _renderTableInternal() {
             const orderToUse = (columnOrder && columnOrder.length > 0)
                 ? columnOrder.filter(Key => filteredCells[Key] !== undefined)
                 : Object.keys(filteredCells);
-            
+
             return `<tr class="${meta.displayName ? 'row-known-address' : ''}" style="height: ${rowHeight}px">
             ${orderToUse.map(Key => filteredCells[Key]).join('')}
         </tr>`;
@@ -977,7 +977,7 @@ function _renderTableInternal() {
         setTimeout(() => {
             setupColumnResizing();
         }, 100);
-        
+
         // Always try to setup drag and drop - the function has its own guards
         // The setupColumnDragAndDrop function uses a module-level flag that resets on page reload
         console.log('%c[RENDER:TABLE] Scheduling setupColumnDragAndDrop...', 'background: #FF5722; color: white; font-weight: bold;');
@@ -1035,7 +1035,7 @@ export function updateTableDataOnly() {
     console.log('[updateTableDataOnly] ════════════════════════════════════════');
     console.log('[updateTableDataOnly] CALLED at', new Date().toLocaleTimeString());
     console.trace('[updateTableDataOnly] Stack trace:');
-    
+
     const allRows = getAllRows();
     const currentPrices = getCurrentPrices();
     const fxRates = getFxRates();
@@ -1046,30 +1046,36 @@ export function updateTableDataOnly() {
     const decimalPlaces = getDecimalPlaces();
     const minBtcVolume = getMinBtcVolume();
     const columnOrder = getColumnOrder();
-    
+    const displayedRows = getDisplayedRows();
+
     console.log('[updateTableDataOnly] columnOrder from state:', JSON.stringify(columnOrder));
     console.log('[updateTableDataOnly] lastColumnOrder tracking:', JSON.stringify(lastColumnOrder));
 
     // Get current displayed rows from state
-    const displayedRows = getDisplayedRows();
     if (!displayedRows || displayedRows.length === 0) {
         console.log('[updateTableDataOnly] No displayed rows, doing full render');
         _renderTableInternal();
         return;
     }
 
+    // Optimization: Build a Map for O(1) lookup
+    const rowDataMap = new Map();
+    displayedRows.forEach(r => {
+        rowDataMap.set(`${fmtAddr(r.address)}_${r.coin}`, r);
+    });
+
     // Validate headers are still attached to DOM
     const headersValid = areHeadersValid();
     const domOrderCorrect = isDOMHeaderOrderCorrect(columnOrder);
     console.log('[updateTableDataOnly] areHeadersValid():', headersValid);
     console.log('[updateTableDataOnly] isDOMHeaderOrderCorrect():', domOrderCorrect);
-    
+
     if (!headersValid) {
         console.log('[updateTableDataOnly] Headers detached, doing full render');
         _renderTableInternal();
         return;
     }
-    
+
     if (!domOrderCorrect) {
         console.log('[updateTableDataOnly] DOM order incorrect - headers were reset!');
     }
@@ -1112,10 +1118,8 @@ export function updateTableDataOnly() {
         const coin = coinText?.split(' ')[0];
         if (!coin) return;
 
-        // Find the matching row data
-        const rowData = displayedRows.find(r =>
-            fmtAddr(r.address) === address && r.coin === coin
-        );
+        // Find the matching row data using O(1) lookup
+        const rowData = rowDataMap.get(`${address}_${coin}`);
 
         if (!rowData) return;
 
@@ -1255,6 +1259,12 @@ export function updateTablePriceData() {
     const displayedRows = getDisplayedRows();
     if (!displayedRows || displayedRows.length === 0) return;
 
+    // Optimization: Build a Map for O(1) lookup
+    const rowDataMap = new Map();
+    displayedRows.forEach(r => {
+        rowDataMap.set(`${fmtAddr(r.address)}_${r.coin}`, r);
+    });
+
     const table = document.getElementById('positionsTable');
     if (!table) return;
 
@@ -1290,10 +1300,8 @@ export function updateTablePriceData() {
         const coin = coinText?.split(' ')[0];
         if (!coin) return;
 
-        // Find the matching row data
-        const rowData = displayedRows.find(r =>
-            fmtAddr(r.address) === address && r.coin === coin
-        );
+        // Find the matching row data using O(1) lookup
+        const rowData = rowDataMap.get(`${address}_${coin}`);
 
         if (!rowData) return;
 
