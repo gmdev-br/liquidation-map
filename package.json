@@ -2,8 +2,11 @@
   "name": "liquidation-map",
   "version": "1.0.0",
   "description": "Liquidation Map Application",
+  "homepage": ".",
   "scripts": {
-    "start": "npx http-server -p 8000 -o"
+    "start": "npx http-server -p 8000 -o",
+    "predeploy": "npm install gh-pages --save-dev",
+    "deploy": "gh-pages -d ."
   },
   "devDependencies": {
     "eslint": "^9.39.2",
