@@ -178,6 +178,23 @@ self.onmessage = async function (e) {
     let totalLongNotional = 0;
     let totalShortNotional = 0;
 
+    const createBand = (priceVal) => ({
+        faixaDe: priceVal, faixaAte: priceVal + (bandSize || 0),
+        qtdLong: 0, notionalLong: 0,
+        qtdShort: 0, notionalShort: 0,
+        sumLiqNotionalLong: 0, sumLiqNotionalShort: 0,
+        liqVolLong: 0, liqVolShort: 0,
+        ativosLong: new Set(), ativosShort: new Set(),
+        positionsLong: [], positionsShort: [],
+        whalesLong: new Set(), whalesShort: new Set(),
+        isEmpty: true
+    });
+
+    const isInRange = (price, min, max) => (min <= 0 || max <= 0) || (price >= min && price <= max);
+
+    let totalLongNotional = 0;
+    let totalShortNotional = 0;
+
     for (let i = 0; i < rows.length; i++) {
         const r = rows[i];
         const addr = r.address;
@@ -307,6 +324,40 @@ self.onmessage = async function (e) {
     stats.whalesWithPos = whalesWithPosSet.size;
     stats.whalesLong = whalesLongSet.size;
     stats.whalesShort = whalesShortSet.size;
+
+    // Finalize Aggregation
+    if (aggParams) {
+        const finalize = (bandsMap) => {
+            const arr = Object.values(bandsMap).sort((a, b) => b.faixaDe - a.faixaDe);
+            for (let i = 0; i < arr.length; i++) {
+                const b = arr[i];
+                if (!b.isEmpty) {
+                    b.positionsLong.sort((x, y) => y.positionValue - x.positionValue);
+                    b.positionsShort.sort((x, y) => y.positionValue - x.positionValue);
+                    b.ativosLong = Array.from(b.ativosLong);
+                    b.ativosShort = Array.from(b.ativosShort);
+                    b.whalesLongCount = b.whalesLong.size;
+                    b.whalesShortCount = b.whalesShort.size;
+                    delete b.whalesLong;
+                    delete b.whalesShort;
+                }
+            }
+            return { bandArray: arr, totalLongNotional, totalShortNotional, bandsWithPosCount: arr.filter(x => !x.isEmpty).length };
+        };
+
+        stats.aggFull = finalize(fullBands);
+        const aggRes = finalize(resBands);
+
+        // Summary filtering
+        if (aggRes.bandArray) {
+            aggRes.bandArray = aggRes.bandArray.filter(b => {
+                if (b.isEmpty) return false;
+                return (b.notionalLong + b.notionalShort >= 10_000_000) ||
+                    (b.liqVolLong >= 10_000_000 || b.liqVolShort >= 10_000_000);
+            });
+        }
+        stats.aggRes = aggRes;
+    }
 
     // Finalize Aggregation
     if (aggParams) {

@@ -154,136 +154,170 @@ export function renderLiqScatterPlot(workerLiqPoints = null, force = false) {
 
     const rows = getDisplayedRows();
     if (!rows || rows.length === 0) {
-        if (section.style.display !== 'none') section.style.display = 'none';
-        return;
-    }
+        if (section && section.classList.contains('collapsed') && !force) {
+            // Flag for future refresh when opened
+            section.dataset.dirty = 'true';
+            return;
+        }
+        delete section?.dataset.dirty;
 
-    if (section.style.display !== 'block') {
-        section.style.display = 'block';
-        section.style.height = getLiqChartHeight() + 'px';
-    }
+        const rows = getDisplayedRows();
+        if (!rows || rows.length === 0) {
+            if (section.style.display !== 'none') section.style.display = 'none';
+            return;
+        }
 
-    const canvas = document.getElementById('liqChart');
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
+        if (section.style.display !== 'block') {
+            section.style.display = 'block';
+            section.style.height = getLiqChartHeight() + 'px';
+        }
 
-    // PERFORMANCE: Use pre-calculated worker fields and single-pass for bounds/data mapping
-    let data = [];
-    let minX = 0;
-    let maxX = 0;
+        const canvas = document.getElementById('liqChart');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
 
-    const activeEntryCcy = getActiveEntryCurrency();
-    const btcPrice = parseFloat(getCurrentPrices()['BTC'] || 0);
-    const fxRates = getFxRates();
-    const rate = fxRates[activeEntryCcy] || 1;
-    let refPrice = activeEntryCcy === 'BTC' ? 1 : btcPrice * rate;
+        // PERFORMANCE: Use pre-calculated worker fields and single-pass for bounds/data mapping
+        let data = [];
+        let minX = 0;
+        let maxX = 0;
 
-    if (workerLiqPoints) {
-        // FAST PATH: Use pre-calculated data from worker
-        data = workerLiqPoints;
-        if (data.length > 0) {
-            minX = data[0].x;
-            maxX = data[0].x;
-            for (let i = 1; i < data.length; i++) {
-                const x = data[i].x;
+        const activeEntryCcy = getActiveEntryCurrency();
+        const btcPrice = parseFloat(getCurrentPrices()['BTC'] || 0);
+        const fxRates = getFxRates();
+        const rate = fxRates[activeEntryCcy] || 1;
+        let refPrice = activeEntryCcy === 'BTC' ? 1 : btcPrice * rate;
+
+        if (workerLiqPoints) {
+            // FAST PATH: Use pre-calculated data from worker
+            data = workerLiqPoints;
+            if (data.length > 0) {
+                minX = data[0].x;
+                maxX = data[0].x;
+                for (let i = 1; i < data.length; i++) {
+                    const x = data[i].x;
+                    if (x < minX) minX = x;
+                    if (x > maxX) maxX = x;
+                }
+            }
+        } else {
+            // FALLBACK: Calculate manually (O(N))
+            const bubbleScale = getBubbleScale();
+            minX = refPrice;
+            maxX = refPrice;
+
+            for (let i = 0; i < rows.length; i++) {
+                const r = rows[i];
+                if (r._liqPxCcy <= 0) continue;
+
+                const x = r._liqPxCcy;
+                const d = {
+                    x: x,
+                    y: r._volBTC,
+                    r: r._sqrtPosVal / 1000 * bubbleScale,
+                    _raw: r
+                };
+                data.push(d);
+
                 if (x < minX) minX = x;
                 if (x > maxX) maxX = x;
             }
         }
-    } else {
-        // FALLBACK: Calculate manually (O(N))
+
+        if (data.length === 0) {
+            section.style.display = 'none';
+            return;
+        }
+
+        const chartMode = getChartMode();
         const bubbleScale = getBubbleScale();
-        minX = refPrice;
-        maxX = refPrice;
 
-        for (let i = 0; i < rows.length; i++) {
-            const r = rows[i];
-            if (r._liqPxCcy <= 0) continue;
+        if (liqChartInstance && lastDataHash === currentDataHash) {
+            return;
+        }
 
-            const x = r._liqPxCcy;
-            const d = {
-                x: x,
-                y: r._volBTC,
-                r: r._sqrtPosVal / 1000 * bubbleScale,
-                _raw: r
+        const canUpdateOnly = liqChartInstance &&
+            liqChartInstance.config.type === (chartMode === 'column' || chartMode === 'lines' ? 'bar' : 'bubble') &&
+            liqChartInstance.config.options.indexAxis === (chartMode === 'lines' ? 'y' : 'x');
+
+        lastDataHash = currentDataHash;
+
+        const customColors = getLeverageColors();
+        const opacity = getBubbleOpacity();
+
+        let datasets = [];
+        let localScales = {};
+        let localIndexAxis = 'x';
+        let chartType = 'bubble';
+
+        if (chartMode === 'column') {
+            chartType = 'bar';
+            const numBins = getAggregationFactor();
+            const binSize = (maxX - minX || 1) / numBins;
+            const bins = new Array(numBins).fill(0);
+            for (let i = 0; i < data.length; i++) {
+                bins[Math.min(Math.floor((data[i].x - minX) / binSize), numBins - 1)]++;
+            }
+            datasets = [{ label: 'Liquidations', data: bins, backgroundColor: 'rgba(239, 68, 68, 0.6)', borderColor: 'rgba(239, 68, 68, 0.8)', borderWidth: 1 }];
+            localScales = {
+                x: { type: 'category', ...chartOptions.scales.x, labels: bins.map((_, i) => (minX + (i * binSize)).toLocaleString(undefined, { maximumFractionDigits: 0 })) },
+                y: { ...chartOptions.scales.y }
             };
-            data.push(d);
+        } else if (chartMode === 'lines') {
+            chartType = 'bar';
+            localIndexAxis = 'y';
 
-            if (x < minX) minX = x;
-            if (x > maxX) maxX = x;
-        }
-    }
+            const groupedData = {
+                longLow: { label: `Longs (≤${highLevSplit}x)`, data: [], backgroundColor: hexToRgba(customColors.longLow, 0.7), borderColor: customColors.longLow },
+                longHigh: { label: `Longs (>${highLevSplit}x)`, data: [], backgroundColor: hexToRgba(customColors.longHigh, 0.7), borderColor: customColors.longHigh },
+                shortLow: { label: `Shorts (≤${highLevSplit}x)`, data: [], backgroundColor: hexToRgba(customColors.shortLow, 0.7), borderColor: customColors.shortLow },
+                shortHigh: { label: `Shorts (>${highLevSplit}x)`, data: [], backgroundColor: hexToRgba(customColors.shortHigh, 0.7), borderColor: customColors.shortHigh }
+            };
 
-    if (data.length === 0) {
-        section.style.display = 'none';
-        return;
-    }
+            let maxVol = 0;
+            for (let i = 0; i < data.length; i++) {
+                const d = data[i];
 
-    const chartMode = getChartMode();
-    const bubbleScale = getBubbleScale();
+                const groupedData = {
+                    longLow: { label: `Longs (≤${highLevSplit}x)`, data: [], backgroundColor: hexToRgba(customColors.longLow, 0.7), borderColor: customColors.longLow },
+                    longHigh: { label: `Longs (>${highLevSplit}x)`, data: [], backgroundColor: hexToRgba(customColors.longHigh, 0.7), borderColor: customColors.longHigh },
+                    shortLow: { label: `Shorts (≤${highLevSplit}x)`, data: [], backgroundColor: hexToRgba(customColors.shortLow, 0.7), borderColor: customColors.shortLow },
+                    shortHigh: { label: `Shorts (>${highLevSplit}x)`, data: [], backgroundColor: hexToRgba(customColors.shortHigh, 0.7), borderColor: customColors.shortHigh }
+                };
 
-    if (liqChartInstance && lastDataHash === currentDataHash) {
-        return;
-    }
+                let maxVol = 0;
+                for (let i = 0; i < data.length; i++) {
+                    const d = data[i];
+                    const r = d._raw;
+                    const lev = Math.abs(r.leverageValue);
+                    const key = r.side === 'long' ? (lev >= highLevSplit ? 'longHigh' : 'longLow') : (lev >= highLevSplit ? 'shortHigh' : 'shortLow');
+                    groupedData[key].data.push({ x: d.y, y: d.x, _raw: r });
+                    if (d.y > maxVol) maxVol = d.y;
+                }
 
-    const canUpdateOnly = liqChartInstance &&
-        liqChartInstance.config.type === (chartMode === 'column' || chartMode === 'lines' ? 'bar' : 'bubble') &&
-        liqChartInstance.config.options.indexAxis === (chartMode === 'lines' ? 'y' : 'x');
+                datasets = Object.values(groupedData)
+                    .filter(g => g.data.length > 0)
+                    .map(g => ({
+                        ...g,
+                        const key = r.side === 'long' ? (lev >= highLevSplit ? 'longHigh' : 'longLow') : (lev >= highLevSplit ? 'shortHigh' : 'shortLow');
+                        groupedData[key].data.push({ x: d.y, y: d.x, _raw: r });
+                        if(d.y > maxVol) maxVol = d.y;
+            }
 
-    lastDataHash = currentDataHash;
+            datasets = Object.values(groupedData)
+                .filter(g => g.data.length > 0)
+                .map(g => ({
+                    ...g,
+                    borderWidth: 1,
+                    barThickness: 2,
+                    grouped: true,
+                    categoryPercentage: 1.0,
+                    barPercentage: 1.0
+                }));
 
-    const customColors = getLeverageColors();
-    const opacity = getBubbleOpacity();
-
-    let datasets = [];
-    let localScales = {};
-    let localIndexAxis = 'x';
-    let chartType = 'bubble';
-
-    if (chartMode === 'column') {
-        chartType = 'bar';
-        const numBins = getAggregationFactor();
-        const binSize = (maxX - minX || 1) / numBins;
-        const bins = new Array(numBins).fill(0);
-        for (let i = 0; i < data.length; i++) {
-            bins[Math.min(Math.floor((data[i].x - minX) / binSize), numBins - 1)]++;
-        }
-        datasets = [{ label: 'Liquidations', data: bins, backgroundColor: 'rgba(239, 68, 68, 0.6)', borderColor: 'rgba(239, 68, 68, 0.8)', borderWidth: 1 }];
-        localScales = {
-            x: { type: 'category', ...chartOptions.scales.x, labels: bins.map((_, i) => (minX + (i * binSize)).toLocaleString(undefined, { maximumFractionDigits: 0 })) },
-            y: { ...chartOptions.scales.y }
-        };
-    } else if (chartMode === 'lines') {
-        chartType = 'bar';
-        localIndexAxis = 'y';
-
-        const groupedData = {
-            longLow: { label: `Longs (≤${highLevSplit}x)`, data: [], backgroundColor: hexToRgba(customColors.longLow, 0.7), borderColor: customColors.longLow },
-            longHigh: { label: `Longs (>${highLevSplit}x)`, data: [], backgroundColor: hexToRgba(customColors.longHigh, 0.7), borderColor: customColors.longHigh },
-            shortLow: { label: `Shorts (≤${highLevSplit}x)`, data: [], backgroundColor: hexToRgba(customColors.shortLow, 0.7), borderColor: customColors.shortLow },
-            shortHigh: { label: `Shorts (>${highLevSplit}x)`, data: [], backgroundColor: hexToRgba(customColors.shortHigh, 0.7), borderColor: customColors.shortHigh }
-        };
-
-        let maxVol = 0;
-        for (let i = 0; i < data.length; i++) {
-            const d = data[i];
-            const r = d._raw;
-            const lev = Math.abs(r.leverageValue);
-            const key = r.side === 'long' ? (lev >= highLevSplit ? 'longHigh' : 'longLow') : (lev >= highLevSplit ? 'shortHigh' : 'shortLow');
-            groupedData[key].data.push({ x: d.y, y: d.x, _raw: r });
-            if (d.y > maxVol) maxVol = d.y;
-        }
-
-        datasets = Object.values(groupedData)
-            .filter(g => g.data.length > 0)
-            .map(g => ({
-                ...g,
-                borderWidth: 1,
-                barThickness: 2,
-                grouped: true,
+            grouped: true,
                 categoryPercentage: 1.0,
-                barPercentage: 1.0
-            }));
+                    barPercentage: 1.0
+        }));
 
         localScales = {
             x: { type: 'linear', position: 'bottom', stacked: true, min: 0, max: maxVol * 1.1 },
