@@ -247,6 +247,91 @@ function setupEventListeners() {
         });
     }
 
+    // Copy prices buttons - Table 3 (Positions Table)
+    const copyLongPricesBtn = getElement('copyLongPricesBtn');
+    const copyShortPricesBtn = getElement('copyShortPricesBtn');
+    const copyMinBtcVolumeInput = getElement('copyMinBtcVolume');
+
+    // Load saved min BTC volume value
+    if (copyMinBtcVolumeInput) {
+        const savedValue = localStorage.getItem('copyMinBtcVolume');
+        if (savedValue !== null) {
+            copyMinBtcVolumeInput.value = savedValue;
+        }
+        // Save value on change
+        eventManager.on(copyMinBtcVolumeInput, 'input', () => {
+            localStorage.setItem('copyMinBtcVolume', copyMinBtcVolumeInput.value);
+        });
+    }
+
+    function copyPricesToClipboard(side) {
+        // Import dependencies dynamically
+        Promise.all([
+            import('../state.js'),
+            import('../utils/currency.js'),
+            import('../ui/toast.js')
+        ]).then(([{ getAllRows, getActiveEntryCurrency, getCurrentPrices, getFxRates }, { getCorrelatedEntry }, { showToast }]) => {
+            const rows = getAllRows();
+            const activeEntryCurrency = getActiveEntryCurrency();
+            const currentPrices = getCurrentPrices();
+            const fxRates = getFxRates();
+
+            // Get minimum BTC volume filter
+            const minBtcInput = document.getElementById('copyMinBtcVolume');
+            const minBtcVolume = minBtcInput ? parseFloat(minBtcInput.value) || 0 : 0;
+
+            // Get BTC price for volume calculation
+            const btcPrice = parseFloat(currentPrices['BTC'] || 0);
+
+            // Filter rows by side and minimum BTC volume, then get entry prices
+            const prices = rows
+                .filter(r => {
+                    // Filter by side
+                    if (r.side !== side) return false;
+                    // Filter by minimum BTC volume if specified
+                    if (minBtcVolume > 0 && btcPrice > 0) {
+                        const volBTC = r.positionValue / btcPrice;
+                        return volBTC >= minBtcVolume;
+                    }
+                    return true;
+                })
+                .map(r => {
+                    const entryCcy = r._entCcy != null ? r._entCcy : getCorrelatedEntry(r, activeEntryCurrency, currentPrices, fxRates);
+                    return entryCcy != null ? Math.round(entryCcy).toString() : null;
+                })
+                .filter(p => p !== null);
+
+            if (prices.length === 0) {
+                const msg = minBtcVolume > 0
+                    ? `Nenhum preço ${side === 'long' ? 'de compra' : 'de venda'} encontrado com vol >= ${minBtcVolume} BTC`
+                    : `Nenhum preço ${side === 'long' ? 'de compra' : 'de venda'} encontrado`;
+                showToast(msg, 'warning');
+                return;
+            }
+
+            // Copy to clipboard (semicolon-separated, no decimals)
+            const text = prices.join(';');
+            navigator.clipboard.writeText(text).then(() => {
+                const msg = minBtcVolume > 0
+                    ? `${prices.length} preços ${side === 'long' ? 'de compra' : 'de venda'} (>= ${minBtcVolume} BTC) copiados!`
+                    : `${prices.length} preços ${side === 'long' ? 'de compra' : 'de venda'} copiados!`;
+                showToast(msg, 'success');
+            }).catch(err => {
+                console.error('Failed to copy:', err);
+                showToast('Erro ao copiar para área de transferência', 'error');
+            });
+        }).catch(err => {
+            console.error('Error copying prices:', err);
+        });
+    }
+
+    if (copyLongPricesBtn) {
+        eventManager.on(copyLongPricesBtn, 'click', () => copyPricesToClipboard('long'));
+    }
+    if (copyShortPricesBtn) {
+        eventManager.on(copyShortPricesBtn, 'click', () => copyPricesToClipboard('short'));
+    }
+
     // Collapsible sections - use event delegation
     const collapseToggles = getElements('.js-collapse-toggle');
     collapseToggles.forEach(toggle => {

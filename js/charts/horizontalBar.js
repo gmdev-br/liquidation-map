@@ -20,8 +20,8 @@ let lastDataHash = null;
 // ═══════════════════════════════════════════════════════════
 
 const ZOOM_CONFIG = {
-    MIN_BARS: 5,        // Maximum zoom (fewest bars visible)
-    MAX_BARS: 50,       // Minimum zoom (most bars visible)
+    MIN_BARS: 1,        // Maximum zoom - pode ver apenas 1 barra
+    MAX_BARS: Infinity, // Minimum zoom - pode ver TODAS as barras
     DEFAULT_BARS: 20,   // Default view
     STEP_BARS: 3,       // Bars changed per zoom step
     ANIMATION_DURATION: 300  // Smooth transition duration
@@ -381,8 +381,8 @@ export function renderHorizontalBarChart(force = false) {
                 bottom: 50,
                 startValue: startValue,
                 endValue: endValue,
-                minValueSpan: ZOOM_CONFIG.MIN_BARS,  // mínimo 5 barras visíveis (máximo zoom)
-                maxValueSpan: Math.min(ZOOM_CONFIG.MAX_BARS, totalBands), // máximo 50 barras
+                minValueSpan: 1,        // mínimo 1 barra visível (máximo zoom ilimitado)
+                maxValueSpan: totalBands, // máximo: todas as barras visíveis (mínimo zoom ilimitado)
                 handleIcon: 'path://M10.7,11.9v-1.3H9.3v1.3c-4.9,0.3-8.8,4.4-8.8,9.4c0,5,3.9,9.1,8.8,9.4v1.3h1.3v-1.3c4.9-0.3,8.8-4.4,8.8-9.4C19.5,16.3,15.6,12.2,10.7,11.9z M13.3,24.4H6.7V23h6.6V24.4z M13.3,19.6H6.7v-1.4h6.6V19.6z',
                 handleSize: '80%',
                 handleStyle: {
@@ -421,10 +421,10 @@ export function renderHorizontalBarChart(force = false) {
             {
                 type: 'inside',
                 yAxisIndex: 0,
-                zoomOnMouseWheel: true,  // habilita zoom com scroll
-                moveOnMouseWheel: true,  // scroll move a visualização
-                moveOnMouseMove: true,
-                preventDefaultMouseMove: false,
+                zoomOnMouseWheel: 'ctrl',  // só dá zoom com Ctrl+Scroll
+                moveOnMouseWheel: true,    // scroll normal move a visualização
+                moveOnMouseMove: false,    // não move ao mover o mouse
+                preventDefaultMouseMove: true,
                 // Zoom sensitivity
                 zoomLock: false,
                 // Preserve range ratio during zoom
@@ -599,7 +599,19 @@ function syncZoomStateFromChart() {
         endVal = Math.min(totalBands - 1, Math.ceil((dz.end / 100) * totalBands));
     }
 
-    const visibleBars = Math.max(ZOOM_CONFIG.MIN_BARS, Math.min(ZOOM_CONFIG.MAX_BARS, endVal - startVal + 1));
+    // Garante valores válidos
+    startVal = Math.max(0, startVal);
+    endVal = Math.min(totalBands - 1, endVal);
+
+    // Calcula barras visíveis - se o range cobrir todas, mostra o total
+    let visibleBars = endVal - startVal + 1;
+    visibleBars = Math.max(1, Math.min(totalBands, visibleBars));
+
+    // Se estiver mostrando todas ou quase todas (dentro de uma margem), considera como total
+    if (visibleBars >= totalBands - 1) {
+        visibleBars = totalBands;
+    }
+
     const centerIdx = Math.floor((startVal + endVal) / 2);
 
     // Update state
@@ -622,30 +634,40 @@ function applyZoom(visibleBars, centerIndex = null) {
     const yAxisData = option.yAxis && option.yAxis[0] ? option.yAxis[0].data : [];
     const totalBands = yAxisData.length || 1;
 
-    // Clamp visible bars to limits
-    const targetBars = Math.max(ZOOM_CONFIG.MIN_BARS, Math.min(ZOOM_CONFIG.MAX_BARS, visibleBars));
-    targetBars = Math.min(targetBars, totalBands);
+    // Zoom ilimitado: garante apenas entre 1 e todas as barras
+    let targetBars = Math.max(1, Math.min(totalBands, visibleBars));
 
-    // Determine center index
-    let centerIdx = centerIndex;
-    if (centerIdx === null || centerIdx === undefined) {
-        // Use current center from dataZoom
-        const dz = option.dataZoom[0];
-        if (dz && dz.startValue !== undefined && dz.endValue !== undefined) {
-            centerIdx = Math.floor((dz.startValue + dz.endValue) / 2);
-        } else {
-            centerIdx = Math.floor(totalBands / 2);
+    // Se quer mostrar todas as barras, mostra do início ao fim
+    let startIndex, endIndex, centerIdx;
+
+    if (targetBars >= totalBands) {
+        // Mostrar todas as barras: range completo
+        startIndex = 0;
+        endIndex = totalBands - 1;
+        centerIdx = Math.floor(totalBands / 2);
+        targetBars = totalBands; // Garante que o estado reflete o total
+    } else {
+        // Determine center index
+        centerIdx = centerIndex;
+        if (centerIdx === null || centerIdx === undefined) {
+            // Use current center from dataZoom
+            const dz = option.dataZoom[0];
+            if (dz && dz.startValue !== undefined && dz.endValue !== undefined) {
+                centerIdx = Math.floor((dz.startValue + dz.endValue) / 2);
+            } else {
+                centerIdx = Math.floor(totalBands / 2);
+            }
         }
-    }
 
-    // Calculate range
-    const halfVisible = Math.floor(targetBars / 2);
-    let startIndex = Math.max(0, centerIdx - halfVisible);
-    let endIndex = Math.min(totalBands - 1, startIndex + targetBars - 1);
+        // Calculate range
+        const halfVisible = Math.floor(targetBars / 2);
+        startIndex = Math.max(0, centerIdx - halfVisible);
+        endIndex = Math.min(totalBands - 1, startIndex + targetBars - 1);
 
-    // Adjust if near boundaries
-    if (endIndex - startIndex + 1 < targetBars) {
-        startIndex = Math.max(0, endIndex - targetBars + 1);
+        // Adjust if near boundaries
+        if (endIndex - startIndex + 1 < targetBars) {
+            startIndex = Math.max(0, endIndex - targetBars + 1);
+        }
     }
 
     // Update state
@@ -676,34 +698,52 @@ export function zoomIn() {
 
     syncZoomStateFromChart();
 
-    // Reduce visible bars by STEP
+    // Se já estiver no mínimo (1 barra), não faz nada
+    if (currentZoomState.visibleBars <= 1) {
+        return;
+    }
+
+    // Zoom máximo ilimitado: pode ir até 1 barra
     const newVisibleBars = Math.max(
-        ZOOM_CONFIG.MIN_BARS,
+        1,
         currentZoomState.visibleBars - ZOOM_CONFIG.STEP_BARS
     );
 
-    applyZoom(newVisibleBars, currentZoomState.centerIndex);
+    // Só aplica se realmente houver mudança
+    if (newVisibleBars !== currentZoomState.visibleBars) {
+        applyZoom(newVisibleBars, currentZoomState.centerIndex);
+    }
 }
 
 /**
  * Aplica zoom no gráfico (diminuir - mostra mais barras)
  */
 export function zoomOut() {
+    console.log('[zoomOut] called, chart exists:', !!horizontalBarChart);
     if (!horizontalBarChart) return;
 
     syncZoomStateFromChart();
+    console.log('[zoomOut] after sync, visibleBars:', currentZoomState.visibleBars);
 
-    // Increase visible bars by STEP
+    // Zoom mínimo ilimitado: pode ver TODAS as barras
     const option = horizontalBarChart.getOption();
     const yAxisData = option.yAxis && option.yAxis[0] ? option.yAxis[0].data : [];
     const totalBands = yAxisData.length || 1;
 
+    // Se já estiver mostrando todas as barras, não faz nada (não scrolla)
+    if (currentZoomState.visibleBars >= totalBands) {
+        return;
+    }
+
     const newVisibleBars = Math.min(
-        Math.min(ZOOM_CONFIG.MAX_BARS, totalBands),
+        totalBands,  // permite ver todas as barras
         currentZoomState.visibleBars + ZOOM_CONFIG.STEP_BARS
     );
 
-    applyZoom(newVisibleBars, currentZoomState.centerIndex);
+    // Só aplica se realmente houver mudança no número de barras visíveis
+    if (newVisibleBars !== currentZoomState.visibleBars) {
+        applyZoom(newVisibleBars, currentZoomState.centerIndex);
+    }
 }
 
 /**
@@ -752,16 +792,30 @@ export function zoomReset() {
 /**
  * Handler para evento de wheel no container do gráfico
  * Suporta Ctrl+Scroll para zoom e scroll normal para navegação
+ *
+ * NOTA: O dataZoom 'inside' já está configurado para:
+ * - zoomOnMouseWheel: 'ctrl' (só zooma com Ctrl)
+ * - moveOnMouseWheel: true (scroll normal navega)
+ *
+ * Este handler complementa para garantir comportamento consistente.
  */
 function handleChartWheel(e) {
     if (!horizontalBarChart) return;
 
-    // Check for Ctrl key or use normal scroll behavior for zoom
-    const isZoomModifier = e.ctrlKey || e.metaKey || e.altKey;
+    const isZoomModifier = e.ctrlKey || e.metaKey;
+    const option = horizontalBarChart.getOption();
+    const yAxisData = option.yAxis && option.yAxis[0] ? option.yAxis[0].data : [];
+    const totalBands = yAxisData.length || 1;
 
     if (isZoomModifier) {
+        // Ctrl+Scroll: sempre dá zoom (nunca navega)
         e.preventDefault();
         e.stopPropagation();
+
+        // Se está tentando dar zoom out mas já mostra todas as barras, ignora
+        if (e.deltaY > 0 && currentZoomState.visibleBars >= totalBands) {
+            return;
+        }
 
         // Determine zoom direction
         const delta = e.deltaY;
@@ -779,8 +833,18 @@ function handleChartWheel(e) {
                 zoomOut();
             }
         }, 50);
+    } else {
+        // Scroll sem Ctrl: navegação (move)
+        // Quando todas as barras cabem na tela, o scroll não deve fazer nada
+        // ou deve scrollar a página, não o gráfico
+        if (currentZoomState.visibleBars >= totalBands) {
+            // Todas as barras visíveis: deixa o scroll da página acontecer
+            // Não previne o default, não faz nada no gráfico
+            return;
+        }
+        // Quando há mais barras que cabem, o dataZoom 'inside' moveOnMouseWheel
+        // já cuida da navegação, então não precisamos fazer nada aqui
     }
-    // Se não tiver modifier, deixa o dataZoom 'inside' lidar com o scroll (navegação)
 }
 
 /**
@@ -807,15 +871,20 @@ export function initZoomControls() {
     const zoomResetBtn = document.getElementById('hbZoomReset');
     const chartDom = document.getElementById('horizontalBarChart');
 
+    console.log('[initZoomControls] buttons found:', { zoomIn: !!zoomInBtn, zoomOut: !!zoomOutBtn, zoomReset: !!zoomResetBtn, chart: !!chartDom });
+
     // Button controls
     if (zoomInBtn) {
         zoomInBtn.addEventListener('click', zoomIn);
+        console.log('[initZoomControls] zoomIn listener attached');
     }
     if (zoomOutBtn) {
         zoomOutBtn.addEventListener('click', zoomOut);
+        console.log('[initZoomControls] zoomOut listener attached');
     }
     if (zoomResetBtn) {
         zoomResetBtn.addEventListener('click', zoomReset);
+        console.log('[initZoomControls] zoomReset listener attached');
     }
 
     // Mouse wheel zoom on chart container
