@@ -31,6 +31,7 @@ import { saveSettings, loadSettings } from '../storage/settings.js';
 import { updateRankingPanel, renderQuotesPanel, removeCoin as removeCoinFn, handlePriceModeClick, updatePriceModeUI, startPriceTicker } from '../ui/panels.js';
 import { renderScatterPlot, getScatterChart } from '../charts/scatter.js';
 import { renderLiqScatterPlot, getLiqChartInstance } from '../charts/liquidation.js';
+import { initZoomControls } from '../charts/horizontalBar.js';
 import { updateStats, renderTable, renderTableImmediate, updateTableDataOnly } from '../ui/table.js';
 import { startScan, stopScan, togglePause, finishScan } from '../api/leaderboard.js';
 import { updateCoinFilter, cbOpen, openCombobox, cbSelect as cbSelectFn, selectCoin as selectCoinFn, cbInit, setupClickOutsideHandler } from '../ui/combobox.js';
@@ -795,6 +796,7 @@ function applyColumnWidthAfterRender() {
 function initializeCharts() {
     renderScatterPlot();
     renderLiqScatterPlot();
+    initZoomControls();
 }
 
 function initializePanels() {

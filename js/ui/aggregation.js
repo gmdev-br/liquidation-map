@@ -280,7 +280,9 @@ function renderAggregationTableBase(options = {}) {
         state.virtualScrollManager = enableVirtualScroll(tableBodyId, { threshold: 40, rowHeight: rowHeight });
     } else {
         // Update row height if it changed
-        state.virtualScrollManager.rowHeight = rowHeight;
+        if (typeof state.virtualScrollManager.setRowHeight === 'function') {
+            state.virtualScrollManager.setRowHeight(rowHeight);
+        }
     }
 
     const rowRenderer = createRowRenderer({
@@ -587,13 +589,13 @@ function createRowRenderer(context) {
                 domType = 'COMPRA';
                 const isForte = b.notionalLong >= 30_000_000;
                 domColor = isForte ? aggZoneColors.buyStrong : aggZoneColors.buyNormal;
-                domBg = isForte ? `rgba(${hexToRgb(aggZoneColors.buyStrong)}, 0.1)` : `rgba(${hexToRgb(aggZoneColors.buyNormal)}, 0.05)`;
+                domBg = isForte ? `rgba(${hexToRgb(aggZoneColors.buyStrong)}, 0.4)` : `rgba(${hexToRgb(aggZoneColors.buyNormal)}, 0.2)`;
                 domPct = (b.notionalLong / totalNotional) * 100;
             } else if (b.notionalShort > b.notionalLong) {
                 domType = 'VENDA';
                 const isForte = b.notionalShort >= 30_000_000;
                 domColor = isForte ? aggZoneColors.sellStrong : aggZoneColors.sellNormal;
-                domBg = isForte ? `rgba(${hexToRgb(aggZoneColors.sellStrong)}, 0.1)` : `rgba(${hexToRgb(aggZoneColors.sellNormal)}, 0.05)`;
+                domBg = isForte ? `rgba(${hexToRgb(aggZoneColors.sellStrong)}, 0.4)` : `rgba(${hexToRgb(aggZoneColors.sellNormal)}, 0.2)`;
                 domPct = (b.notionalShort / totalNotional) * 100;
             } else {
                 domType = 'NEUTRO';
@@ -617,13 +619,14 @@ function createRowRenderer(context) {
         let zoneColor = '#4b5563';
 
         // Initialize styling variables BEFORE the if/else block to avoid TDZ error
+        let isForteZone = false;
         let totalNotionalColor = '#bfdbfe';
         let fwBold = '700';
         let fwSemi = '600';
 
         if (!isEmpty) {
             const isForteTotal = totalNotional >= 30_000_000;
-            const isForteZone = (domPct === 100 || isForteTotal) && totalNotional >= 10_000_000;
+            isForteZone = (domPct === 100 || isForteTotal) && totalNotional >= 10_000_000;
             const baseStr = domType === 'COMPRA' ? 'Compra' : domType === 'VENDA' ? 'Venda' : 'Neutro';
             const isContested = domPct < 70;
 
@@ -668,7 +671,7 @@ function createRowRenderer(context) {
                 colorShort = b.notionalShort > 0 ? aggZoneColors.sellNormal : '#4b5563';
             }
 
-            domBg = isForteZone ? `rgba(${hexToRgb(domColor)}, 0.1)` : `rgba(${hexToRgb(domColor)}, 0.05)`;
+            domBg = isForteZone ? `rgba(${hexToRgb(domColor)}, 0.4)` : `rgba(${hexToRgb(domColor)}, 0.2)`;
 
             // Initialize styling variables for the if branch
             totalNotionalColor = '#bfdbfe';
@@ -736,12 +739,14 @@ function createRowRenderer(context) {
             highlightStyle = `background:rgba(${r},${g},${b},0.2); border:1px solid ${hexColor}; box-shadow:inset 0 0 10px rgba(${r},${g},${b},0.2)`;
         }
 
-        const trClass = isCurrentPriceRange ? 'active-price-range' : '';
+        const trClass = [
+            isCurrentPriceRange ? 'active-price-range' : '',
+            isForteZone ? (domType === 'COMPRA' ? 'is-forte-zone-long' : domType === 'VENDA' ? 'is-forte-zone-short' : 'is-forte-zone') : ''
+        ].filter(Boolean).join(' ');
 
         let rowBgCSS = '';
-        if (highlightStyle) {
-            // Use highlight style
-        } else if (domBg) {
+        // Always apply zone background if it's a forte zone
+        if (domBg) {
             rowBgCSS = `background:${domBg}`;
         }
 
@@ -877,7 +882,7 @@ function createRowRenderer(context) {
             newContent = Object.values(cellMap).join('');
         }
 
-        return `<tr class="${trClass}" style="height: ${rowHeight}px; ${expectedStyle}">${newContent}</tr>`;
+        return `<tr class="${trClass}" style="min-height: ${rowHeight}px; ${expectedStyle}">${newContent}</tr>`;
     };
 }
 

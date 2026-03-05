@@ -10,6 +10,7 @@ import { renderTable, updateTablePriceData } from './table.js';
 import { renderAggregationTable, renderAggregationTableResumida } from './aggregation.js';
 import { getScatterChart } from '../charts/scatter.js';
 import { getLiqChartInstance } from '../charts/liquidation.js';
+import { renderHorizontalBarChart } from '../charts/horizontalBar.js';
 import { CURRENCY_META } from '../config.js';
 
 // Cache for market cap data
@@ -317,7 +318,8 @@ export function updateQuotesHTML() {
     // PERFORMANCE: Use a faster hash (property sum or count) instead of full stringification
     let priceSum = 0;
     for (let i = 0; i < selectedCoins.length; i++) {
-        priceSum += (currentPrices[selectedCoins[i]] || 0);
+        const price = parseFloat(currentPrices[selectedCoins[i]]);
+        priceSum += isNaN(price) ? 0 : price;
     }
     const currentHash = `${selectedCoins.length}-${priceSum.toFixed(2)}`;
     if (currentHash === _lastQuotesHTMLHash) {
@@ -539,6 +541,7 @@ export function startPriceTicker() {
             // Update aggregation table highlight if active
             renderAggregationTable();
             renderAggregationTableResumida();
+            renderHorizontalBarChart();
 
             // Update main table with new prices (using lightweight update to preserve column settings)
             updateTablePriceData();

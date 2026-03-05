@@ -178,3 +178,113 @@
     transform: scaleY(1.3);
     box-shadow: 0 0 12px rgba(139, 158, 255, 0.5);
 }
+
+/* ═══════════════════════════════════════════════════════════
+   HORIZONTAL BAR CHART ZOOM CONTROLS
+   ═══════════════════════════════════════════════════════════ */
+
+/* Zoom control buttons for horizontal bar chart */
+#hbZoomIn,
+#hbZoomOut,
+#hbZoomReset {
+    min-width: 32px;
+    height: 28px;
+    padding: 4px 8px;
+    font-size: 14px;
+    font-weight: 600;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.8) 0%, rgba(79, 70, 229, 0.9) 100%);
+    color: #ffffff;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#hbZoomIn:hover,
+#hbZoomOut:hover,
+#hbZoomReset:hover {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 1) 0%, rgba(79, 70, 229, 1) 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+}
+
+#hbZoomIn:active,
+#hbZoomOut:active,
+#hbZoomReset:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 6px rgba(99, 102, 241, 0.3);
+}
+
+/* Horizontal bar chart container improvements */
+#horizontalBarChart {
+    position: relative;
+    transition: height 0.3s ease;
+}
+
+/* Container wrapper para scroll suave */
+.horizontal-bar-chart-wrapper {
+    max-height: 600px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch; /* scroll suave em iOS */
+}
+
+/* Custom scrollbar styling */
+.horizontal-bar-chart-wrapper::-webkit-scrollbar {
+    width: 8px;
+}
+
+.horizontal-bar-chart-wrapper::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+}
+
+.horizontal-bar-chart-wrapper::-webkit-scrollbar-thumb {
+    background: rgba(99, 102, 241, 0.5);
+    border-radius: 4px;
+}
+
+.horizontal-bar-chart-wrapper::-webkit-scrollbar-thumb:hover {
+    background: rgba(99, 102, 241, 0.8);
+}
+
+/* Firefox scrollbar */
+.horizontal-bar-chart-wrapper {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(99, 102, 241, 0.5) rgba(255, 255, 255, 0.05);
+}
+
+/* DataZoom slider styling enhancement */
+#horizontalBarChart .echarts-data-zoom-slider {
+    border-radius: 4px;
+}
+
+/* Responsive adjustments for zoom controls */
+@media (max-width: 767px) {
+    #hbZoomIn,
+    #hbZoomOut,
+    #hbZoomReset {
+        min-width: 36px;
+        height: 32px;
+        font-size: 16px;
+    }
+}
+
+@media (max-width: 479px) {
+    /* Stack zoom controls on very small screens */
+    #horizontalBarSectionContent > div:first-child {
+        flex-direction: column;
+        align-items: flex-start !important;
+    }
+    
+    #horizontalBarSectionContent > div:first-child > div:last-child {
+        margin-left: 0 !important;
+        margin-top: 8px;
+        width: 100%;
+        justify-content: flex-start;
+    }
+}

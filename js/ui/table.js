@@ -25,6 +25,7 @@ import { applyColumnWidth } from './columnWidth.js';
 import { debounce, Cache, adaptiveDebounce } from '../utils/performance.js';
 import { enableVirtualScroll } from '../utils/virtualScroll.js';
 import { renderAggregationTable, renderAggregationTableResumida } from './aggregation.js';
+import { renderHorizontalBarChart } from '../charts/horizontalBar.js';
 
 // Cache for filtered data to avoid recomputing
 const filterCache = new Cache(5000);
@@ -686,6 +687,8 @@ function _renderTableInternal() {
                     // NEW: Render aggregation tables with worker-calculated bands
                     if (stats.aggFull) renderAggregationTable(false, stats.aggFull);
                     if (stats.aggRes) renderAggregationTableResumida(false, stats.aggRes);
+                    // Render horizontal bar chart
+                    renderHorizontalBarChart();
 
                     // PERFORMANCE: Pass pre-calculated chart points
                     renderCharts(stats.scatterPoints, stats.liqPoints);
@@ -905,10 +908,15 @@ function _renderTableInternal() {
 
         // Use virtual scrolling for large datasets
         const rowHeight = getRowHeight();
+        console.log('[Table] Rendering with rowHeight:', rowHeight, 'rows count:', rows.length);
+        
         if (!virtualScrollManager) {
+            console.log('[Table] Initializing virtual scroll manager');
             virtualScrollManager = enableVirtualScroll('positionsTableBody', { threshold: 100, rowHeight: rowHeight });
+            console.log('[Table] Virtual scroll manager created:', virtualScrollManager ? 'yes' : 'no');
         } else {
             // Update row height in case it changed
+            console.log('[Table] Updating existing virtual scroll rowHeight');
             if (typeof virtualScrollManager.setRowHeight === 'function') {
                 virtualScrollManager.setRowHeight(rowHeight);
             }
@@ -1042,7 +1050,7 @@ function _renderTableInternal() {
                 ? columnOrder.filter(Key => filteredCells[Key] !== undefined)
                 : Object.keys(filteredCells);
 
-            return `<tr class="${meta.displayName ? 'row-known-address' : ''}" style="height: ${rowHeight}px" data-address="${r.address}">
+            return `<tr style="min-height: ${rowHeight}px" data-address="${r.address}">
             ${orderToUse.map(Key => filteredCells[Key]).join('')}
         </tr>`;
         };
@@ -1070,7 +1078,9 @@ function _renderTableInternal() {
             }
         };
 
+        console.log('[Table] Calling virtualScrollManager.setData with', rows.length, 'rows');
         virtualScrollManager.setData(rows);
+        console.log('[Table] setData completed');
 
         // DEBUG: Update table rows count
         const debugRows = document.getElementById('debug-table-rows');
@@ -1083,6 +1093,7 @@ function _renderTableInternal() {
         // Render aggregation table based on filtered rows
         renderAggregationTable(true);
         renderAggregationTableResumida(true);
+        renderHorizontalBarChart(true);
 
         // Apply column widths after table is rendered
         ////console.log(`% c[PERSISTENCE:RENDER] Calling applyColumnWidths()...`, 'color: #9C27B0;');
@@ -1357,6 +1368,7 @@ export function updateTableDataOnly() {
     try {
         renderAggregationTable(true);
         renderAggregationTableResumida(true);
+        renderHorizontalBarChart(true);
     } catch (err) {
         console.error('Aggregation table update error (non-fatal):', err);
     }
@@ -1478,6 +1490,7 @@ export function updateTablePriceData() {
     try {
         renderAggregationTable(true);
         renderAggregationTableResumida(true);
+        renderHorizontalBarChart(true);
     } catch (err) {
         console.error('Aggregation table update error (non-fatal):', err);
     }

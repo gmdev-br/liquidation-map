@@ -2,7 +2,7 @@
 // LIQUID GLASS — Service Worker
 // ═══════════════════════════════════════════════════════════
 
-const CACHE_NAME = 'whale-watcher-v4';
+const CACHE_NAME = 'whale-watcher-v5';
 const urlsToCache = [
     '/',
     '/index.html',

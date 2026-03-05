@@ -315,6 +315,7 @@ import { COLUMN_DEFS } from '../config.js';
 import { renderTable, renderTableImmediate, rebuildTableHeaderCache, updateStats } from '../ui/table.js';
 import { renderAggregationTable, renderAggregationTableResumida, scrollToCurrentPriceRange as aggScrollToRange, scrollToCurrentPriceRangeResumida } from '../ui/aggregation.js';
 import { renderQuotesPanel, updateRankingPanel } from '../ui/panels.js';
+import { renderHorizontalBarChart } from '../charts/horizontalBar.js';
 import { saveSettings } from '../storage/settings.js';
 import { startPriceTicker, stopPriceTicker } from '../ui/panels.js';
 import { sortBy } from '../ui/filters.js';
@@ -651,6 +652,7 @@ const debouncedUpdateAggZoneColors = debounce('aggZoneColors', () => {
     // Call directly with force=true to bypass all debounce/optimization caches
     renderAggregationTable(true);
     renderAggregationTableResumida(true);
+    renderHorizontalBarChart(true);
 }, 150);
 
 const debouncedUpdateAggHighlightColor = debounce('aggHighlightColor', () => {
@@ -659,6 +661,7 @@ const debouncedUpdateAggHighlightColor = debounce('aggHighlightColor', () => {
     saveSettings();
     renderAggregationTable(true);
     renderAggregationTableResumida(true);
+    renderHorizontalBarChart(true);
 }, 150);
 
 export function updateAggZoneColors(e) {
@@ -1684,4 +1687,5 @@ export function handleAutoFitTextToggle(e) {
     // Re-render aggregation tables
     renderAggregationTable(true);
     renderAggregationTableResumida(true);
+    renderHorizontalBarChart(true);
 }

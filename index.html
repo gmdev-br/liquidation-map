@@ -774,6 +774,50 @@
         </div>
     </div>
 
+    <!-- Horizontal Bar Chart Section -->
+    <div class="section-wrapper" id="horizontalBarSectionWrapper">
+        <div class="section-header js-collapse-toggle" data-target="horizontalBarSectionContent">
+            <h2 class="section-title">📊 Gráfico de Barras - Agregação</h2>
+            <svg class="chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+        </div>
+        <div class="section-content" id="horizontalBarSectionContent" style="position:relative;">
+            <div style="padding:16px;background:var(--panel-bg);border-bottom:1px solid var(--border-color);display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+                <div style="display:flex;gap:8px;align-items:center;">
+                    <span style="display:inline-block;width:12px;height:12px;background:linear-gradient(90deg,#4ade80,#22c55e);border-radius:2px;"></span>
+                    <span style="font-size:12px;color:#9ca3af;">Long (Compra)</span>
+                </div>
+                <div style="display:flex;gap:8px;align-items:center;">
+                    <span style="display:inline-block;width:12px;height:12px;background:linear-gradient(90deg,#ef4444,#f87171);border-radius:2px;"></span>
+                    <span style="font-size:12px;color:#9ca3af;">Short (Venda)</span>
+                </div>
+                <!-- Zoom Controls -->
+                <div style="display:flex;gap:4px;align-items:center;margin-left:auto;">
+                    <button type="button" id="hbZoomOut" class="btn btn-sm" title="Diminuir zoom (mais barras)">−</button>
+                    <button type="button" id="hbZoomReset" class="btn btn-sm" title="Reset zoom (20 barras)">⟲</button>
+                    <button type="button" id="hbZoomIn" class="btn btn-sm" title="Aumentar zoom (menos barras)">+</button>
+                    <span id="hbZoomLevel" style="font-size:11px;color:#6b7280;margin-left:8px;padding:4px 8px;background:rgba(255,255,255,0.05);border-radius:4px;min-width:50px;text-align:center;">
+                        20 barras
+                    </span>
+                    <span style="font-size:11px;color:#6b7280;margin-left:4px;padding:4px 8px;background:rgba(255,255,255,0.05);border-radius:4px;" title="Ctrl+Scroll para zoom, Scroll para navegar">
+                        🖱️ Ctrl+Scroll
+                    </span>
+                </div>
+                <div style="display:flex;gap:8px;align-items:center;margin-left:12px;">
+                    <span style="font-size:12px;color:#facc15;">●</span>
+                    <span style="font-size:12px;color:#9ca3af;">Faixa do Preço BTC Atual</span>
+                </div>
+            </div>
+            <div style="padding:16px;background:var(--panel-bg);">
+                <div class="horizontal-bar-chart-wrapper">
+                    <div id="horizontalBarChart" style="width:100%;height:500px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Collapsible Aggregation Section - Resumida -->
     <div class="section-wrapper" id="aggResumidaSectionWrapper">
         <div class="section-header js-collapse-toggle" data-target="aggResumidaSectionContent">
@@ -1175,6 +1219,7 @@
     </div>
 
     <!-- Third-party Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js" defer></script>
