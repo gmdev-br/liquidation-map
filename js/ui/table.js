@@ -42,6 +42,76 @@ let _lastLookupRowsHash = '';
 let _lastSentAllRowsHash = '';
 let _lastSentWhaleMetaHash = '';
 
+// ═══════════════════════════════════════════════════════════
+// PERFORMANCE FIX #2: Cache de Intl.NumberFormat
+// toLocaleString é 50-100x mais lento que toFixed em hot path
+// ═══════════════════════════════════════════════════════════
+const formatterCache = new Map();
+
+// Store interval ID for cleanup
+let cellCacheCleanupInterval = null;
+
+function getFormatter(currency, locale = 'pt-BR') {
+    const key = `${locale}_${currency}`;
+    if (!formatterCache.has(key)) {
+        formatterCache.set(key, new Intl.NumberFormat(locale, {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        }));
+    }
+    return formatterCache.get(key);
+}
+
+function formatNumberCached(value, currency, locale = 'pt-BR') {
+    return getFormatter(currency, locale).format(value);
+}
+
+// ═══════════════════════════════════════════════════════════
+// PERFORMANCE FIX #1: Cache de células por tipo para evitar
+// querySelectors aninhados em loops O(N×M)
+// ═══════════════════════════════════════════════════════════
+const cellCache = new Map();
+
+function getCachedRowCells(rowEl, rowKey) {
+    let rowCells = cellCache.get(rowKey);
+    if (!rowCells) {
+        // Usar cells collection nativa (O(1)) em vez de querySelector
+        const cells = rowEl.cells;
+        rowCells = {};
+        for (let i = 0; i < cells.length; i++) {
+            const cell = cells[i];
+            // Mapear célula pela classe
+            if (cell.classList.contains('col-address')) rowCells.address = cell;
+            else if (cell.classList.contains('col-coin')) rowCells.coin = cell;
+            else if (cell.classList.contains('col-positionValue')) rowCells.positionValue = cell;
+            else if (cell.classList.contains('col-valueCcy')) rowCells.valueCcy = cell;
+            else if (cell.classList.contains('col-entryCcy')) rowCells.entryCcy = cell;
+            else if (cell.classList.contains('col-unrealizedPnl')) rowCells.unrealizedPnl = cell;
+            else if (cell.classList.contains('col-funding')) rowCells.funding = cell;
+            else if (cell.classList.contains('col-liqPx')) rowCells.liqPx = cell;
+            else if (cell.classList.contains('col-distToLiq')) rowCells.distToLiq = cell;
+            else if (cell.classList.contains('col-accountValue')) rowCells.accountValue = cell;
+        }
+        cellCache.set(rowKey, rowCells);
+    }
+    return rowCells;
+}
+
+// Limpar cache de células periodicamente para evitar memory leaks
+cellCacheCleanupInterval = setInterval(() => {
+    if (cellCache.size > 1000) {
+        cellCache.clear();
+    }
+}, 30000);
+
+// Clean up interval on page unload
+window.addEventListener('beforeunload', () => {
+    if (cellCacheCleanupInterval) {
+        clearInterval(cellCacheCleanupInterval);
+        cellCacheCleanupInterval = null;
+    }
+});
+
 // Debounced render function to reduce DOM updates - use adaptive debounce
 const debouncedRenderTable = adaptiveDebounce(() => {
     _renderTableInternal();
@@ -56,12 +126,55 @@ let virtualScrollManager = null;
 
 // Initialize Web Worker
 let dataWorker = null;
+let workerMessageId = 0;
+let workerPendingCallbacks = new Map();
+const MAX_PENDING_CALLBACKS = 5; // Limit to prevent memory leak on rapid renders
+
 if (window.Worker) {
     // PERFORMANCE: Removed cache-busting (?v=${Date.now()})
     // Cache busting forces the browser to re-download the worker on every page load,
     // which is unnecessary for a production environment and slows down initial load.
     // The service worker handles proper cache invalidation for updates.
     dataWorker = new Worker(new URL('../workers/dataWorker.js', import.meta.url), { type: 'module' });
+    
+    // PERFORMANCE FIX: Set up worker message handler ONCE at initialization
+    // with correlation ID support to handle concurrent messages properly
+    dataWorker.onmessage = function (e) {
+        const { id, rows: processedRows, stats } = e.data;
+
+        // Find and execute the pending callback for this message ID
+        // If no ID or callback not found, try to use the most recent callback
+        if (id && workerPendingCallbacks.has(id)) {
+            const callback = workerPendingCallbacks.get(id);
+            workerPendingCallbacks.delete(id);
+            callback(processedRows, stats);
+        } else if (workerPendingCallbacks.size > 0) {
+            // Fallback: use the oldest pending callback if ID doesn't match
+            const oldestKey = workerPendingCallbacks.keys().next().value;
+            const callback = workerPendingCallbacks.get(oldestKey);
+            workerPendingCallbacks.delete(oldestKey);
+            if (callback) {
+                callback(processedRows, stats);
+            }
+        }
+        // If no callbacks pending, silently ignore (may be from old messages)
+    };
+
+    // WORKER ERROR HANDLING: Clean up pending callbacks on worker errors
+    // to prevent memory leaks and notify waiting operations
+    dataWorker.onerror = function (error) {
+        console.error('[Worker] Error occurred:', error.message, 'at', error.filename, ':', error.lineno);
+        // Clean up all pending callbacks to prevent memory leaks
+        workerPendingCallbacks.clear();
+    };
+
+    // PERFORMANCE FIX: Terminate worker on page unload to prevent memory leaks
+    window.addEventListener('beforeunload', () => {
+        if (dataWorker) {
+            dataWorker.terminate();
+            dataWorker = null;
+        }
+    });
 }
 
 // Cache for headers to prevent loss during reordering
@@ -670,8 +783,17 @@ function _renderTableInternal() {
     } else {
         if (dataWorker) {
             // Use Web Worker for heavy lifting
-            dataWorker.onmessage = function (e) {
-                const { rows: processedRows, stats } = e.data;
+            // PERFORMANCE FIX: Generate unique message ID and store callback
+            // instead of reassigning onmessage handler on every render
+            const messageId = ++workerMessageId;
+            
+            // Clean up oldest callbacks if we have too many pending (prevents memory leak)
+            if (workerPendingCallbacks.size >= MAX_PENDING_CALLBACKS) {
+                const oldestKey = workerPendingCallbacks.keys().next().value;
+                workerPendingCallbacks.delete(oldestKey);
+            }
+            
+            workerPendingCallbacks.set(messageId, (processedRows, stats) => {
                 //console.log(`[Table] Worker returned ${processedRows.length} rows and stats.`);
 
                 filterCache.set(cacheKey, processedRows);
@@ -707,7 +829,7 @@ function _renderTableInternal() {
 
                 // Note: renderCharts() is now called inside stats check
                 finalizeTableRender(processedRows, showSymbols, true); // Added skipCharts flag
-            };
+            });
 
             const currencyState = {
                 activeCurrency, activeEntryCurrency, currentPrices, fxRates
@@ -737,6 +859,7 @@ function _renderTableInternal() {
             const whaleMetaHash = `${Object.keys(whaleMeta).length}`;
 
             const payload = {
+                id: messageId, // Include correlation ID for callback matching
                 filterState, sortState, currencyState, aggParams,
                 priceUpdateVersion: getPriceUpdateVersion()
             };
@@ -921,15 +1044,12 @@ function _renderTableInternal() {
 
         // Use virtual scrolling for large datasets
         const rowHeight = getRowHeight();
-        console.log('[Table] Rendering with rowHeight:', rowHeight, 'rows count:', rows.length);
+        // PERFORMANCE FIX: Removed debug console.log from hot render path
         
         if (!virtualScrollManager) {
-            console.log('[Table] Initializing virtual scroll manager');
             virtualScrollManager = enableVirtualScroll('positionsTableBody', { threshold: 100, rowHeight: rowHeight });
-            console.log('[Table] Virtual scroll manager created:', virtualScrollManager ? 'yes' : 'no');
         } else {
             // Update row height in case it changed
-            console.log('[Table] Updating existing virtual scroll rowHeight');
             if (typeof virtualScrollManager.setRowHeight === 'function') {
                 virtualScrollManager.setRowHeight(rowHeight);
             }
@@ -968,13 +1088,14 @@ function _renderTableInternal() {
             const levClass = `${side}-${isHighLev ? 'high' : 'low'}`;
 
             // PERFORMANCE: Use pre-calculated worker values instead of calling currency utilities thousands of times
-            const liqPrice = r._liqPxCcy || 0;
-            let liqPriceFormatted = '—';
-            if (liqPrice > 0) {
-                const entMeta = CURRENCY_META[activeEntryCurrency] || CURRENCY_META.USD;
-                const sym = showSymbols ? entMeta.symbol : '';
-                liqPriceFormatted = sym + liqPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-            }
+                const liqPrice = r._liqPxCcy || 0;
+                let liqPriceFormatted = '—';
+                if (liqPrice > 0) {
+                    const entMeta = CURRENCY_META[activeEntryCurrency] || CURRENCY_META.USD;
+                    const sym = showSymbols ? entMeta.symbol : '';
+                    // PERFORMANCE FIX #2: Usar formatter cacheado em vez de toLocaleString
+                    liqPriceFormatted = sym + formatNumberCached(liqPrice, activeEntryCurrency);
+                }
 
             // Distance to liq (distPct is already calculated in worker)
             let distHtml = '<span class="muted">—</span>';
@@ -1004,7 +1125,8 @@ function _renderTableInternal() {
             const entVal = r._entCcy || 0;
             const entMeta = CURRENCY_META[activeEntryCurrency] || CURRENCY_META.USD;
             const sym = showSymbols ? entMeta.symbol : '';
-            const entStr = sym + entVal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            // PERFORMANCE FIX #2: Usar formatter cacheado em vez de toLocaleString
+            const entStr = sym + formatNumberCached(entVal, activeEntryCurrency);
 
             const usdSym = showSymbols ? '$' : '';
 
@@ -1072,22 +1194,49 @@ function _renderTableInternal() {
         // Override row renderer and update data
         virtualScrollManager.renderRow = rowRenderer;
 
-        // Hook for font size adjustments after virtual scroll renders
+        // ═══════════════════════════════════════════════════════════
+        // PERFORMANCE FIX #4: Throttle em adjustFontSizeToFit
+        // Cálculos de layout caros devem ser throttled com requestAnimationFrame
+        // ═══════════════════════════════════════════════════════════
+        let fontSizePending = false;
+        let fontSizeRafId = null;
+
         const originalOnRender = virtualScrollManager.onRender;
         virtualScrollManager.onRender = () => {
             if (originalOnRender) originalOnRender();
 
-            if (getAutoFitText()) {
-                const tableBody = document.getElementById('positionsTableBody');
-                if (tableBody) {
-                    const cells = tableBody.querySelectorAll('td.auto-fit-active');
-                    cells.forEach(td => {
-                        const content = td.querySelector('.cell-content');
-                        if (content) {
-                            adjustFontSizeToFit(content, td);
-                        }
-                    });
+            if (getAutoFitText() && !fontSizePending) {
+                fontSizePending = true;
+                // Cancelar frame anterior se existir
+                if (fontSizeRafId) {
+                    cancelAnimationFrame(fontSizeRafId);
                 }
+                fontSizeRafId = requestAnimationFrame(() => {
+                    const tableBody = document.getElementById('positionsTableBody');
+                    if (tableBody) {
+                        // Processar apenas células visíveis no viewport
+                        const cells = tableBody.querySelectorAll('td.auto-fit-active');
+                        // Limitar número de células processadas por frame para evitar jank
+                        const maxCellsPerFrame = 50;
+                        let processed = 0;
+
+                        for (const td of cells) {
+                            if (processed >= maxCellsPerFrame) {
+                                // Agendar próximo batch - NÃO resetar flag para prevenir race conditions
+                                // A flag será resetada apenas quando todos os batches completarem
+                                requestAnimationFrame(() => virtualScrollManager.onRender());
+                                return;
+                            }
+                            const content = td.querySelector('.cell-content');
+                            if (content) {
+                                adjustFontSizeToFit(content, td);
+                                processed++;
+                            }
+                        }
+                    }
+                    fontSizePending = false;
+                    fontSizeRafId = null;
+                });
             }
         };
 
@@ -1243,33 +1392,55 @@ export function updateTableDataOnly() {
     // Reorder headers if needed (but don't clear them)
     reorderTableHeadersAndFilters(columnOrder);
 
-    // Get all visible rows in the DOM
-    const rows = tbody.querySelectorAll('tr');
+    // ═══════════════════════════════════════════════════════════
+    // PERFORMANCE FIX #1: Otimização de acesso a células
+    // Usar cells collection nativa (O(1)) em vez de querySelectors aninhados O(N×M)
+    // ═══════════════════════════════════════════════════════════
+    const rows = tbody.rows; // Native HTMLCollection - mais rápido que querySelectorAll
 
-    rows.forEach((rowEl) => {
-        // Skip empty state row
-        if (rowEl.querySelector('.empty-cell')) return;
+    // Pré-calcular valores comuns fora do loop
+    const btcPrice = parseFloat(currentPrices['BTC'] || 0);
+    const entMeta = CURRENCY_META[activeEntryCurrency] || CURRENCY_META.USD;
+    const usdSym = showSymbols ? '$' : '';
+    const entSym = showSymbols ? entMeta.symbol : '';
 
-        // Find the address cell to identify the row data
-        const addressCell = rowEl.querySelector('.col-address .addr-text');
-        if (!addressCell) return;
+    for (let r = 0; r < rows.length; r++) {
+        const rowEl = rows[r];
 
-        const address = addressCell.textContent?.trim();
-        if (!address) return;
+        // Skip spacer rows (virtual scroll)
+        if (rowEl.classList.contains('vs-top-spacer') || rowEl.classList.contains('vs-bottom-spacer')) continue;
 
-        // Find the coin cell to get the coin
-        const coinCell = rowEl.querySelector('.col-coin .coin-badge');
-        if (!coinCell) return;
+        // Skip empty state row (verificar primeira célula apenas)
+        const firstCell = rowEl.cells[0];
+        if (firstCell && firstCell.querySelector('.empty-cell')) continue;
 
-        const coinText = coinCell.textContent?.trim();
+        // Usar dataset para O(1) lookup em vez de querySelector
+        const rawAddr = rowEl.dataset.address;
+        if (!rawAddr) continue;
+
+        // Encontrar células usando cells collection nativa (O(1))
+        const cells = rowEl.cells;
+        let addressCell = null;
+        let coinCell = null;
+
+        // Scan rápido das células (máximo ~12 colunas, O(1) vs O(N) querySelectors)
+        for (let c = 0; c < cells.length; c++) {
+            const cellClass = cells[c].className;
+            if (cellClass.includes('col-address')) addressCell = cells[c];
+            else if (cellClass.includes('col-coin')) coinCell = cells[c];
+            if (addressCell && coinCell) break;
+        }
+
+        if (!addressCell || !coinCell) continue;
+
+        const coinBadge = coinCell.querySelector('.coin-badge');
+        const coinText = coinBadge?.textContent?.trim();
         const coin = coinText?.split(' ')[0];
-        if (!coin) return;
+        if (!coin) continue;
 
         // Find the matching row data using O(1) lookup
-        const rawAddr = rowEl.dataset.address || address;
         const rowData = rowDataMap.get(rawAddr + coin);
-
-        if (!rowData) return;
+        if (!rowData) continue;
 
         const meta = whaleMeta[rowData.address] || {};
         const side = rowData.side;
@@ -1277,105 +1448,96 @@ export function updateTableDataOnly() {
         const fundClass = rowData.funding >= 0 ? 'green' : 'red';
 
         // Calculate BTC volume for highlighting
-        const btcPrice = parseFloat(currentPrices['BTC'] || 0);
         const volBTC = btcPrice > 0 ? rowData.positionValue / btcPrice : 0;
         const isHighlighted = meta.displayName || (minBtcVolume > 0 && volBTC >= minBtcVolume);
 
-        // Get currency meta for formatting
-        const entMeta = CURRENCY_META[activeEntryCurrency] || CURRENCY_META.USD;
-        const usdSym = showSymbols ? '$' : '';
-        const entSym = showSymbols ? entMeta.symbol : '';
+        // Mapear células restantes com scan único O(M) onde M = número de colunas
+        const cellMap = {};
+        for (let c = 0; c < cells.length; c++) {
+            const cell = cells[c];
+            const className = cell.className;
+            if (className.includes('col-positionValue')) cellMap.positionValue = cell;
+            else if (className.includes('col-valueCcy')) cellMap.valueCcy = cell;
+            else if (className.includes('col-entryCcy')) cellMap.entryCcy = cell;
+            else if (className.includes('col-unrealizedPnl')) cellMap.unrealizedPnl = cell;
+            else if (className.includes('col-funding')) cellMap.funding = cell;
+            else if (className.includes('col-liqPx')) cellMap.liqPx = cell;
+            else if (className.includes('col-distToLiq')) cellMap.distToLiq = cell;
+            else if (className.includes('col-accountValue')) cellMap.accountValue = cell;
+        }
 
         // Update position value cell
-        const posValueCell = rowEl.querySelector('.col-positionValue');
-        if (posValueCell) {
-            posValueCell.textContent = `${usdSym}${fmt(rowData.positionValue)} `;
+        if (cellMap.positionValue) {
+            cellMap.positionValue.textContent = `${usdSym}${fmt(rowData.positionValue)}`;
         }
 
         // Update valueCcy cell
-        const valueCcyCell = rowEl.querySelector('.col-valueCcy');
-        if (valueCcyCell) {
+        if (cellMap.valueCcy) {
             const ccyVal = convertToActiveCcy(rowData.positionValue, null, activeCurrency, fxRates);
-            valueCcyCell.textContent = fmtCcy(ccyVal, null, activeCurrency, showSymbols);
-            if (isHighlighted) {
-                valueCcyCell.style.fontWeight = '600';
-            }
+            cellMap.valueCcy.textContent = fmtCcy(ccyVal, null, activeCurrency, showSymbols);
+            cellMap.valueCcy.style.fontWeight = isHighlighted ? '600' : '';
         }
 
-        // Update entryCcy cell
-        const entryCcyCell = rowEl.querySelector('.col-entryCcy');
-        if (entryCcyCell) {
+        // Update entryCcy cell - usar cache de formatter
+        if (cellMap.entryCcy) {
             const entVal = getCorrelatedEntry(rowData, activeEntryCurrency, currentPrices, fxRates);
-            entryCcyCell.textContent = entSym + entVal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-            if (isHighlighted) {
-                entryCcyCell.style.fontWeight = '600';
-            }
+            // PERFORMANCE FIX #2: Usar formatter cacheado em vez de toLocaleString
+            cellMap.entryCcy.textContent = entSym + formatNumberCached(entVal, activeEntryCurrency);
+            cellMap.entryCcy.style.fontWeight = isHighlighted ? '600' : '';
         }
 
         // Update unrealizedPnl cell
-        const pnlCell = rowEl.querySelector('.col-unrealizedPnl');
-        if (pnlCell) {
-            pnlCell.textContent = fmtUSD(rowData.unrealizedPnl);
-            pnlCell.className = `mono col - unrealizedPnl ${pnlClass} `;
-            if (isHighlighted) {
-                pnlCell.style.fontWeight = '600';
-            }
+        if (cellMap.unrealizedPnl) {
+            cellMap.unrealizedPnl.textContent = fmtUSD(rowData.unrealizedPnl);
+            cellMap.unrealizedPnl.className = `mono col-unrealizedPnl ${pnlClass}`;
+            cellMap.unrealizedPnl.style.fontWeight = isHighlighted ? '600' : '';
         }
 
         // Update funding cell
-        const fundingCell = rowEl.querySelector('.col-funding');
-        if (fundingCell) {
-            fundingCell.textContent = fmtUSD(rowData.funding);
-            fundingCell.className = `mono col - funding ${fundClass} `;
+        if (cellMap.funding) {
+            cellMap.funding.textContent = fmtUSD(rowData.funding);
+            cellMap.funding.className = `mono col-funding ${fundClass}`;
         }
 
-        // Update liqPx cell
-        const liqPxCell = rowEl.querySelector('.col-liqPx');
-        if (liqPxCell && rowData.liquidationPx > 0) {
+        // Update liqPx cell - usar cache de formatter
+        if (cellMap.liqPx && rowData.liquidationPx > 0) {
             const liqPrice = getCorrelatedPrice(rowData, rowData.liquidationPx, activeEntryCurrency, currentPrices, fxRates);
-            liqPxCell.textContent = entSym + liqPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-            if (isHighlighted) {
-                liqPxCell.style.fontWeight = '600';
-            }
+            // PERFORMANCE FIX #2: Usar formatter cacheado
+            cellMap.liqPx.textContent = entSym + formatNumberCached(liqPrice, activeEntryCurrency);
+            cellMap.liqPx.style.fontWeight = isHighlighted ? '600' : '';
         }
 
         // Update distToLiq cell
-        const distCell = rowEl.querySelector('.col-distToLiq');
-        if (distCell && rowData.distPct !== null) {
+        if (cellMap.distToLiq && rowData.distPct !== null) {
             const pct = rowData.distPct;
             const barClass = pct > 30 ? 'safe' : pct > 10 ? 'warn' : 'danger';
             const barW = Math.min(pct, 100).toFixed(0);
             const liqStr = rowData.liquidationPx > 0 ? (showSymbols ? '$' : '') + rowData.liquidationPx.toLocaleString('en-US', { maximumFractionDigits: 0 }) : '—';
 
-            const pctSpan = distCell.querySelector('.liq-pct');
+            const pctSpan = cellMap.distToLiq.querySelector('.liq-pct');
             if (pctSpan) {
-                pctSpan.textContent = `${pct.toFixed(0)}% `;
-                pctSpan.className = `liq - pct ${barClass === 'safe' ? 'green' : barClass === 'warn' ? '' : 'red'} `;
-                if (barClass === 'warn') {
-                    pctSpan.style.color = 'var(--orange)';
-                } else {
-                    pctSpan.style.color = '';
-                }
+                pctSpan.textContent = `${pct.toFixed(0)}%`;
+                pctSpan.className = `liq-pct ${barClass === 'safe' ? 'green' : barClass === 'warn' ? '' : 'red'}`;
+                pctSpan.style.color = barClass === 'warn' ? 'var(--orange)' : '';
             }
 
-            const liqPriceSpan = distCell.querySelector('.liq-price');
+            const liqPriceSpan = cellMap.distToLiq.querySelector('.liq-price');
             if (liqPriceSpan) {
                 liqPriceSpan.textContent = liqStr;
             }
 
-            const liqBar = distCell.querySelector('.liq-bar');
+            const liqBar = cellMap.distToLiq.querySelector('.liq-bar');
             if (liqBar) {
-                liqBar.style.width = `${barW}% `;
-                liqBar.className = `liq - bar ${barClass} `;
+                liqBar.style.width = `${barW}%`;
+                liqBar.className = `liq-bar ${barClass}`;
             }
         }
 
         // Update accountValue cell
-        const accValueCell = rowEl.querySelector('.col-accountValue');
-        if (accValueCell) {
-            accValueCell.textContent = `${usdSym}${fmt(meta.accountValue || 0)} `;
+        if (cellMap.accountValue) {
+            cellMap.accountValue.textContent = `${usdSym}${fmt(meta.accountValue || 0)}`;
         }
-    });
+    }
 
     // Update aggregation tables
     try {

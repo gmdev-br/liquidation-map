@@ -5,10 +5,24 @@
 // This file replaces the current system with the original working version
 // from https://gmdev-br.github.io/liquidation-map/
 
+// PERFORMANCE FIX: Store AbortControllers for cleanup
+const chartResizeControllers = new Map();
+
 // ── Chart Scale Resizing (Original Implementation) ──
 function enableChartScaleResizing(canvasId, getChartInstance, resetBtnId) {
     const canvas = document.getElementById(canvasId);
     if (!canvas) return;
+
+    // PERFORMANCE FIX: Clean up existing listeners if any
+    if (chartResizeControllers.has(canvasId)) {
+        chartResizeControllers.get(canvasId).abort();
+        chartResizeControllers.delete(canvasId);
+    }
+
+    // PERFORMANCE FIX: Create AbortController for cleanup
+    const controller = new AbortController();
+    const { signal } = controller;
+    chartResizeControllers.set(canvasId, controller);
 
     let isDragging = false;
     let dragAxis = null;
@@ -52,7 +66,7 @@ function enableChartScaleResizing(canvasId, getChartInstance, resetBtnId) {
                 if (btn) btn.style.display = 'block';
             }
         }
-    });
+    }, { signal });
 
     window.addEventListener('mousemove', (e) => {
         if (!isDragging || !dragAxis) return;
@@ -125,7 +139,7 @@ function enableChartScaleResizing(canvasId, getChartInstance, resetBtnId) {
         }
 
         chart.update('none');
-    });
+    }, { signal });
 
     window.addEventListener('mouseup', () => {
         if (isDragging) {
@@ -137,8 +151,19 @@ function enableChartScaleResizing(canvasId, getChartInstance, resetBtnId) {
                 saveSettings();
             }
         }
-    });
+    }, { signal });
 }
 
+// PERFORMANCE FIX: Cleanup function to abort chart resize listeners
+function cleanupChartResizeListeners(canvasId) {
+    if (chartResizeControllers.has(canvasId)) {
+        chartResizeControllers.get(canvasId).abort();
+        chartResizeControllers.delete(canvasId);
+    }
+}
+
+// Expose cleanup function globally for use in chart destroy
+window.cleanupChartResizeListeners = cleanupChartResizeListeners;
+
 // Export the function for use in the main system
-export { enableChartScaleResizing };
+export { enableChartScaleResizing, cleanupChartResizeListeners };

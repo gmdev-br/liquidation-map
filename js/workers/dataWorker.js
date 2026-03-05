@@ -2,6 +2,108 @@ const MAX_REASONABLE_PRICE = 10000000;
 const MAX_ALLOWED_BANDS = 5000;
 const MIN_VALID_COIN_PRICE = 0.0001;
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// PERFORMANCE CRITICAL: Object Pooling para bandas
+// Evita criação excessiva de objetos em loops quentes (GC pressure)
+// ═══════════════════════════════════════════════════════════════════════════════
+const bandPool = [];
+const setPool = [];
+const MAX_POOL_SIZE = 1000; // Limitar tamanho do pool para evitar memory bloat
+
+/**
+ * Obtém uma banda do pool ou cria nova se pool estiver vazio
+ * Reseta todas as propriedades antes de retornar
+ * @param {number} bandKey - Chave da banda (faixaDe)
+ * @param {number} bandSize - Tamanho da banda
+ * @returns {Object} Banda pronta para uso
+ */
+function getBandFromPool(bandKey, bandSize) {
+    let band = bandPool.pop();
+    if (!band) {
+        // Criar nova banda apenas se pool estiver vazio
+        band = {
+            faixaDe: 0, faixaAte: 0,
+            qtdLong: 0, notionalLong: 0,
+            qtdShort: 0, notionalShort: 0,
+            sumLiqNotionalLong: 0, sumLiqNotionalShort: 0,
+            liqVolLong: 0, liqVolShort: 0,
+            ativosLong: null, ativosShort: null,
+            whalesLong: null, whalesShort: null,
+            positionsLong: [], positionsShort: [],
+            isEmpty: false
+        };
+    }
+    // Reset valores - reutilizar objeto existente evita alocação de memória
+    band.faixaDe = bandKey;
+    band.faixaAte = bandKey + bandSize;
+    band.qtdLong = band.qtdShort = 0;
+    band.notionalLong = band.notionalShort = 0;
+    band.sumLiqNotionalLong = band.sumLiqNotionalShort = 0;
+    band.liqVolLong = band.liqVolShort = 0;
+    // Obter Sets do pool em vez de criar novos
+    band.ativosLong = getSetFromPool();
+    band.ativosShort = getSetFromPool();
+    band.whalesLong = getSetFromPool();
+    band.whalesShort = getSetFromPool();
+    // Limpar arrays reutilizando memória alocada
+    band.positionsLong.length = 0;
+    band.positionsShort.length = 0;
+    band.isEmpty = true;
+    return band;
+}
+
+/**
+ * Obtém um Set do pool ou cria novo se pool estiver vazio
+ * @returns {Set} Set vazio pronto para uso
+ */
+function getSetFromPool() {
+    const set = setPool.pop();
+    if (set) {
+        set.clear(); // Reutilizar - apenas limpar
+        return set;
+    }
+    return new Set();
+}
+
+/**
+ * Devolve banda ao pool para reutilização
+ * Limpa Sets e libera referências para ajudar GC
+ * @param {Object} band - Banda a ser reciclada
+ */
+function releaseBandToPool(band) {
+    if (!band) return;
+    // Devolver Sets ao pool para reutilização
+    if (band.ativosLong) {
+        band.ativosLong.clear();
+        if (setPool.length < MAX_POOL_SIZE) setPool.push(band.ativosLong);
+    }
+    if (band.ativosShort) {
+        band.ativosShort.clear();
+        if (setPool.length < MAX_POOL_SIZE) setPool.push(band.ativosShort);
+    }
+    if (band.whalesLong) {
+        band.whalesLong.clear();
+        if (setPool.length < MAX_POOL_SIZE) setPool.push(band.whalesLong);
+    }
+    if (band.whalesShort) {
+        band.whalesShort.clear();
+        if (setPool.length < MAX_POOL_SIZE) setPool.push(band.whalesShort);
+    }
+    // Limpar referências para ajudar GC
+    band.positionsLong.length = 0;
+    band.positionsShort.length = 0;
+    if (bandPool.length < MAX_POOL_SIZE) bandPool.push(band);
+}
+
+/**
+ * Limpa o pool de bandas e Sets
+ * Útil para forçar liberação de memória
+ */
+function clearPools() {
+    bandPool.length = 0;
+    setPool.length = 0;
+}
+
 // Helper: Convert USD value to active currency (BTC or Fiat)
 function convertToActiveCcy(valUSD, overrideCcy = null, activeCurrency, fxRates, currentPrices) {
     const ccy = overrideCcy || activeCurrency;
@@ -75,6 +177,7 @@ let lastPriceUpdateVersion = -1;
 
 self.onmessage = async function (e) {
     const {
+        id, // Correlation ID for callback matching
         allRows: incomingAllRows,
         whaleMeta: incomingWhaleMeta,
         filterState,
@@ -84,7 +187,12 @@ self.onmessage = async function (e) {
         priceUpdateVersion
     } = e.data;
 
-    if (incomingAllRows) cachedAllRows = incomingAllRows;
+    if (incomingAllRows) {
+        // Ajuda GC marcando como null primeiro
+        cachedAllRows = null;
+        cachedUpdatedRows = null;
+        cachedAllRows = incomingAllRows;
+    }
     if (incomingWhaleMeta) cachedWhaleMeta = incomingWhaleMeta;
     if (!cachedAllRows) return;
 
@@ -101,12 +209,24 @@ self.onmessage = async function (e) {
     const selectedCoinSet = (selectedCoins && selectedCoins.length > 0) ? new Set(selectedCoins) : null;
 
     // 1. Filter
-    let rows = cachedUpdatedRows.filter(r => {
-        if (selectedCoinSet && !selectedCoinSet.has(r.coin)) return false;
-        if (addressFilterRegex) {
+    let rows;
+    // Pré-filtrar com substring match antes do regex
+    if (addressFilterRegex) {
+        const candidates = cachedUpdatedRows.filter(r =>
+            r.address.includes(addressFilter) ||
+            (cachedWhaleMeta[r.address]?.displayName || '').includes(addressFilter)
+        );
+        rows = candidates.filter(r => {
             const meta = cachedWhaleMeta[r.address];
-            if (!addressFilterRegex.test(r.address) && !addressFilterRegex.test(meta?.displayName || '')) return false;
-        }
+            return addressFilterRegex.test(r.address) ||
+                   addressFilterRegex.test(meta?.displayName || '');
+        });
+    } else {
+        rows = cachedUpdatedRows;
+    }
+
+    rows = rows.filter(r => {
+        if (selectedCoinSet && !selectedCoinSet.has(r.coin)) return false;
         if (sideFilter && r.side !== sideFilter) return false;
         if (!isNaN(minLev) && r.leverageValue < minLev) return false;
         if (!isNaN(maxLev) && r.leverageValue > maxLev) return false;
@@ -160,17 +280,8 @@ self.onmessage = async function (e) {
     const whalesShortSet = new Set();
     const processedWhalesForCap = new Set();
 
-    const createBand = (priceVal) => ({
-        faixaDe: priceVal, faixaAte: priceVal + (bandSize || 0),
-        qtdLong: 0, notionalLong: 0,
-        qtdShort: 0, notionalShort: 0,
-        sumLiqNotionalLong: 0, sumLiqNotionalShort: 0,
-        liqVolLong: 0, liqVolShort: 0,
-        ativosLong: new Set(), ativosShort: new Set(),
-        positionsLong: [], positionsShort: [],
-        whalesLong: new Set(), whalesShort: new Set(),
-        isEmpty: true
-    });
+    // PERFORMANCE: Usar object pooling em vez de criar novos objetos
+    const createBand = (priceVal) => getBandFromPool(priceVal, bandSize || 0);
 
     const isInRange = (price, min, max) => (min <= 0 || max <= 0) || (price >= min && price <= max);
 
@@ -290,8 +401,18 @@ self.onmessage = async function (e) {
 
     const coins = Object.keys(stats.coinStats).sort();
     stats.uniqueCoins = coins;
+
+    // PERFORMANCE CRITICAL: Criar novo objeto sem _whales em vez de deletar propriedade
+    // Deletar propriedades causa reshape de hidden class (deoptimization V8)
     for (let i = 0; i < coins.length; i++) {
-        delete stats.coinStats[coins[i]]._whales;
+        const coin = coins[i];
+        const cs = stats.coinStats[coin];
+        // Shape estável: criar novo objeto com mesmas propriedades, sem _whales
+        stats.coinStats[coin] = {
+            totalPositionValue: cs.totalPositionValue,
+            count: cs.count,
+            whaleCount: cs.whaleCount
+        };
     }
 
     stats.whalesWithPos = whalesWithPosSet.size;
@@ -299,22 +420,68 @@ self.onmessage = async function (e) {
     stats.whalesShort = whalesShortSet.size;
 
     if (aggParams) {
+        // PERFORMANCE CRITICAL: Bucket sort O(N) + lazy evaluation
         const finalize = (bandsMap) => {
-            const arr = Object.values(bandsMap).sort((a, b) => b.faixaDe - a.faixaDe);
+            const keys = Object.keys(bandsMap);
+            if (keys.length === 0) {
+                return { bandArray: [], totalLongNotional, totalShortNotional, bandsWithPosCount: 0 };
+            }
+
+            // Bucket sort: encontrar min/max e iterar na ordem desejada O(N)
+            let minBand = Infinity;
+            let maxBand = -Infinity;
+            for (let i = 0; i < keys.length; i++) {
+                const bandVal = Number(keys[i]);
+                if (bandVal < minBand) minBand = bandVal;
+                if (bandVal > maxBand) maxBand = bandVal;
+            }
+
+            // Construir array ordenado de maior para menor (ordem decrescente) O(N)
+            const arr = [];
+            const bandSizeLocal = bandSize || 1;
+            for (let band = maxBand; band >= minBand; band -= bandSizeLocal) {
+                if (bandsMap[band]) {
+                    arr.push(bandsMap[band]);
+                }
+            }
+
+            // Lazy evaluation: só ordenar posições se necessário
             for (let i = 0; i < arr.length; i++) {
                 const b = arr[i];
                 if (!b.isEmpty) {
-                    b.positionsLong.sort((x, y) => y.positionValue - x.positionValue);
-                    b.positionsShort.sort((x, y) => y.positionValue - x.positionValue);
+                    // Ordenar apenas se houver múltiplas posições (evita sort de 0-1 elementos)
+                    if (b.positionsLong.length > 1) {
+                        b.positionsLong.sort((x, y) => y.positionValue - x.positionValue);
+                    }
+                    if (b.positionsShort.length > 1) {
+                        b.positionsShort.sort((x, y) => y.positionValue - x.positionValue);
+                    }
+                    // Converter Sets para Arrays apenas quando necessário (serialização)
                     b.ativosLong = Array.from(b.ativosLong);
                     b.ativosShort = Array.from(b.ativosShort);
                     b.whalesLongCount = b.whalesLong.size;
                     b.whalesShortCount = b.whalesShort.size;
-                    delete b.whalesLong;
-                    delete b.whalesShort;
+                    // PERFORMANCE: Liberar Sets de whales para o pool em vez de deletar
+                    if (b.whalesLong) {
+                        b.whalesLong.clear();
+                        if (setPool.length < MAX_POOL_SIZE) setPool.push(b.whalesLong);
+                        b.whalesLong = null; // Remover referência, não deletar propriedade
+                    }
+                    if (b.whalesShort) {
+                        b.whalesShort.clear();
+                        if (setPool.length < MAX_POOL_SIZE) setPool.push(b.whalesShort);
+                        b.whalesShort = null;
+                    }
                 }
             }
-            return { bandArray: arr, totalLongNotional, totalShortNotional, bandsWithPosCount: arr.filter(x => !x.isEmpty).length };
+
+            // Contar bandas não-vazias
+            let bandsWithPosCount = 0;
+            for (let i = 0; i < arr.length; i++) {
+                if (!arr[i].isEmpty) bandsWithPosCount++;
+            }
+
+            return { bandArray: arr, totalLongNotional, totalShortNotional, bandsWithPosCount };
         };
 
         stats.aggFull = finalize(fullBands);
@@ -330,5 +497,5 @@ self.onmessage = async function (e) {
         stats.aggRes = aggRes;
     }
 
-    self.postMessage({ rows, stats });
+    self.postMessage({ id, rows, stats });
 };

@@ -2,12 +2,12 @@
 // LIQUID GLASS — Exchange Rates API
 // ═══════════════════════════════════════════════════════════
 
-import { FX_URL } from '../config.js';
+import { FX_URL, fetchWithTimeout } from '../config.js';
 import { setFxRates, setFxReady, getCurrentPrices, setCurrentPrices } from '../state.js';
 
 export async function fetchAllMids() {
     try {
-        const resp = await fetch('https://api.hyperliquid.xyz/info', {
+        const resp = await fetchWithTimeout('https://api.hyperliquid.xyz/info', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ type: 'allMids' })
@@ -23,7 +23,7 @@ export async function fetchAllMids() {
 
 export async function fetchExchangeRates() {
     try {
-        const resp = await fetch(FX_URL);
+        const resp = await fetchWithTimeout(FX_URL);
         const data = await resp.json();
         if (data.rates) {
             setFxRates(data.rates);

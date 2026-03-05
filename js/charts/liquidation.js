@@ -313,7 +313,15 @@ export function renderLiqScatterPlot(workerLiqPoints = null, force = false) {
         };
     }
 
-    if (canUpdateOnly) {
+    // PERFORMANCE FIX: Use chart.update() instead of destroy/create when possible
+    // This preserves zoom/pan state and is much faster
+    const shouldUseUpdate = liqChartInstance && (
+        // Same chart type: can always update
+        liqChartInstance.config.type === chartType &&
+        liqChartInstance.config.options.indexAxis === localIndexAxis
+    );
+    
+    if (shouldUseUpdate) {
         liqChartInstance.data.datasets = datasets;
         liqChartInstance.options.scales.x = { ...liqChartInstance.options.scales.x, ...localScales.x };
         liqChartInstance.options.scales.y = { ...liqChartInstance.options.scales.y, ...localScales.y };
@@ -324,7 +332,14 @@ export function renderLiqScatterPlot(workerLiqPoints = null, force = false) {
         return liqChartInstance;
     }
 
-    if (liqChartInstance) liqChartInstance.destroy();
+    // Only destroy if chart type actually changed
+    if (liqChartInstance) {
+        // PERFORMANCE FIX: Abort event listeners before destroying
+        if (typeof window.cleanupChartResizeListeners === 'function') {
+            window.cleanupChartResizeListeners('liqChart');
+        }
+        liqChartInstance.destroy();
+    }
 
     const sym = getShowSymbols() ? (CURRENCY_META[activeEntryCcy || 'USD']?.symbol || '$') : '';
     liqChartInstance = new Chart(ctx, {

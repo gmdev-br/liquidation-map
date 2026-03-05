@@ -167,12 +167,17 @@ export async function updateRankingPanel() {
         }
         _lastRankingPanelHash = currentHash;
 
-        panel.innerHTML = `
-            <div style="display: flex; align-items: center; gap: 8px; margin-right: 10px; color: var(--muted); font-size: 11px; flex-shrink: 0;">
-                <span>🌍</span>
-                <span>Global Market Cap Ranking</span>
-            </div>
-            ${combinedData.map((coin, i) => {
+        // CRITICAL: Use DocumentFragment for batch DOM update to prevent synchronous reflow
+        const fragment = document.createDocumentFragment();
+
+        // Header element
+        const header = document.createElement('div');
+        header.style.cssText = 'display: flex; align-items: center; gap: 8px; margin-right: 10px; color: var(--muted); font-size: 11px; flex-shrink: 0;';
+        header.innerHTML = '<span>🌍</span><span>Global Market Cap Ranking</span>';
+        fragment.appendChild(header);
+
+        // Create ranking cards
+        combinedData.forEach((coin, i) => {
             const rank = i + 1;
             const marketCapStr = fmtCcy(coin.marketCap, null, 'USD', true);
             const change = coin.priceChange24h ? `${coin.priceChange24h.toFixed(2)}%` : '0%';
@@ -184,24 +189,30 @@ export async function updateRankingPanel() {
             const whaleCount = coin.whaleCount || 0;
             const whaleMarketCapStr = whalePositionValue > 0 ? fmtCcy(whalePositionValue, null, 'USD', true) : '—';
             const whaleInfo = whaleCount > 0 ?
-                `Whale Market Cap: ${whaleMarketCapStr}\n${whaleCount} whales • $${(whalePositionValue / 1000000).toFixed(1)}M positions` :
+                `Whale Market Cap: ${whaleMarketCapStr}\n${whaleCount} whales • ${(whalePositionValue / 1000000).toFixed(1)}M positions` :
                 'No whale positions';
 
-            return `
-                    <div class="ranking-card ${isSelected ? 'selected' : ''}"
-                         onclick="selectCoin('${coin.symbol}')"
-                         title="${coin.name} (${coin.symbol})\nGlobal Market Cap: ${marketCapStr}\n24h Change: ${change}\n${whaleInfo}">
-                        <div class="ranking-rank">#${rank}</div>
-                        <div class="ranking-coin">${coin.symbol}</div>
-                        <div class="ranking-mcap">${marketCapStr}</div>
-                        <div class="ranking-change ${changeClass}">${change}</div>
-                        <div class="whale-market-cap" title="${whaleInfo}">${whaleMarketCapStr}</div>
-                        ${whaleCount > 0 ? `<div class="whale-indicator" title="${whaleInfo}">🐋</div>` : ''}
-                        ${isSelected ? '<div class="ranking-selected-indicator">✓</div>' : ''}
-                    </div>
-                `;
-        }).join('')}
-        `;
+            const card = document.createElement('div');
+            card.className = `ranking-card ${isSelected ? 'selected' : ''}`;
+            card.title = `${coin.name} (${coin.symbol})\nGlobal Market Cap: ${marketCapStr}\n24h Change: ${change}\n${whaleInfo}`;
+            card.onclick = () => { if (typeof window.selectCoin === 'function') window.selectCoin(coin.symbol); };
+
+            card.innerHTML = `
+                <div class="ranking-rank">#${rank}</div>
+                <div class="ranking-coin">${coin.symbol}</div>
+                <div class="ranking-mcap">${marketCapStr}</div>
+                <div class="ranking-change ${changeClass}">${change}</div>
+                <div class="whale-market-cap" title="${whaleInfo}">${whaleMarketCapStr}</div>
+                ${whaleCount > 0 ? `<div class="whale-indicator" title="${whaleInfo}">🐋</div>` : ''}
+                ${isSelected ? '<div class="ranking-selected-indicator">✓</div>' : ''}
+            `;
+
+            fragment.appendChild(card);
+        });
+
+        // Batch DOM update - clear and append in one operation
+        panel.innerHTML = '';
+        panel.appendChild(fragment);
 
         //console.log('Market cap ranking panel updated with', combinedData.length, 'coins');
     }, RANKING_PANEL_DEBOUNCE_MS);
@@ -304,6 +315,22 @@ export function renderQuotesPanel() {
 // Quotes state for change detection
 let _lastQuotesHTMLHash = '';
 
+// CRITICAL: FNV-1a hash implementation for efficient price change detection
+function computePricesHash(prices, coins) {
+    let hash = 2166136261; // FNV offset basis
+    for (const coin of coins) {
+        const price = prices[coin];
+        if (price != null) {
+            const str = `${coin}:${price}`;
+            for (let i = 0; i < str.length; i++) {
+                hash ^= str.charCodeAt(i);
+                hash += (hash << 1) + (hash << 4) + (hash << 7) + (hash << 8) + (hash << 24);
+            }
+        }
+    }
+    return hash >>> 0; // Convert to unsigned 32-bit
+}
+
 export function updateQuotesHTML() {
     const panel = document.getElementById('quotesPanel');
     if (!panel) return;
@@ -314,14 +341,8 @@ export function updateQuotesHTML() {
     const selectedCoins = getSelectedCoins();
     const currentPrices = getCurrentPrices();
 
-    // PERFORMANCE: Simple change detection to avoid layout thrashing
-    // PERFORMANCE: Use a faster hash (property sum or count) instead of full stringification
-    let priceSum = 0;
-    for (let i = 0; i < selectedCoins.length; i++) {
-        const price = parseFloat(currentPrices[selectedCoins[i]]);
-        priceSum += isNaN(price) ? 0 : price;
-    }
-    const currentHash = `${selectedCoins.length}-${priceSum.toFixed(2)}`;
+    // CRITICAL: Use FNV-1a hash for efficient and collision-resistant change detection
+    const currentHash = computePricesHash(currentPrices, selectedCoins);
     if (currentHash === _lastQuotesHTMLHash) {
         return;
     }
@@ -374,12 +395,20 @@ export function updatePriceModeUI() {
 }
 
 let priceTicker = null;
+let isPriceUpdating = false; // CRITICAL: Protection against concurrent executions
 
 export function startPriceTicker() {
     stopPriceTicker();
 
-    // Atualiza a cada 5 segundos para evitar sobrecarga
-    priceTicker = setInterval(async () => {
+    // CRITICAL: Use a named async function with concurrency protection to prevent death spiral
+    const tick = async () => {
+        // Skip if still processing previous tick (prevents death spiral)
+        if (isPriceUpdating) {
+            // console.log('[PriceTicker] Skipping tick - previous still processing');
+            return;
+        }
+        isPriceUpdating = true;
+
         try {
             const response = await fetch('https://api.hyperliquid.xyz/info', {
                 method: 'POST',
@@ -430,126 +459,125 @@ export function startPriceTicker() {
 
                 setCurrentPrices(currentPrices);
 
-                // Now update UI which uses these prices
-                updateQuotesHTML();
+                // Batch all UI updates into single RAF for better performance
+                requestAnimationFrame(() => {
+                    // Update quotes panel
+                    updateQuotesHTML();
 
-                // Update prevPrice for NEXT tick
-                selectedCoins.forEach(coin => {
-                    const newPrice = parseFloat(data[coin]);
-                    if (!isNaN(newPrice)) {
-                        window[`prevPrice_${coin}`] = newPrice;
+                    // Update prevPrice for NEXT tick after UI update
+                    selectedCoins.forEach(coin => {
+                        const newPrice = parseFloat(data[coin]);
+                        if (!isNaN(newPrice)) {
+                            window[`prevPrice_${coin}`] = newPrice;
+                        }
+                    });
+
+                    // Update scatter chart
+                    const scatterChart = getScatterChart();
+                    const liqChart = getLiqChartInstance();
+
+                    if (scatterChart) {
+                        // Update the price line annotation
+                        const currentPrices = getCurrentPrices();
+                        const btcPrice = parseFloat(currentPrices['BTC'] || 0);
+                        const activeEntryCurrency = getActiveEntryCurrency();
+
+                        // Calculate refPrice based on entry currency (X-axis)
+                        let refPrice = btcPrice;
+                        if (activeEntryCurrency === 'BTC') {
+                            refPrice = 1;
+                        } else if (activeEntryCurrency && activeEntryCurrency !== 'USD') {
+                            const fxRates = getFxRates();
+                            const rate = fxRates[activeEntryCurrency] || 1;
+                            refPrice = btcPrice * rate;
+                        }
+
+                        // Update BTC price label plugin
+                        if (scatterChart.options.plugins.btcPriceLabel) {
+                            scatterChart.options.plugins.btcPriceLabel.price = refPrice;
+                            const currencyMeta = CURRENCY_META[activeEntryCurrency] || CURRENCY_META.USD;
+                            const showSymbols = getShowSymbols();
+                            const sym = showSymbols ? currencyMeta.symbol : '';
+                            scatterChart.options.plugins.btcPriceLabel.text = `BTC: ${sym}${refPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                        }
+
+                        // Only update if chart is valid and visible
+                        const canvas = document.getElementById('scatterChart');
+                        const section = document.getElementById('chart-section');
+                        const isChartVisible = section && section.style.display !== 'none' && canvas?.offsetParent !== null;
+                        if (scatterChart.ctx && scatterChart.canvas && canvas && canvas.isConnected && isChartVisible) {
+                            try {
+                                scatterChart.update('none'); // Use 'none' for instant update without animation
+                            } catch (e) {
+                                console.warn('[ChartUpdate] scatterChart.update() failed:', e.message);
+                            }
+                        }
                     }
+
+                    if (liqChart) {
+                        // Update liquidation chart price line
+                        const currentPrices = getCurrentPrices();
+                        const btcPrice = parseFloat(currentPrices['BTC'] || 0);
+                        const activeEntryCurrency = getActiveEntryCurrency();
+                        let refPrice = btcPrice;
+                        if (activeEntryCurrency === 'BTC') {
+                            refPrice = 1;
+                        } else if (activeEntryCurrency && activeEntryCurrency !== 'USD') {
+                            const fxRates = getFxRates();
+                            const rate = fxRates[activeEntryCurrency] || 1;
+                            refPrice = btcPrice * rate;
+                        }
+
+                        // Update annotation
+                        if (liqChart.options.plugins.annotation && liqChart.options.plugins.annotation.annotations.currentPriceLine) {
+                            liqChart.options.plugins.annotation.annotations.currentPriceLine.xMin = refPrice;
+                            liqChart.options.plugins.annotation.annotations.currentPriceLine.xMax = refPrice;
+                            liqChart.options.plugins.annotation.annotations.currentPriceLine.yMin = undefined;
+                            liqChart.options.plugins.annotation.annotations.currentPriceLine.yMax = undefined;
+                        }
+
+                        // Update BTC price label
+                        if (liqChart.options.plugins.btcPriceLabel) {
+                            liqChart.options.plugins.btcPriceLabel.price = refPrice;
+                            const currencyMeta = CURRENCY_META[activeEntryCurrency] || CURRENCY_META.USD;
+                            const showSymbols = getShowSymbols();
+                            const sym = showSymbols ? currencyMeta.symbol : '';
+                            liqChart.options.plugins.btcPriceLabel.text = `BTC: ${sym}${refPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                        }
+
+                        // Only update if chart is valid and visible
+                        const liqCanvas = document.getElementById('liqScatterChart');
+                        const liqSection = document.getElementById('liq-chart-section');
+                        const isLiqVisible = liqSection && liqSection.style.display !== 'none' && liqCanvas?.offsetParent !== null;
+                        if (liqChart.ctx && liqChart.canvas && liqCanvas && liqCanvas.isConnected && isLiqVisible) {
+                            try {
+                                liqChart.update('none'); // Use 'none' for instant update
+                            } catch (e) {
+                                console.warn('[ChartUpdate] liqChart.update() failed:', e.message);
+                            }
+                        }
+                    }
+
+                    // Update aggregation table highlight and horizontal bar chart
+                    renderAggregationTable();
+                    renderAggregationTableResumida();
+                    renderHorizontalBarChart();
+
+                    // Update main table with new prices (using lightweight update to preserve column settings)
+                    updateTablePriceData();
                 });
             }
 
-            // Update charts to reflect new price line position
-            const scatterChart = getScatterChart();
-            const liqChart = getLiqChartInstance();
-            if (scatterChart) {
-                // Update the price line annotation
-                const currentPrices = getCurrentPrices();
-                const btcPrice = parseFloat(currentPrices['BTC'] || 0);
-                const activeEntryCurrency = getActiveEntryCurrency();
-
-                // Calculate refPrice based on entry currency (X-axis)
-                let refPrice = btcPrice;
-                if (activeEntryCurrency === 'BTC') {
-                    refPrice = 1;
-                } else if (activeEntryCurrency && activeEntryCurrency !== 'USD') {
-                    const fxRates = getFxRates();
-                    const rate = fxRates[activeEntryCurrency] || 1;
-                    refPrice = btcPrice * rate;
-                }
-
-                // Update BTC price label plugin
-                if (scatterChart.options.plugins.btcPriceLabel) {
-                    scatterChart.options.plugins.btcPriceLabel.price = refPrice;
-                    const currencyMeta = CURRENCY_META[activeEntryCurrency] || CURRENCY_META.USD;
-                    const showSymbols = getShowSymbols();
-                    const sym = showSymbols ? currencyMeta.symbol : '';
-                    scatterChart.options.plugins.btcPriceLabel.text = `BTC: ${sym}${refPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-
-                    // DEBUG: Chart update
-                    //console.log(`[ChartUpdate] Scatter refPrice: ${refPrice} (Entry Currency: ${activeEntryCurrency})`);
-                }
-
-                // DEBUG: Check chart validity before update
-                const canvas = document.getElementById('scatterChart');
-                const section = document.getElementById('chart-section');
-                //console.log(`[ChartUpdate] scatterChart exists: ${!!scatterChart}, canvas exists: ${!!canvas}, canvas in DOM: ${canvas?.isConnected}, section display: ${section?.style.display}, chart.ctx: ${!!scatterChart?.ctx}, chart.canvas: ${!!scatterChart?.canvas}`);
-
-                // Only update if chart is valid and visible
-                const isChartVisible = section && section.style.display !== 'none' && canvas?.offsetParent !== null;
-                if (scatterChart.ctx && scatterChart.canvas && canvas && canvas.isConnected && isChartVisible) {
-                    try {
-                        scatterChart.update('none'); // Use 'none' for instant update without animation
-                    } catch (e) {
-                        console.warn('[ChartUpdate] scatterChart.update() failed:', e.message);
-                    }
-                }
-            }
-
-            if (liqChart) {
-                // Update liquidation chart price line
-                const currentPrices = getCurrentPrices();
-                const btcPrice = parseFloat(currentPrices['BTC'] || 0);
-                const activeEntryCurrency = getActiveEntryCurrency();
-                let refPrice = btcPrice;
-                if (activeEntryCurrency === 'BTC') {
-                    refPrice = 1;
-                } else if (activeEntryCurrency && activeEntryCurrency !== 'USD') {
-                    const fxRates = getFxRates();
-                    const rate = fxRates[activeEntryCurrency] || 1;
-                    refPrice = btcPrice * rate;
-                }
-
-                // Update annotation
-                if (liqChart.options.plugins.annotation && liqChart.options.plugins.annotation.annotations.currentPriceLine) {
-                    liqChart.options.plugins.annotation.annotations.currentPriceLine.xMin = refPrice;
-                    liqChart.options.plugins.annotation.annotations.currentPriceLine.xMax = refPrice;
-                    liqChart.options.plugins.annotation.annotations.currentPriceLine.yMin = undefined;
-                    liqChart.options.plugins.annotation.annotations.currentPriceLine.yMax = undefined;
-                }
-
-                // Update BTC price label
-                if (liqChart.options.plugins.btcPriceLabel) {
-                    liqChart.options.plugins.btcPriceLabel.price = refPrice;
-                    const currencyMeta = CURRENCY_META[activeEntryCurrency] || CURRENCY_META.USD;
-                    const showSymbols = getShowSymbols();
-                    const sym = showSymbols ? currencyMeta.symbol : '';
-                    liqChart.options.plugins.btcPriceLabel.text = `BTC: ${sym}${refPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-
-                    // DEBUG: LiqChart update
-                    //console.log(`[ChartUpdate] LiqChart refPrice: ${refPrice}`);
-                }
-
-                // DEBUG: Check liqChart validity before update
-                const liqCanvas = document.getElementById('liqScatterChart');
-                const liqSection = document.getElementById('liq-chart-section');
-                //console.log(`[ChartUpdate] liqChart exists: ${!!liqChart}, canvas exists: ${!!liqCanvas}, canvas in DOM: ${liqCanvas?.isConnected}, section display: ${liqSection?.style.display}, chart.ctx: ${!!liqChart?.ctx}, chart.canvas: ${!!liqChart?.canvas}`);
-
-                // Only update if chart is valid and visible
-                const isLiqVisible = liqSection && liqSection.style.display !== 'none' && liqCanvas?.offsetParent !== null;
-                if (liqChart.ctx && liqChart.canvas && liqCanvas && liqCanvas.isConnected && isLiqVisible) {
-                    try {
-                        liqChart.update('none'); // Use 'none' for instant update
-                    } catch (e) {
-                        console.warn('[ChartUpdate] liqChart.update() failed:', e.message);
-                    }
-                }
-            }
-
-            // Update aggregation table highlight if active
-            renderAggregationTable();
-            renderAggregationTableResumida();
-            renderHorizontalBarChart();
-
-            // Update main table with new prices (using lightweight update to preserve column settings)
-            updateTablePriceData();
         } catch (e) {
             console.warn('Failed to fetch prices', e);
+        } finally {
+            // CRITICAL: Always reset flag to prevent deadlock
+            isPriceUpdating = false;
         }
-    }, getPriceUpdateInterval());
+    };
+
+    // Start the ticker with concurrency-protected tick function
+    priceTicker = setInterval(tick, getPriceUpdateInterval());
 }
 
 export function stopPriceTicker() {

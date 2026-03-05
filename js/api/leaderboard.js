@@ -2,7 +2,7 @@
 // LIQUID GLASS — Leaderboard API
 // ═══════════════════════════════════════════════════════════
 
-import { LEADERBOARD_URL } from '../config.js';
+import { LEADERBOARD_URL, fetchWithTimeout } from '../config.js';
 import {
     setAllRows, setLoadedCount, setScanning, setIsPaused, setWhaleList,
     getScanning, getIsPaused, getMaxConcurrency, getFxReady, getFxRates, getActiveCurrency
@@ -29,7 +29,7 @@ export async function startScan(callbacks) {
         // Refresh prices before scanning to ensure accuracy
         await fetchAllMids();
 
-        const lbResp = await fetch(LEADERBOARD_URL);
+        const lbResp = await fetchWithTimeout(LEADERBOARD_URL);
         if (!lbResp.ok) throw new Error(`Leaderboard HTTP ${lbResp.status}`);
         const lbData = await lbResp.json();
         const rows = lbData.leaderboardRows || [];

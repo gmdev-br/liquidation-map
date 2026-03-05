@@ -29,42 +29,141 @@ import { showToast } from '../ui/toast.js';
 
 const STORAGE_KEY = 'whaleWatcherSettings';
 
-// Debounced save to reduce localStorage writes
-const debouncedSave = debounce((settings) => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
-    showToast('Configurações salvas', 'success', 2500);
-}, 1000);
+// ═══════════════════════════════════════════════════════════════════════════════
+// PERFORMANCE CRITICAL: Migrado para IndexedDB para evitar bloqueio da main thread
+// localStorage é síncrono e bloqueia a UI com JSON.stringify/parse grandes
+// IndexedDB é assíncrono e não bloqueia a main thread
+// ═══════════════════════════════════════════════════════════════════════════════
+const DB_NAME = 'whaleTrackerDB';
+const DB_VERSION = 1;
+const STORE_NAME = 'settings';
 
-// Immediate save function for critical settings like sort and column order
-function saveSettingsImmediate(settings) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
-    //console.log('Settings saved immediately');
+let dbPromise = null;
+
+/**
+ * Abre conexão com IndexedDB
+ * @returns {Promise<IDBDatabase>}
+ */
+async function openSettingsDB() {
+    if (dbPromise) return dbPromise;
+
+    dbPromise = new Promise((resolve, reject) => {
+        const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+        request.onerror = () => {
+            console.warn('IndexedDB open failed, falling back to localStorage');
+            reject(request.error);
+        };
+
+        request.onsuccess = () => resolve(request.result);
+
+        request.onupgradeneeded = (event) => {
+            const db = event.target.result;
+            if (!db.objectStoreNames.contains(STORE_NAME)) {
+                db.createObjectStore(STORE_NAME, { keyPath: 'key' });
+            }
+        };
+    });
+
+    return dbPromise;
 }
 
-export function saveSettings(getChartState = null, savedScatterState = null, savedLiqState = null, scatterChart = null, liqChartInstance = null, immediate = false) {
-    //console.log(`%c[saveSettings] ════════════════════════════════════════`, 'background: #4CAF50; color: white; font-weight: bold;');
-    //console.log('[saveSettings] CALLED at', new Date().toLocaleTimeString());
-    //console.log('[saveSettings] immediate:', immediate);
-    //console.trace('[saveSettings] Stack trace:');
+/**
+ * Salva settings no IndexedDB de forma assíncrona (não bloqueia main thread)
+ * @param {Object} settings - Settings a serem salvas
+ * @returns {Promise<void>}
+ */
+async function saveSettingsToIndexedDB(settings) {
+    try {
+        const db = await openSettingsDB();
+        return new Promise((resolve, reject) => {
+            const transaction = db.transaction(STORE_NAME, 'readwrite');
+            const store = transaction.objectStore(STORE_NAME);
+            const request = store.put({ key: STORAGE_KEY, value: settings, timestamp: Date.now() });
 
-    // Helper to get chart state
-    function getChartStateHelper(chart) {
-        if (!chart) return null;
-        if (chart.isZoomed) {
-            return {
-                x: { min: chart.scales.x.min, max: chart.scales.x.max },
-                y: { min: chart.scales.y.min, max: chart.scales.y.max }
-            };
-        }
-        return null; // Return null if not zoomed (user wants default view)
+            request.onsuccess = () => resolve();
+            request.onerror = () => reject(request.error);
+        });
+    } catch (e) {
+        // Fallback para localStorage se IndexedDB falhar
+        console.warn('IndexedDB save failed, falling back to localStorage:', e);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+        throw e;
     }
+}
 
+/**
+ * Carrega settings do IndexedDB de forma assíncrona
+ * @returns {Promise<Object|null>}
+ */
+async function loadSettingsFromIndexedDB() {
+    try {
+        const db = await openSettingsDB();
+        return new Promise((resolve, reject) => {
+            const transaction = db.transaction(STORE_NAME, 'readonly');
+            const store = transaction.objectStore(STORE_NAME);
+            const request = store.get(STORAGE_KEY);
+
+            request.onsuccess = () => {
+                const result = request.result;
+                resolve(result?.value || null);
+            };
+            request.onerror = () => reject(request.error);
+        });
+    } catch (e) {
+        console.warn('IndexedDB load failed, falling back to localStorage:', e);
+        return null;
+    }
+}
+
+// Debounced save usando IndexedDB (assíncrono, não bloqueia UI)
+const debouncedSave = debounce(async (settings) => {
+    try {
+        await saveSettingsToIndexedDB(settings);
+        showToast('Configurações salvas', 'success', 2500);
+    } catch (e) {
+        console.error('Failed to save settings:', e);
+        showToast('Erro ao salvar configurações', 'error', 3000);
+    }
+}, 1000);
+
+/**
+ * Save settings immediately - agora assíncrono usando IndexedDB
+ * @param {Object} settings
+ * @returns {Promise<void>}
+ */
+async function saveSettingsImmediate(settings) {
+    try {
+        await saveSettingsToIndexedDB(settings);
+    } catch (e) {
+        // Fallback já tratado na função, apenas logar
+        console.warn('Settings immediate save used fallback');
+    }
+}
+
+// Helper to get chart state
+function getChartStateHelper(chart) {
+    if (!chart) return null;
+    if (chart.isZoomed) {
+        return {
+            x: { min: chart.scales.x.min, max: chart.scales.x.max },
+            y: { min: chart.scales.y.min, max: chart.scales.y.max }
+        };
+    }
+    return null; // Return null if not zoomed (user wants default view)
+}
+
+/**
+ * Constrói objeto de settings a partir do estado atual da UI
+ * @returns {Object} Settings coletados
+ */
+function buildSettingsObject(getChartState = null, savedScatterState = null, savedLiqState = null, scatterChart = null, liqChartInstance = null) {
     const currencySelectEl = document.getElementById('currencySelect');
     const entryCurrencySelectEl = document.getElementById('entryCurrencySelect');
     const minValueCcyEl = document.getElementById('minValueCcy');
     const maxValueCcyEl = document.getElementById('maxValueCcy');
 
-    const settings = {
+    return {
         scatterChartState: getChartStateHelper(scatterChart) || savedScatterState,
         liqChartState: getChartStateHelper(liqChartInstance) || savedLiqState,
         minValue: document.getElementById('minValue').value,
@@ -131,50 +230,54 @@ export function saveSettings(getChartState = null, savedScatterState = null, sav
         tooltipDelay: getTooltipDelay(),
         autoFitText: getAutoFitText()
     };
+}
 
-    //console.log('Saving currency settings:', {
-    //currencySelect: settings.currencySelect,
-    //    entryCurrencySelect: settings.entryCurrencySelect
-    //});
-
-    //console.log('Saving VALUE column data:', {
-    //minValueCcy: settings.minValueCcy,
-    //maxValueCcy: settings.maxValueCcy
-    //});
-
-    //console.log('Saving columnWidths:', JSON.stringify(settings.columnWidths));
-    //console.log('Saving columnOrder:', JSON.stringify(settings.columnOrder));
-    //console.log('Saving aggColumnOrder:', JSON.stringify(settings.aggColumnOrder));
-    //console.log('Saving aggColumnOrderResumida:', JSON.stringify(settings.aggColumnOrderResumida));
+/**
+ * Salva configurações - agora assíncrono usando IndexedDB
+ * PERFORMANCE: Não bloqueia a main thread
+ * @param {Function} getChartState
+ * @param {Object} savedScatterState
+ * @param {Object} savedLiqState
+ * @param {Object} scatterChart
+ * @param {Object} liqChartInstance
+ * @param {boolean} immediate
+ */
+export function saveSettings(getChartState = null, savedScatterState = null, savedLiqState = null, scatterChart = null, liqChartInstance = null, immediate = false) {
+    const settings = buildSettingsObject(getChartState, savedScatterState, savedLiqState, scatterChart, liqChartInstance);
 
     if (immediate) {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
-        //console.log('%c[saveSettings] ✓ Settings saved IMMEDIATELY', 'color: #4CAF50; font-weight: bold;');
-        //console.log(`%c[saveSettings] ════════════════════════════════════════`, 'background: #4CAF50; color: white; font-weight: bold;');
-    }
-    else {
-        //console.log('[saveSettings] Debouncing save...');
+        // PERFORMANCE: IndexedDB assíncrono não bloqueia a UI
+        saveSettingsImmediate(settings);
+    } else {
         debouncedSave(settings);
-        //console.log(`%c[saveSettings] ════════════════════════════════════════`, 'background: #4CAF50; color: white; font-weight: bold;');
     }
 }
 
-export function loadSettings() {
-    //console.log(`%c[loadSettings] ════════════════════════════════════════`, 'background: #FF9800; color: white; font-weight: bold;');
-    //console.log('[loadSettings] CALLED at', new Date().toLocaleTimeString());
+/**
+ * Carrega configurações - agora assíncrono usando IndexedDB
+ * PERFORMANCE: Não bloqueia a main thread
+ * @returns {Promise<Object|null>}
+ */
+export async function loadSettings() {
+    // PERFORMANCE: Tentar carregar do IndexedDB primeiro (assíncrono)
+    let s = await loadSettingsFromIndexedDB();
 
-    const saved = localStorage.getItem(STORAGE_KEY);
-    let s = null;
-
-    if (saved) {
-        try {
-            s = JSON.parse(saved);
-            //console.log('[loadSettings] Settings loaded from localStorage');
-        } catch (e) {
-            console.warn('Failed to parse saved settings', e);
+    // Fallback para localStorage se IndexedDB estiver vazio
+    if (!s) {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+            try {
+                s = JSON.parse(saved);
+                // Migrar para IndexedDB para próximas vezes
+                saveSettingsToIndexedDB(s).catch(e => {
+                    console.warn('Failed to migrate settings to IndexedDB:', e);
+                });
+            } catch (e) {
+                console.warn('Failed to parse saved settings from localStorage', e);
+            }
         }
     } else {
-        //console.log('[loadSettings] NO saved settings found in localStorage');
+        //console.log('[loadSettings] Settings loaded from IndexedDB');
     }
 
     // Initialize column order

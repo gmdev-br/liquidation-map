@@ -6,6 +6,16 @@
 let debounceTimeouts = new Map();
 let throttleLastRun = new Map();
 
+// Cleanup debounce/throttle maps on page unload to prevent memory leaks
+window.addEventListener('beforeunload', () => {
+    debounceTimeouts.forEach(timeout => clearTimeout(timeout));
+    debounceTimeouts.clear();
+    throttleLastRun.clear();
+});
+
+// Store drag and drop event listeners for cleanup
+let dragListeners = [];
+
 /**
  * Debounce function to limit execution rate
  * @param {string} key - Unique identifier for the debounced function
@@ -1067,6 +1077,10 @@ function initResize(e, tableType) {
     document.body.classList.add('resizing');
     th.classList.add('resizing-active');
 
+    // Use AbortController for guaranteed cleanup of event listeners
+    const abortController = new AbortController();
+    const signal = abortController.signal;
+
     const onMouseMove = (e) => {
         window.requestAnimationFrame(() => {
             const diffX = e.clientX - startX;
@@ -1093,8 +1107,7 @@ function initResize(e, tableType) {
 
         document.body.classList.remove('resizing');
         th.classList.remove('resizing-active');
-        document.removeEventListener('mousemove', onMouseMove);
-        document.removeEventListener('mouseup', onMouseUp);
+        abortController.abort(); // Limpa todos os listeners automaticamente
 
         // Save new width with table-specific key
         const columnWidths = getColumnWidths() || {};
@@ -1116,8 +1129,8 @@ function initResize(e, tableType) {
         //console.log(`%c[PERSISTENCE:RESIZE] ✓ DONE`, 'background: #ff9800; color: white; font-weight: bold;');
     };
 
-    document.addEventListener('mousemove', onMouseMove);
-    document.addEventListener('mouseup', onMouseUp);
+    document.addEventListener('mousemove', onMouseMove, { signal });
+    document.addEventListener('mouseup', onMouseUp, { signal });
 }
 
 function initResizeV(e) {
@@ -1182,6 +1195,14 @@ export function setupColumnDragAndDrop() {
         existingMarker.remove();
     }
 
+    // ═══════════════════════════════════════════════════════════
+    // CRITICAL: Limpar listeners anteriores para evitar memory leaks
+    // ═══════════════════════════════════════════════════════════
+    dragListeners.forEach(({type, handler}) => {
+        document.removeEventListener(type, handler);
+    });
+    dragListeners = [];
+
     //console.log('%c[DRAG-DROP:INIT] ✓ Proceeding with initialization...', 'background: #4CAF50; color: white; font-weight: bold;');
     const tableHeaders = document.querySelectorAll('th[id^="th-"]');
     //console.log('Found table headers:', tableHeaders.length);
@@ -1194,6 +1215,9 @@ export function setupColumnDragAndDrop() {
     let dragGhost = null;
     let sourceTable = null;
     let draggedColumnIndex = -1;
+    let lastDragOverTarget = null; // Cache do último target para evitar query DOM completo
+    let lastTargetCheck = 0;
+    const THROTTLE_MS = 50; // Throttle para elementFromPoint
 
     // Remove draggable from all headers (we handle manually)
     tableHeaders.forEach(th => {
@@ -1201,7 +1225,7 @@ export function setupColumnDragAndDrop() {
     });
 
     // Global mouse event delegation for drag start (no capture to run after resize)
-    document.addEventListener('mousedown', (e) => {
+    const mousedownHandler = (e) => {
         // Skip if resizing
         if (document.body.classList.contains('resizing')) return;
 
@@ -1249,10 +1273,12 @@ export function setupColumnDragAndDrop() {
         sourceTable.querySelectorAll(columnSelector).forEach(td => {
             td.classList.add('column-dragging');
         });
-    }, false); // No capture to run after resize handler
+    }; // Fim do mousedownHandler
+
+    document.addEventListener('mousedown', mousedownHandler, false);
 
     // Global mouse move for drag feedback
-    document.addEventListener('mousemove', (e) => {
+    const mousemoveHandler = (e) => {
         if (!isDragging || !draggedTh) return;
 
         const deltaX = e.clientX - dragStartX;
@@ -1332,6 +1358,13 @@ export function setupColumnDragAndDrop() {
             dragGhost.style.top = `${e.clientY + 15}px`;
         }
 
+        // ═══════════════════════════════════════════════════════════
+        // PERFORMANCE: Throttle elementFromPoint para evitar reflow a 60-120fps
+        // ═══════════════════════════════════════════════════════════
+        const now = performance.now();
+        if (now - lastTargetCheck < THROTTLE_MS) return;
+        lastTargetCheck = now;
+
         // Find potential drop target
         const targetElement = document.elementFromPoint(e.clientX, e.clientY);
         const targetTh = targetElement?.closest('th[id^="th-"]');
@@ -1340,18 +1373,21 @@ export function setupColumnDragAndDrop() {
             // Only allow drop within the same table
             const targetTable = targetTh.closest('table');
             if (targetTable === sourceTable) {
-                // Remove drag-over from all headers
-                document.querySelectorAll('th').forEach(header => {
-                    header.classList.remove('drag-over');
-                });
+                // PERFORMANCE: Cache do último target para evitar querySelectorAll a cada frame
+                if (lastDragOverTarget && lastDragOverTarget !== targetTh) {
+                    lastDragOverTarget.classList.remove('drag-over');
+                }
                 // Add drag-over to current target
                 targetTh.classList.add('drag-over');
+                lastDragOverTarget = targetTh;
             }
         }
-    });
+    }; // Fim do mousemoveHandler
+
+    document.addEventListener('mousemove', mousemoveHandler);
 
     // Global mouse up for drop
-    document.addEventListener('mouseup', (e) => {
+    const mouseupHandler = (e) => {
         //console.log('%c[DRAG-DROP:DROP] ═══ MOUSEUP EVENT ═══', 'background: #9C27B0; color: white; font-weight: bold; font-size: 12px;');
         //console.log('[DRAG-DROP:DROP] isDragging:', isDragging);
         //console.log('[DRAG-DROP:DROP] draggedTh:', draggedTh ? draggedTh.id : 'null');
@@ -1560,10 +1596,26 @@ export function setupColumnDragAndDrop() {
             dragGhost = null;
         }
         sourceTable = null;
+        // PERFORMANCE: Limpar cache do último target
+        if (lastDragOverTarget) {
+            lastDragOverTarget.classList.remove('drag-over');
+            lastDragOverTarget = null;
+        }
         document.querySelectorAll('th').forEach(header => {
             header.classList.remove('drag-over');
         });
-    });
+    }; // Fim do mouseupHandler
+
+    document.addEventListener('mouseup', mouseupHandler);
+
+    // ═══════════════════════════════════════════════════════════
+    // CRITICAL: Armazenar referências dos listeners para cleanup futuro
+    // ═══════════════════════════════════════════════════════════
+    dragListeners.push(
+        {type: 'mousedown', handler: mousedownHandler},
+        {type: 'mousemove', handler: mousemoveHandler},
+        {type: 'mouseup', handler: mouseupHandler}
+    );
 
     // Mark as initialized using both JS flag AND DOM marker
     dragAndDropInitialized = true;

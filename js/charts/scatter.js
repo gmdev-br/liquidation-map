@@ -30,6 +30,23 @@ import {
 let scatterChart = null;
 let lastDataHash = null; // Track data changes for incremental updates
 
+// OPTIMIZATION: Store event handler references to prevent memory leaks from duplicate listeners
+let scatterMouseMoveHandler = null;
+let scatterMouseUpHandler = null;
+
+/**
+ * Cleanup scatter plot event listeners to prevent memory leaks
+ * Should be called before re-initializing the chart
+ */
+export function cleanupScatterListeners() {
+    if (scatterMouseMoveHandler) {
+        window.removeEventListener('mousemove', scatterMouseMoveHandler);
+        window.removeEventListener('mouseup', scatterMouseUpHandler);
+        scatterMouseMoveHandler = null;
+        scatterMouseUpHandler = null;
+    }
+}
+
 // ── Chart Scale Resizing ──
 function enableChartScaleResizing(canvasId, getChartInstance, resetBtnId) {
     const canvas = document.getElementById(canvasId);
@@ -79,7 +96,11 @@ function enableChartScaleResizing(canvasId, getChartInstance, resetBtnId) {
         }
     });
 
-    window.addEventListener('mousemove', (e) => {
+    // OPTIMIZATION: Clean up previous listeners before adding new ones to prevent memory leaks
+    cleanupScatterListeners();
+
+    // Store handler references so they can be properly removed later
+    scatterMouseMoveHandler = (e) => {
         if (!isDragging || !dragAxis) return;
         const chart = getChartInstance();
         if (!chart) return;
@@ -150,9 +171,9 @@ function enableChartScaleResizing(canvasId, getChartInstance, resetBtnId) {
         }
 
         chart.update('none');
-    });
+    };
 
-    window.addEventListener('mouseup', () => {
+    scatterMouseUpHandler = () => {
         if (isDragging) {
             isDragging = false;
             dragAxis = null;
@@ -162,7 +183,10 @@ function enableChartScaleResizing(canvasId, getChartInstance, resetBtnId) {
                 saveSettings();
             }
         }
-    });
+    };
+
+    window.addEventListener('mousemove', scatterMouseMoveHandler);
+    window.addEventListener('mouseup', scatterMouseUpHandler);
 }
 
 export function renderScatterPlot(workerScatterPoints = null) {
@@ -276,11 +300,12 @@ export function renderScatterPlot(workerScatterPoints = null) {
         const range = maxX - minX || 1;
         const binSize = range / numBins;
 
+        // Tracking O(1) durante o loop principal
         const bins = {
-            longLow: new Array(numBins).fill(0),
-            longHigh: new Array(numBins).fill(0),
-            shortLow: new Array(numBins).fill(0),
-            shortHigh: new Array(numBins).fill(0)
+            longLow: { data: new Array(numBins).fill(0), hasData: false },
+            longHigh: { data: new Array(numBins).fill(0), hasData: false },
+            shortLow: { data: new Array(numBins).fill(0), hasData: false },
+            shortHigh: { data: new Array(numBins).fill(0), hasData: false }
         };
 
         for (let i = 0; i < data.length; i++) {
@@ -288,7 +313,8 @@ export function renderScatterPlot(workerScatterPoints = null) {
             const binIdx = Math.min(Math.floor((d.x - minX) / binSize), numBins - 1);
             const lev = Math.abs(d._raw.leverageValue);
             const key = d._raw.side === 'long' ? (lev < highLevSplit ? 'longLow' : 'longHigh') : (lev < highLevSplit ? 'shortLow' : 'shortHigh');
-            bins[key][binIdx]++;
+            bins[key].data[binIdx]++;
+            bins[key].hasData = true;  // Track O(1)
         }
 
         const binLabels = Array.from({ length: numBins }, (_, i) => (minX + (i * binSize)).toLocaleString(undefined, { maximumFractionDigits: 0 }));
@@ -297,10 +323,11 @@ export function renderScatterPlot(workerScatterPoints = null) {
             label, data: dataArr, backgroundColor: color, borderColor: color, borderWidth: 1, stack: 'positions'
         });
 
-        if (bins.shortLow.some(b => b > 0)) datasets.push(createDataset(`Shorts (≤${highLevSplit}x)`, bins.shortLow, customColors.shortLow));
-        if (bins.shortHigh.some(b => b > 0)) datasets.push(createDataset(`Shorts (>${highLevSplit}x)`, bins.shortHigh, customColors.shortHigh));
-        if (bins.longLow.some(b => b > 0)) datasets.push(createDataset(`Longs (≤${highLevSplit}x)`, bins.longLow, customColors.longLow));
-        if (bins.longHigh.some(b => b > 0)) datasets.push(createDataset(`Longs (>${highLevSplit}x)`, bins.longHigh, customColors.longHigh));
+        // O(1) checks
+        if (bins.shortLow.hasData) datasets.push(createDataset(`Shorts (≤${highLevSplit}x)`, bins.shortLow.data, customColors.shortLow));
+        if (bins.shortHigh.hasData) datasets.push(createDataset(`Shorts (>${highLevSplit}x)`, bins.shortHigh.data, customColors.shortHigh));
+        if (bins.longLow.hasData) datasets.push(createDataset(`Longs (≤${highLevSplit}x)`, bins.longLow.data, customColors.longLow));
+        if (bins.longHigh.hasData) datasets.push(createDataset(`Longs (>${highLevSplit}x)`, bins.longHigh.data, customColors.longHigh));
 
         localScales = {
             x: { type: 'category', ...chartOptions.scales.x, labels: binLabels },
@@ -379,7 +406,15 @@ export function renderScatterPlot(workerScatterPoints = null) {
         };
     }
 
-    if (canUpdateOnly) {
+    // PERFORMANCE FIX: Use chart.update() instead of destroy/create when possible
+    // This preserves zoom/pan state and is much faster
+    const shouldUseUpdate = scatterChart && (
+        // Same chart type: can always update
+        scatterChart.config.type === chartType &&
+        scatterChart.config.options.indexAxis === localIndexAxis
+    );
+    
+    if (shouldUseUpdate) {
         scatterChart.data.datasets = datasets;
         scatterChart.options.scales.x = { ...scatterChart.options.scales.x, ...localScales.x };
         scatterChart.options.scales.y = { ...scatterChart.options.scales.y, ...localScales.y };
@@ -390,7 +425,14 @@ export function renderScatterPlot(workerScatterPoints = null) {
         return scatterChart;
     }
 
-    if (scatterChart) scatterChart.destroy();
+    // Only destroy if chart type actually changed
+    if (scatterChart) {
+        // PERFORMANCE FIX: Abort event listeners before destroying
+        if (typeof window.cleanupChartResizeListeners === 'function') {
+            window.cleanupChartResizeListeners('scatterChart');
+        }
+        scatterChart.destroy();
+    }
 
     const sym = getShowSymbols() ? (CURRENCY_META[activeEntryCcy || 'USD']?.symbol || '$') : '';
     const entryLabel = `Entry Price (${activeEntryCcy || 'USD'})`;

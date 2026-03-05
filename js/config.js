@@ -36,7 +36,35 @@ export const CURRENCY_META = {
 };
 
 export const RETRY_DELAY_MS = 2000;  // wait 2s on 429 before retry
+export const FETCH_TIMEOUT_MS = 10000; // 10 second timeout for API calls
 
 // Rate limit: 1200 weight/min, clearinghouseState = weight 2 → max 600 req/min = 10 req/s
 // We use 8 concurrent requests to stay safely under the limit.
 export const DEFAULT_MAX_CONCURRENCY = 8;
+
+/**
+ * Fetch with timeout utility using AbortController
+ * @param {string} url - URL to fetch
+ * @param {object} options - fetch options
+ * @param {number} timeout - timeout in milliseconds (default: FETCH_TIMEOUT_MS)
+ * @returns {Promise<Response>} - fetch response
+ */
+export async function fetchWithTimeout(url, options = {}, timeout = FETCH_TIMEOUT_MS) {
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), timeout);
+    
+    try {
+        const response = await fetch(url, {
+            ...options,
+            signal: controller.signal
+        });
+        return response;
+    } catch (error) {
+        if (error.name === 'AbortError') {
+            throw new Error(`Request timeout after ${timeout}ms: ${url}`);
+        }
+        throw error;
+    } finally {
+        clearTimeout(id);
+    }
+}

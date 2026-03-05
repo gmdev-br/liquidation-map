@@ -176,62 +176,62 @@ export const getState = () => ({
 
 // Setters
 export const setState = (updates) => {
-    Object.assign({
-        whaleList,
-        allRows,
-        displayedRows,
-        visibleColumns,
-        columnOrder,
-        columnWidths,
-        sortKey,
-        sortDir,
-        activeWindow,
-        loadedCount,
-        scanning,
-        isPaused,
-        selectedCoins,
-        priceMode,
-        dailyCloseCache,
-        currentPrices,
-        priceUpdateInterval,
-        rankingLimit,
-        chartHeight,
-        liqChartHeight,
-        colorMaxLev,
-        chartHighLevSplit,
-        chartMode,
-        bubbleScale,
-        bubbleOpacity,
-        lineThickness,
-        aggregationFactor,
-        savedScatterState,
-        savedLiqState,
-        fxRates,
-        fxReady,
-        activeCurrency,
-        activeEntryCurrency,
-        showSymbols,
-        decimalPlaces,
-        maxConcurrency,
-        renderPending,
-        lastSaveTime,
-        leverageColors,
-        columnWidth,
-        gridSpacing,
-        minBtcVolume,
-        aggInterval,
-        aggTableHeight,
-        aggVolumeUnit,
-        liquidationMinPriceFull,
-        liquidationMaxPriceFull,
-        useCompactFormat,
-        lastSeenAccountValues,
-        whaleMeta,
-        isZenMode,
-        showLiquidationSymbols,
-        liquidationZoneColors,
-        autoFitText
-    }, updates);
+    // PERFORMANCE FIX: Explicitly map each update to the actual state variable
+    // The original Object.assign was creating a new object without updating the actual state variables
+    if (updates.whaleList !== undefined) whaleList = updates.whaleList;
+    if (updates.allRows !== undefined) allRows = updates.allRows;
+    if (updates.displayedRows !== undefined) displayedRows = updates.displayedRows;
+    if (updates.visibleColumns !== undefined) visibleColumns = updates.visibleColumns;
+    if (updates.columnOrder !== undefined) columnOrder = updates.columnOrder;
+    if (updates.columnWidths !== undefined) columnWidths = updates.columnWidths;
+    if (updates.sortKey !== undefined) sortKey = updates.sortKey;
+    if (updates.sortDir !== undefined) sortDir = updates.sortDir;
+    if (updates.activeWindow !== undefined) activeWindow = updates.activeWindow;
+    if (updates.loadedCount !== undefined) loadedCount = updates.loadedCount;
+    if (updates.scanning !== undefined) scanning = updates.scanning;
+    if (updates.isPaused !== undefined) isPaused = updates.isPaused;
+    if (updates.selectedCoins !== undefined) selectedCoins = updates.selectedCoins;
+    if (updates.priceMode !== undefined) priceMode = updates.priceMode;
+    if (updates.dailyCloseCache !== undefined) dailyCloseCache = updates.dailyCloseCache;
+    if (updates.currentPrices !== undefined) currentPrices = updates.currentPrices;
+    if (updates.priceUpdateInterval !== undefined) priceUpdateInterval = updates.priceUpdateInterval;
+    if (updates.rankingLimit !== undefined) rankingLimit = updates.rankingLimit;
+    if (updates.chartHeight !== undefined) chartHeight = updates.chartHeight;
+    if (updates.liqChartHeight !== undefined) liqChartHeight = updates.liqChartHeight;
+    if (updates.colorMaxLev !== undefined) colorMaxLev = updates.colorMaxLev;
+    if (updates.chartHighLevSplit !== undefined) chartHighLevSplit = updates.chartHighLevSplit;
+    if (updates.chartMode !== undefined) chartMode = updates.chartMode;
+    if (updates.bubbleScale !== undefined) bubbleScale = updates.bubbleScale;
+    if (updates.bubbleOpacity !== undefined) bubbleOpacity = updates.bubbleOpacity;
+    if (updates.lineThickness !== undefined) lineThickness = updates.lineThickness;
+    if (updates.aggregationFactor !== undefined) aggregationFactor = updates.aggregationFactor;
+    if (updates.savedScatterState !== undefined) savedScatterState = updates.savedScatterState;
+    if (updates.savedLiqState !== undefined) savedLiqState = updates.savedLiqState;
+    if (updates.fxRates !== undefined) fxRates = updates.fxRates;
+    if (updates.fxReady !== undefined) fxReady = updates.fxReady;
+    if (updates.activeCurrency !== undefined) activeCurrency = updates.activeCurrency;
+    if (updates.activeEntryCurrency !== undefined) activeEntryCurrency = updates.activeEntryCurrency;
+    if (updates.showSymbols !== undefined) showSymbols = updates.showSymbols;
+    if (updates.decimalPlaces !== undefined) decimalPlaces = updates.decimalPlaces;
+    if (updates.maxConcurrency !== undefined) maxConcurrency = updates.maxConcurrency;
+    if (updates.renderPending !== undefined) renderPending = updates.renderPending;
+    if (updates.lastSaveTime !== undefined) lastSaveTime = updates.lastSaveTime;
+    if (updates.leverageColors !== undefined) leverageColors = updates.leverageColors;
+    if (updates.columnWidth !== undefined) columnWidth = updates.columnWidth;
+    if (updates.gridSpacing !== undefined) gridSpacing = updates.gridSpacing;
+    if (updates.minBtcVolume !== undefined) minBtcVolume = updates.minBtcVolume;
+    if (updates.aggInterval !== undefined) aggInterval = updates.aggInterval;
+    if (updates.aggTableHeight !== undefined) aggTableHeight = updates.aggTableHeight;
+    if (updates.aggVolumeUnit !== undefined) aggVolumeUnit = updates.aggVolumeUnit;
+    if (updates.liquidationMinPriceFull !== undefined) liquidationMinPriceFull = updates.liquidationMinPriceFull;
+    if (updates.liquidationMaxPriceFull !== undefined) liquidationMaxPriceFull = updates.liquidationMaxPriceFull;
+    if (updates.useCompactFormat !== undefined) useCompactFormat = updates.useCompactFormat;
+    if (updates.lastSeenAccountValues !== undefined) lastSeenAccountValues = updates.lastSeenAccountValues;
+    if (updates.whaleMeta !== undefined) whaleMeta = updates.whaleMeta;
+    if (updates.isZenMode !== undefined) isZenMode = updates.isZenMode;
+    if (updates.showLiquidationSymbols !== undefined) showLiquidationSymbols = updates.showLiquidationSymbols;
+    if (updates.liquidationZoneColors !== undefined) liquidationZoneColors = updates.liquidationZoneColors;
+    if (updates.autoFitText !== undefined) autoFitText = updates.autoFitText;
 };
 
 // Individual setters for common state updates

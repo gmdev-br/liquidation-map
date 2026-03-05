@@ -19,13 +19,19 @@ export class VirtualScroll {
         this.visibleStart = 0;
         this.visibleEnd = 0;
         this._scrollHandler = null;
-        this._parser = null; // Cache DOMParser instance
+        // PERFORMANCE FIX: Use template element instead of DOMParser for better performance
+        this._template = null;
+        // PERFORMANCE FIX: Cache tableContainer in constructor to avoid querying on every scroll
+        this._tableContainer = null;
 
         if (!this.tbody) {
             console.error('VirtualScroll: tbody element is required');
             return;
         }
 
+        // Cache the table container once during initialization
+        this._tableContainer = this.tbody.closest('.table-wrap');
+        
         this.setupScrollListener();
     }
 
@@ -51,7 +57,8 @@ export class VirtualScroll {
     }
 
     handleScroll() {
-        const tableContainer = this.tbody.closest('.table-wrap');
+        // PERFORMANCE FIX: Use cached tableContainer instead of querying DOM every scroll
+        const tableContainer = this._tableContainer;
         if (!tableContainer) return;
 
         this.scrollTop = tableContainer.scrollTop;
@@ -150,26 +157,44 @@ export class VirtualScroll {
         }
         bottomSpacer.style.height = `${paddingBottom}px`;
 
-        // Get current data rows (excluding spacers)
-        const existingRows = Array.from(this.tbody.querySelectorAll('tr:not(.vs-top-spacer):not(.vs-bottom-spacer)'));
+        // ═══════════════════════════════════════════════════════════
+        // PERFORMANCE FIX #3: Usar DocumentFragment + array privado cacheado
+        // Evita múltiplas inserções DOM e querySelectorAll em hot path
+        // ═══════════════════════════════════════════════════════════
+
+        // Inicializar cache de rows se necessário
+        if (!this._cachedRows) {
+            this._cachedRows = [];
+        }
+
         const neededRowsCount = this.visibleEnd - this.visibleStart;
+        const fragment = document.createDocumentFragment();
 
-        // Adjust number of rows
-        while (existingRows.length < neededRowsCount) {
+        // Criar rows necessários em batch usando DocumentFragment
+        while (this._cachedRows.length < neededRowsCount) {
             const tr = document.createElement('tr');
-            this.tbody.insertBefore(tr, bottomSpacer);
-            existingRows.push(tr);
-        }
-        while (existingRows.length > neededRowsCount) {
-            const tr = existingRows.pop();
-            if (tr) tr.remove();
+            this._cachedRows.push(tr);
+            fragment.appendChild(tr);
         }
 
-        // Update row content
+        // Única inserção no DOM para novas rows
+        if (fragment.childNodes.length > 0 && bottomSpacer) {
+            this.tbody.insertBefore(fragment, bottomSpacer);
+        }
+
+        // Remover rows excedentes (marcar para remoção em batch)
+        while (this._cachedRows.length > neededRowsCount) {
+            const tr = this._cachedRows.pop();
+            if (tr) {
+                tr.remove();
+            }
+        }
+
+        // Update row content usando array cacheado
         for (let i = 0; i < neededRowsCount; i++) {
             const rowIndex = this.visibleStart + i;
             const rowData = this.data[rowIndex];
-            const tr = existingRows[i];
+            const tr = this._cachedRows[i];
 
             if (!rowData || !tr) continue;
 
@@ -191,10 +216,12 @@ export class VirtualScroll {
 
             // If html is a complete <tr>...</tr>, extract inner content and class
             if (html.trim().toLowerCase().startsWith('<tr')) {
-                // Use DOMParser for reliable HTML parsing (faster than regex)
-                if (!this._parser) this._parser = new DOMParser();
-                const doc = this._parser.parseFromString(html, 'text/html');
-                const parsedTr = doc.querySelector('tr');
+                // PERFORMANCE FIX: Use template element instead of DOMParser (lighter and faster)
+                if (!this._template) {
+                    this._template = document.createElement('template');
+                }
+                this._template.innerHTML = html.trim();
+                const parsedTr = this._template.content.firstElementChild;
                 
                 if (parsedTr) {
                     // Apply class to the tr element

@@ -52,15 +52,20 @@ function validateWhaleData(whale, clearinghouseData) {
 }
 
 // Enhanced fetch with retry and validation
-export async function fetchWithRetryAndValidation(whale, retries = 3) {
+export async function fetchWithRetryAndValidation(whale, retries = 3, timeout = 10000) {
     for (let attempt = 0; attempt < retries; attempt++) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), timeout);
+
         try {
             const resp = await fetch(INFO_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ type: 'clearinghouseState', user: whale.ethAddress })
+                body: JSON.stringify({ type: 'clearinghouseState', user: whale.ethAddress }),
+                signal: controller.signal
             });
-            
+            clearTimeout(timeoutId);
+
             if (resp.status === 429) {
                 const wait = RETRY_DELAY_MS * Math.pow(2, attempt);
                 console.warn(`Rate limited, retrying in ${wait}ms…`);
@@ -97,6 +102,10 @@ export async function fetchWithRetryAndValidation(whale, retries = 3) {
             return state;
             
         } catch (e) {
+            clearTimeout(timeoutId);
+            if (e.name === 'AbortError') {
+                console.warn(`Timeout fetching data for ${whale.ethAddress}`);
+            }
             if (attempt === retries - 1) {
                 console.error(`Failed to fetch data for ${whale.ethAddress}:`, e);
                 return null;

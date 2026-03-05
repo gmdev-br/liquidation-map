@@ -11,20 +11,24 @@ export default [
         localStorage: "readonly",
         Chart: "readonly",
         fetch: "readonly",
+        AbortController: "readonly",
         setTimeout: "readonly",
         setInterval: "readonly",
         clearTimeout: "readonly",
         clearInterval: "readonly",
         // Browser globals
         requestAnimationFrame: "readonly",
+        cancelAnimationFrame: "readonly",
         performance: "readonly",
         Worker: "readonly",
         self: "readonly",
         DOMParser: "readonly",
-        // Project-specific globals
+        URL: "readonly",
+        // Project-specific globals (state functions that may not be imported in all files)
         saveSettings: "readonly",
         updateHeaderWidths: "readonly",
-        renderColumnDropdown: "readonly"
+        renderColumnDropdown: "readonly",
+        getBubbleScale: "readonly"
       }
     },
     rules: {

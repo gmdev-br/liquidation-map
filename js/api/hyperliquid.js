@@ -1,4 +1,4 @@
-import { INFO_URL, RETRY_DELAY_MS } from '../config.js';
+import { INFO_URL, RETRY_DELAY_MS, fetchWithTimeout } from '../config.js';
 import {
     setAllRows, getAllRows, setLoadedCount, setScanning, getCurrentPrices, getScanning,
     getIsPaused, getRenderPending, getLastSaveTime, getLastSeenAccountValues, setLastSeenAccountValues,
@@ -86,7 +86,7 @@ export async function fetchWithRetry(whale, retries = 3) {
     for (let attempt = 0; attempt < retries; attempt++) {
         try {
             await apiRateLimiter.acquire();
-            const resp = await fetch(INFO_URL, {
+            const resp = await fetchWithTimeout(INFO_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ type: 'clearinghouseState', user: whale.ethAddress })
@@ -212,6 +212,8 @@ export async function streamPositions(whaleList, minVal, maxConcurrency, callbac
 
     // PERFORMANCE: Use a Map for O(1) address tracking instead of O(N) array filtering
     const positionsByAddress = new Map();
+    // PERFORMANCE FIX: Maintain incremental allRows update to avoid O(N) flattening on every render
+    let incrementalAllRows = [...allRows];
     // Initialize map with existing rows if any
     allRows.forEach(r => {
         if (!positionsByAddress.has(r.address)) {
@@ -239,16 +241,20 @@ export async function streamPositions(whaleList, minVal, maxConcurrency, callbac
 
         return fetchWithRetry(whale).then(state => {
             if (state) {
-                // Remove existing rows for this address using the Map (O(1))
-                positionsByAddress.set(whale.ethAddress, []);
+                // PERFORMANCE FIX: Incrementally update allRows instead of flattening on every render
+                // Remove existing rows for this address from incrementalAllRows
+                const existingRows = positionsByAddress.get(whale.ethAddress) || [];
+                if (existingRows.length > 0) {
+                    const existingSet = new Set(existingRows);
+                    incrementalAllRows = incrementalAllRows.filter(r => !existingSet.has(r));
+                }
 
-                // Process state will push new rows into the global allRows array.
-                // To keep the Map in sync, we'll temporarily capture the new rows.
+                // Process state will create new rows
                 const newRowsForWhale = [];
                 processState(whale, state, newRowsForWhale);
 
-                // Update our Map. We DON'T flatten allRows here (O(N)) because 
-                // it would cause O(N*W) complexity during the scan.
+                // Add new rows to incremental array and update Map
+                incrementalAllRows.push(...newRowsForWhale);
                 positionsByAddress.set(whale.ethAddress, newRowsForWhale);
 
                 newSeenAccountValues[whale.ethAddress] = currentVal;
@@ -276,9 +282,9 @@ export async function streamPositions(whaleList, minVal, maxConcurrency, callbac
         setTimeout(() => {
             setRenderPending(false);
 
-            // PERFORMANCE: Flatten the map once here (at most once every 3s during scan)
-            // instead of on every whale update. This transforms O(N*W) into O(N).
-            allRows = Array.from(positionsByAddress.values()).flat();
+            // PERFORMANCE FIX: Use incrementalAllRows instead of flattening the Map
+            // This avoids O(N) array flattening on every render
+            allRows = incrementalAllRows;
             setAllRows(allRows);
 
             // IMPORTANT: During scanning, use updateTableDataOnly to preserve column widths/order

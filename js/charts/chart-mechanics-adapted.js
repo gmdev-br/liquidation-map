@@ -6,6 +6,19 @@
 // Import saveSettings from the correct location
 import { saveSettings } from '../storage/settings.js';
 
+// OPTIMIZATION: Module-level cache for DOM elements to avoid querying every frame (60fps)
+let cachedFilterInputs = null;
+
+function getFilterInputs() {
+    if (!cachedFilterInputs) {
+        cachedFilterInputs = {
+            minEntry: document.getElementById('minEntryCcy'),
+            maxEntry: document.getElementById('maxEntryCcy')
+        };
+    }
+    return cachedFilterInputs;
+}
+
 // ── Crosshair Plugin (Adapted) ──
 export const crosshairPlugin = {
     id: 'crosshair',
@@ -17,11 +30,17 @@ export const crosshairPlugin = {
     afterInit: (chart, _args, _options) => {
         chart.crosshair = { x: 0, y: 0, visible: false };
     },
+    // OPTIMIZATION: Throttle crosshair re-renders to avoid 60fps re-render on every mouse event
     afterEvent: (chart, args) => {
-        const { inChartArea } = args;
-        const { x, y } = args.event;
-        chart.crosshair = { x, y, visible: inChartArea };
-        args.changed = true;
+        const { inChartArea, event } = args;
+        const lastX = chart.crosshair?.x || 0;
+        const lastY = chart.crosshair?.y || 0;
+        
+        // Only re-render if mouse moved more than 2px (reduces unnecessary renders from 60fps to ~10-20fps)
+        if (Math.abs(event.x - lastX) > 2 || Math.abs(event.y - lastY) > 2) {
+            chart.crosshair = { x: event.x, y: event.y, visible: inChartArea };
+            args.changed = true;
+        }
     },
     afterDraw: (chart, _args, options) => {
         if (chart.crosshair && chart.crosshair.visible) {
@@ -314,77 +333,84 @@ export function originalScaleResizing(canvasId, getChartInstance, resetBtnId) {
         }
     });
 
+    // OPTIMIZATION: Throttle chart updates during drag to prevent sync updates on every mousemove frame
+    let pendingChartUpdate = false;
+
     window.addEventListener('mousemove', (e) => {
-        if (!isDragging || !dragAxis) return;
+        if (!isDragging || !dragAxis || pendingChartUpdate) return;
         const chart = getChartInstance();
         if (!chart) return;
 
-        const rect = canvas.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
+        pendingChartUpdate = true;
+        requestAnimationFrame(() => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
 
-        const scale = chart.scales[dragAxis];
-        const isLog = scale.type === 'logarithmic';
-        const sensitivity = 2.0;
+            const scale = chart.scales[dragAxis];
+            const isLog = scale.type === 'logarithmic';
+            const sensitivity = 2.0;
 
-        if (dragAxis === 'y') {
-            const delta = y - startPos; // Drag down > 0
-            const height = chart.chartArea.bottom - chart.chartArea.top;
-            const factor = (delta / height) * sensitivity;
+            if (dragAxis === 'y') {
+                const delta = y - startPos; // Drag down > 0
+                const height = chart.chartArea.bottom - chart.chartArea.top;
+                const factor = (delta / height) * sensitivity;
 
-            if (isLog) {
-                if (initialMin <= 0) initialMin = 0.0001;
-                const logMin = Math.log(initialMin);
-                const logMax = Math.log(initialMax);
-                const logRange = logMax - logMin;
+                if (isLog) {
+                    if (initialMin <= 0) initialMin = 0.0001;
+                    const logMin = Math.log(initialMin);
+                    const logMax = Math.log(initialMax);
+                    const logRange = logMax - logMin;
 
-                const newLogRange = logRange * (1 + factor);
-                const logCenter = (logMax + logMin) / 2;
+                    const newLogRange = logRange * (1 + factor);
+                    const logCenter = (logMax + logMin) / 2;
 
-                const newLogMin = logCenter - newLogRange / 2;
-                const newLogMax = logCenter + newLogRange / 2;
+                    const newLogMin = logCenter - newLogRange / 2;
+                    const newLogMax = logCenter + newLogRange / 2;
 
-                chart.options.scales.y.min = Math.exp(newLogMin);
-                chart.options.scales.y.max = Math.exp(newLogMax);
-            } else {
-                const range = initialMax - initialMin;
-                const newRange = range * (1 + factor);
-                const center = (initialMax + initialMin) / 2;
+                    chart.options.scales.y.min = Math.exp(newLogMin);
+                    chart.options.scales.y.max = Math.exp(newLogMax);
+                } else {
+                    const range = initialMax - initialMin;
+                    const newRange = range * (1 + factor);
+                    const center = (initialMax + initialMin) / 2;
 
-                chart.options.scales.y.min = center - newRange / 2;
-                chart.options.scales.y.max = center + newRange / 2;
+                    chart.options.scales.y.min = center - newRange / 2;
+                    chart.options.scales.y.max = center + newRange / 2;
+                }
+            } else if (dragAxis === 'x') {
+                const delta = x - startPos; // Drag right > 0
+                const width = chart.chartArea.right - chart.chartArea.left;
+                // Drag Right -> Zoom In -> Negative factor
+                const factor = -(delta / width) * sensitivity;
+
+                if (isLog) {
+                    if (initialMin <= 0) initialMin = 0.0001;
+                    const logMin = Math.log(initialMin);
+                    const logMax = Math.log(initialMax);
+                    const logRange = logMax - logMin;
+
+                    const newLogRange = logRange * (1 + factor);
+                    const logCenter = (logMax + logMin) / 2;
+
+                    const newLogMin = logCenter - newLogRange / 2;
+                    const newLogMax = logCenter + newLogRange / 2;
+
+                    chart.options.scales.x.min = Math.exp(newLogMin);
+                    chart.options.scales.x.max = Math.exp(newLogMax);
+                } else {
+                    const range = initialMax - initialMin;
+                    const newRange = range * (1 + factor);
+                    const center = (initialMax + initialMin) / 2;
+
+                    chart.options.scales.x.min = center - newRange / 2;
+                    chart.options.scales.x.max = center + newRange / 2;
+                }
             }
-        } else if (dragAxis === 'x') {
-            const delta = x - startPos; // Drag right > 0
-            const width = chart.chartArea.right - chart.chartArea.left;
-            // Drag Right -> Zoom In -> Negative factor
-            const factor = -(delta / width) * sensitivity;
 
-            if (isLog) {
-                if (initialMin <= 0) initialMin = 0.0001;
-                const logMin = Math.log(initialMin);
-                const logMax = Math.log(initialMax);
-                const logRange = logMax - logMin;
-
-                const newLogRange = logRange * (1 + factor);
-                const logCenter = (logMax + logMin) / 2;
-
-                const newLogMin = logCenter - newLogRange / 2;
-                const newLogMax = logCenter + newLogRange / 2;
-
-                chart.options.scales.x.min = Math.exp(newLogMin);
-                chart.options.scales.x.max = Math.exp(newLogMax);
-            } else {
-                const range = initialMax - initialMin;
-                const newRange = range * (1 + factor);
-                const center = (initialMax + initialMin) / 2;
-
-                chart.options.scales.x.min = center - newRange / 2;
-                chart.options.scales.x.max = center + newRange / 2;
-            }
-        }
-
-        chart.update('none');
+            chart.update('none');
+            pendingChartUpdate = false;
+        });
     });
 
     window.addEventListener('mouseup', () => {
@@ -493,6 +519,29 @@ export function setupChartHeightResizing(sectionId, heightKey, updateCallback) {
     section.addEventListener('touchstart', startResize, { passive: false });
 }
 
+// PERFORMANCE FIX: Cache grid spacing input element outside the plugin to avoid DOM query on every frame
+let _cachedGridSpacingInput = null;
+let _cachedGridSpacingValue = 500;
+let _lastGridSpacingCheck = 0;
+const GRID_SPACING_CACHE_MS = 500; // Re-check DOM every 500ms max
+
+function getGridSpacing() {
+    const now = performance.now();
+    if (now - _lastGridSpacingCheck < GRID_SPACING_CACHE_MS && _cachedGridSpacingInput) {
+        return _cachedGridSpacingValue;
+    }
+    
+    if (!_cachedGridSpacingInput) {
+        _cachedGridSpacingInput = document.getElementById('gridSpacingRange');
+    }
+    
+    _lastGridSpacingCheck = now;
+    if (_cachedGridSpacingInput && _cachedGridSpacingInput.value) {
+        _cachedGridSpacingValue = parseInt(_cachedGridSpacingInput.value);
+    }
+    return _cachedGridSpacingValue || 500;
+}
+
 // ── BTC Grid Plugin (Vertical lines every 500 BTC points) ──
 export const btcGridPlugin = {
     id: 'btcGrid',
@@ -516,9 +565,8 @@ export const btcGridPlugin = {
         // Check if we're in lines mode (horizontal bars)
         const isLinesMode = chart.config.type === 'bar' && chart.config.options.indexAxis === 'y';
 
-        // Get grid spacing from user input
-        const gridSpacingInput = document.getElementById('gridSpacingRange');
-        const userGridSpacing = gridSpacingInput && gridSpacingInput.value ? parseInt(gridSpacingInput.value) : 500;
+        // PERFORMANCE FIX: Use cached grid spacing instead of querying DOM every frame
+        const userGridSpacing = getGridSpacing();
 
         // Update intervals based on user spacing
         const minorInterval = userGridSpacing;
@@ -575,11 +623,10 @@ export const btcGridPlugin = {
 
         } else {
             // Normal mode: Draw vertical lines (original logic)
-            // Get filter values from inputs
-            const minEntryInput = document.getElementById('minEntryCcy');
-            const maxEntryInput = document.getElementById('maxEntryCcy');
-            const minPrice = minEntryInput && minEntryInput.value ? parseFloat(minEntryInput.value) : (xScale.min || 0);
-            const maxPrice = maxEntryInput && maxEntryInput.value ? parseFloat(maxEntryInput.value) : (xScale.max || 100000);
+            // OPTIMIZATION: Use cached DOM references instead of querying every frame (60fps)
+            const inputs = getFilterInputs();
+            const minPrice = inputs.minEntry?.value ? parseFloat(inputs.minEntry.value) : (xScale.min || 0);
+            const maxPrice = inputs.maxEntry?.value ? parseFloat(inputs.maxEntry.value) : (xScale.max || 100000);
 
             // Draw minor vertical lines
             const startMinor = Math.ceil(minPrice / minorInterval) * minorInterval;

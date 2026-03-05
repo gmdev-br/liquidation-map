@@ -284,28 +284,28 @@ function setupEventListeners() {
             // Get BTC price for volume calculation
             const btcPrice = parseFloat(currentPrices['BTC'] || 0);
 
-            // Filter rows by side and minimum BTC volume, then get entry prices
-            const prices = rows
-                .filter(r => {
-                    // Filter by side
-                    if (r.side !== side) return false;
-                    // Filter by minimum BTC volume if specified
-                    if (minBtcVolume > 0 && btcPrice > 0) {
-                        const volBTC = r.positionValue / btcPrice;
-                        return volBTC >= minBtcVolume;
-                    }
-                    return true;
-                })
-                .map(r => {
-                    const entryCcy = r._entCcy != null ? r._entCcy : getCorrelatedEntry(r, activeEntryCurrency, currentPrices, fxRates);
-                    if (entryCcy == null) return null;
-                    const price = Math.round(entryCcy).toString();
-                    // Calculate Value BTC (volume in BTC)
-                    const valueBtc = btcPrice > 0 ? r.positionValue / btcPrice : 0;
-                    const volume = Math.round(valueBtc).toString();
-                    return `${price}_${volume}`;
-                })
-                .filter(p => p !== null);
+            // Single-pass O(n) iteration instead of multiple filter/map passes
+            const prices = [];
+            for (const r of rows) {
+                // Filter by side
+                if (r.side !== side) continue;
+
+                // Filter by minimum BTC volume if specified
+                if (minBtcVolume > 0 && btcPrice > 0) {
+                    const volBTC = r.positionValue / btcPrice;
+                    if (volBTC < minBtcVolume) continue;
+                }
+
+                // Calculate entry price
+                const entryCcy = r._entCcy != null ? r._entCcy : getCorrelatedEntry(r, activeEntryCurrency, currentPrices, fxRates);
+                if (entryCcy == null) continue;
+
+                const price = Math.round(entryCcy).toString();
+                // Calculate Value BTC (volume in BTC)
+                const valueBtc = btcPrice > 0 ? r.positionValue / btcPrice : 0;
+                const volume = Math.round(valueBtc).toString();
+                prices.push(`${price}_${volume}`);
+            }
 
             if (prices.length === 0) {
                 const msg = minBtcVolume > 0
@@ -387,20 +387,64 @@ function setupEventListeners() {
         eventManager.on(pauseBtn, 'click', () => togglePause(setStatus));
     }
 
-    // Speed control - attach to both mobile and desktop - use event delegation
-    const speedRanges = getElements('.js-speed-range');
-    speedRanges.forEach(range => {
-        eventManager.on(range, 'input', (e) => {
-            updateSpeed(e.target.value);
-        });
+    // Event delegation for all range inputs - single listener instead of multiple forEach loops
+    const settingsContainer = document.getElementById('settingsContainer') || document.body;
+
+    eventManager.on(settingsContainer, 'input', (e) => {
+        const target = e.target;
+
+        // Speed control
+        if (target.classList.contains('js-speed-range')) {
+            updateSpeed(target.value);
+        }
+        // Price update interval control
+        else if (target.classList.contains('js-price-interval-range')) {
+            updatePriceInterval(target.value);
+        }
+        // Bubble size control
+        else if (target.classList.contains('js-bubble-size-range')) {
+            updateBubbleSize(target.value);
+        }
+        // Bubble opacity control
+        else if (target.classList.contains('js-bubble-opacity-range')) {
+            updateBubbleOpacity(target.value);
+        }
+        // Line thickness control
+        else if (target.classList.contains('js-line-thickness-range')) {
+            updateLineThickness(target.value);
+        }
+        // Aggregation mode control
+        else if (target.classList.contains('js-aggregation-range')) {
+            updateAggregation(target.value);
+        }
+        // Aggregation table interval control
+        else if (target.classList.contains('js-agg-interval')) {
+            updateAggInterval(target.value);
+        }
+        // Decimal places control
+        else if (target.classList.contains('js-decimal-places-range')) {
+            updateDecimalPlaces(target.value);
+        }
+        // Grid spacing control
+        else if (target.classList.contains('js-grid-spacing-range')) {
+            updateGridSpacing(target.value);
+        }
+        // Min BTC volume control
+        else if (target.classList.contains('js-min-btc-volume')) {
+            updateMinBtcVolume(target.value);
+        }
     });
 
-    // Price update interval control - attach to both mobile and desktop - use event delegation
-    const priceIntervalRanges = getElements('.js-price-interval-range');
-    priceIntervalRanges.forEach(range => {
-        eventManager.on(range, 'input', (e) => {
-            updatePriceInterval(e.target.value);
-        });
+    // Font size controls need both input and change events
+    eventManager.on(settingsContainer, 'input', (e) => {
+        const target = e.target;
+        if (target.classList.contains('js-font-size-range')) {
+            updateFontSize(target.value);
+        } else if (target.classList.contains('js-font-size-known-range')) {
+            updateFontSizeKnown(target.value);
+        } else if (target.classList.contains('js-row-height-range')) {
+            updateRowHeight(target.value);
+        }
     });
 
     // Window tabs - use event delegation
@@ -511,96 +555,6 @@ function setupEventListeners() {
         eventManager.on(el, 'change', updateChartFilters);
     });
 
-    // Bubble size - attach to both mobile and desktop - use getElements and eventManager
-    const bubbleSizeRanges = getElements('.js-bubble-size-range');
-    bubbleSizeRanges.forEach(range => {
-        eventManager.on(range, 'input', (e) => {
-            updateBubbleSize(e.target.value);
-        });
-    });
-
-    // Bubble opacity - attach to both mobile and desktop - use getElements and eventManager
-    const bubbleOpacityRanges = getElements('.js-bubble-opacity-range');
-    bubbleOpacityRanges.forEach(range => {
-        eventManager.on(range, 'input', (e) => {
-            updateBubbleOpacity(e.target.value);
-        });
-    });
-
-    // Line thickness - attach to both mobile and desktop - use getElements and eventManager
-    const lineThicknessRanges = getElements('.js-line-thickness-range');
-    lineThicknessRanges.forEach(range => {
-        eventManager.on(range, 'input', (e) => {
-            updateLineThickness(e.target.value);
-        });
-    });
-
-    // Aggregation mode - attach to both mobile and desktop - use getElements and eventManager
-    const aggregationRanges = getElements('.js-aggregation-range');
-    aggregationRanges.forEach(range => {
-        eventManager.on(range, 'input', (e) => {
-            updateAggregation(e.target.value);
-        });
-    });
-
-    // Aggregation Table Interval - attach to both mobile and desktop - use getElements and eventManager
-    const aggIntervalInputs = getElements('.js-agg-interval');
-    aggIntervalInputs.forEach(input => {
-        eventManager.on(input, 'input', (e) => {
-            updateAggInterval(e.target.value);
-        });
-    });
-
-    // Decimal places control - attach to both mobile and desktop - use getElements and eventManager
-    const decimalPlacesRanges = getElements('.js-decimal-places-range');
-    decimalPlacesRanges.forEach(range => {
-        eventManager.on(range, 'input', (e) => {
-            updateDecimalPlaces(e.target.value);
-        });
-    });
-
-    // Font size control - attach to both mobile and desktop - use getElements and eventManager
-    const fontSizeRanges = getElements('.js-font-size-range');
-    fontSizeRanges.forEach(range => {
-        eventManager.on(range, 'input', (e) => {
-            updateFontSize(e.target.value);
-        });
-        eventManager.on(range, 'change', (e) => {
-            updateFontSize(e.target.value);
-        });
-        eventManager.on(range, 'keyup', (e) => {
-            updateFontSize(e.target.value);
-        });
-    });
-
-    // Font size for known addresses control - attach to both mobile and desktop - use getElements and eventManager
-    const fontSizeKnownRanges = getElements('.js-font-size-known-range');
-    fontSizeKnownRanges.forEach(range => {
-        eventManager.on(range, 'input', (e) => {
-            updateFontSizeKnown(e.target.value);
-        });
-        eventManager.on(range, 'change', (e) => {
-            updateFontSizeKnown(e.target.value);
-        });
-        eventManager.on(range, 'keyup', (e) => {
-            updateFontSizeKnown(e.target.value);
-        });
-    });
-
-    // Row height control - attach to both mobile and desktop - use getElements and eventManager
-    const rowHeightRanges = getElements('.js-row-height-range');
-    rowHeightRanges.forEach(range => {
-        eventManager.on(range, 'input', (e) => {
-            updateRowHeight(e.target.value);
-        });
-        eventManager.on(range, 'change', (e) => {
-            updateRowHeight(e.target.value);
-        });
-        eventManager.on(range, 'keyup', (e) => {
-            updateRowHeight(e.target.value);
-        });
-    });
-
     // Leverage color inputs - attach to both mobile and desktop - use getElements and eventManager
     const colorInputs = [
         { id: 'colorLongLow', class: 'js-color-long-low' },
@@ -640,22 +594,6 @@ function setupEventListeners() {
     if (aggTableSectionResumida) {
         setupResizable(aggTableSectionResumida, updateAggTableHeight);
     }
-
-    // Grid spacing control - attach to both mobile and desktop - use getElements and eventManager
-    const gridSpacingRanges = getElements('.js-grid-spacing-range');
-    gridSpacingRanges.forEach(range => {
-        eventManager.on(range, 'input', (e) => {
-            updateGridSpacing(e.target.value);
-        });
-    });
-
-    // Min BTC Volume control - attach to both mobile and desktop - use getElements and eventManager
-    const minBtcVolumeInputs = getElements('.js-min-btc-volume');
-    minBtcVolumeInputs.forEach(input => {
-        eventManager.on(input, 'input', (e) => {
-            updateMinBtcVolume(e.target.value);
-        });
-    });
 
     // Price filter controls for chart scale - use getElement and eventManager
     const minEntryCcy = getElement('minEntryCcy');
@@ -924,8 +862,9 @@ async function loadInitialState() {
     cbInit('entryCurrencySelect', currencyOptions, onCurrencyChange);
 
     // Load settings FIRST so that initializePanels uses correct saved values
+    // PERFORMANCE: loadSettings agora é async (usa IndexedDB)
     //console.log('loadInitialState: Loading settings...');
-    loadSettings();
+    await loadSettings();
 
     // THEN initialize panels with the loaded settings values
     //console.log('loadInitialState: Initializing panels...');
