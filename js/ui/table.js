@@ -638,8 +638,8 @@ function _renderTableInternal() {
     //console.log(`%c[PERSISTENCE:RENDER] reorderTableHeadersAndFilters() completed`, 'color: #9C27B0;');
 
     const sideFilter = document.getElementById('sideFilter').value;
-    const addressFilter = document.getElementById('addressFilter').value.trim().toLowerCase();
-    const addressFilterRegex = addressFilter ? new RegExp(addressFilter, 'i') : null;
+    const addressFilter = document.getElementById('addressFilter').value.trim();
+    const addressFilterRegex = addressFilter && addressFilter.includes('*') ? new RegExp(addressFilter, 'i') : null;
     const minLev = parseFloat(document.getElementById('minLev').value);
     const maxLev = parseFloat(document.getElementById('maxLev').value);
     const minSize = parseFloat(document.getElementById('minSize').value);
@@ -760,7 +760,11 @@ function _renderTableInternal() {
             // FIX: Validate selectedCoins against actual data coins
             let effectiveSelectedCoins = selectedCoins;
             if (allRows?.length > 0 && selectedCoins?.length > 0) {
-                const uniqueCoins = [...new Set(allRows.map(r => r.coin))];
+                const uniqueCoins = new Set();
+                for (const r of allRows) {
+                    uniqueCoins.add(r.coin);
+                    if (uniqueCoins.size > 100) break; // Limite razoável
+                }
                 const matchingCoins = selectedCoins.filter(sc => uniqueCoins.includes(sc));
                 if (matchingCoins.length === 0) {
                     console.warn(`[Table] selectedCoins has ${selectedCoins.length} coins but none match data. Ignoring coin filter.`);
@@ -793,11 +797,20 @@ function _renderTableInternal() {
 
             rows = updatedRows.filter(r => {
                 if (effectiveSelectedCoins.length > 0 && !effectiveSelectedCoins.includes(r.coin)) return false;
-                if (addressFilterRegex) {
+                if (addressFilter) {
                     const addr = r.address;
                     const meta = whaleMeta[addr];
                     const disp = meta?.displayName || '';
-                    if (!addressFilterRegex.test(addr) && !addressFilterRegex.test(disp)) return false;
+                    if (addressFilterRegex) {
+                        // Use regex for patterns with wildcards
+                        if (!addressFilterRegex.test(addr) && !addressFilterRegex.test(disp)) return false;
+                    } else {
+                        // Use faster string methods for simple filters (no wildcards)
+                        const lowerFilter = addressFilter.toLowerCase();
+                        const addrLower = addr.toLowerCase();
+                        const dispLower = disp.toLowerCase();
+                        if (!addrLower.includes(lowerFilter) && !dispLower.includes(lowerFilter)) return false;
+                    }
                 }
                 if (sideFilter && r.side !== sideFilter) return false;
                 if (!isNaN(minLev) && r.leverageValue < minLev) return false;

@@ -20,6 +20,7 @@ export default [
         performance: "readonly",
         Worker: "readonly",
         self: "readonly",
+        DOMParser: "readonly",
         // Project-specific globals
         saveSettings: "readonly",
         updateHeaderWidths: "readonly",

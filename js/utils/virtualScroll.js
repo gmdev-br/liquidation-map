@@ -19,6 +19,7 @@ export class VirtualScroll {
         this.visibleStart = 0;
         this.visibleEnd = 0;
         this._scrollHandler = null;
+        this._parser = null; // Cache DOMParser instance
 
         if (!this.tbody) {
             console.error('VirtualScroll: tbody element is required');
@@ -190,22 +191,18 @@ export class VirtualScroll {
 
             // If html is a complete <tr>...</tr>, extract inner content and class
             if (html.trim().toLowerCase().startsWith('<tr')) {
-                // Extract class attribute from tr tag
-                const classMatch = html.match(/<tr[^>]*class=["']([^"']*)["'][^>]*>/i);
-                const rowClass = classMatch ? classMatch[1] : '';
+                // Use DOMParser for reliable HTML parsing (faster than regex)
+                if (!this._parser) this._parser = new DOMParser();
+                const doc = this._parser.parseFromString(html, 'text/html');
+                const parsedTr = doc.querySelector('tr');
                 
-                // Apply class to the tr element
-                if (rowClass) {
-                    tr.className = rowClass;
+                if (parsedTr) {
+                    // Apply class to the tr element
+                    tr.className = parsedTr.className || '';
+                    // Use the parsed inner HTML
+                    tr.innerHTML = parsedTr.innerHTML;
                 } else {
                     tr.className = '';
-                }
-                
-                // Extract content between <tr> and </tr>
-                const match = html.match(/<tr[^>]*>([\s\S]*)<\/tr>/i);
-                if (match) {
-                    tr.innerHTML = match[1];
-                } else {
                     tr.innerHTML = html;
                 }
             } else {

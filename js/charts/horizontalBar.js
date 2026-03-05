@@ -235,20 +235,23 @@ export function renderHorizontalBarChart(force = false) {
     }
     lastDataHash = dataHash;
 
-    // Prepare data for chart
-    const categories = bands.map(b => `$${b.faixaDe.toLocaleString()}-$${b.faixaAte.toLocaleString()}`);
-    const longData = bands.map(b => ({
-        value: b.notionalLong,
-        qtd: b.qtdLong,
-        ativos: Array.from(b.ativosLong).join(', '),
-        liqVol: b.liqVolLong
-    }));
-    const shortData = bands.map(b => ({
-        value: -b.notionalShort, // Negative for left side
-        qtd: b.qtdShort,
-        ativos: Array.from(b.ativosShort).join(', '),
-        liqVol: b.liqVolShort
-    }));
+    // Prepare data for chart - single-pass O(N) optimization
+    const { categories, longData, shortData } = bands.reduce((acc, b) => {
+        acc.categories.push(`$${b.faixaDe.toLocaleString()}-$${b.faixaAte.toLocaleString()}`);
+        acc.longData.push({
+            value: b.notionalLong,
+            qtd: b.qtdLong,
+            ativos: Array.from(b.ativosLong).join(', '),
+            liqVol: b.liqVolLong
+        });
+        acc.shortData.push({
+            value: -b.notionalShort, // Negative for left side
+            qtd: b.qtdShort,
+            ativos: Array.from(b.ativosShort).join(', '),
+            liqVol: b.liqVolShort
+        });
+        return acc;
+    }, { categories: [], longData: [], shortData: [] });
 
     // Get BTC price for current range highlighting
     const btcPrice = currentPrices['BTC'] ? parseFloat(currentPrices['BTC']) : 0;

@@ -48,6 +48,7 @@ import {
 } from './handlers.js';
 import { initColumnWidthControl, applyColumnWidth } from '../ui/columnWidth.js';
 import { setWindow, setStatus, setProgress } from '../ui/status.js';
+import { debounce } from '../utils/performance.js';
 import { sortBy, updateSortIndicators } from '../ui/filters.js';
 import { CURRENCY_META } from '../config.js';
 import { eventManager } from '../utils/eventManager.js';
@@ -660,36 +661,31 @@ function setupEventListeners() {
     const minEntryCcy = getElement('minEntryCcy');
     const maxEntryCcy = getElement('maxEntryCcy');
 
+    // Debounced chart update using chart.update() instead of destroy/recreate
+    const debouncedChartUpdate = debounce(() => {
+        const scatterChart = getScatterChart();
+        const liqChart = getLiqChartInstance();
+        const minValue = parseFloat(minEntryCcy?.value) || 0;
+        const maxValue = parseFloat(maxEntryCcy?.value) || 0;
+
+        if (scatterChart) {
+            if (minValue > 0) scatterChart.options.scales.x.min = minValue;
+            if (maxValue > 0) scatterChart.options.scales.x.max = maxValue;
+            scatterChart.update('none');  // 'none' = sem animação
+        }
+        if (liqChart) {
+            if (minValue > 0) liqChart.options.scales.x.min = minValue;
+            if (maxValue > 0) liqChart.options.scales.x.max = maxValue;
+            liqChart.update('none');
+        }
+    }, 300);
+
     if (minEntryCcy) {
-        eventManager.on(minEntryCcy, 'input', () => {
-            // Re-render charts to update scale
-            const scatterChart = window.getScatterChart ? window.getScatterChart() : null;
-            const liqChart = window.getLiqChartInstance ? window.getLiqChartInstance() : null;
-            if (scatterChart) {
-                scatterChart.destroy();
-                renderScatterPlot();
-            }
-            if (liqChart) {
-                liqChart.destroy();
-                renderLiqScatterPlot();
-            }
-        });
+        eventManager.on(minEntryCcy, 'input', debouncedChartUpdate);
     }
 
     if (maxEntryCcy) {
-        eventManager.on(maxEntryCcy, 'input', () => {
-            // Re-render charts to update scale
-            const scatterChart = window.getScatterChart ? window.getScatterChart() : null;
-            const liqChart = window.getLiqChartInstance ? window.getLiqChartInstance() : null;
-            if (scatterChart) {
-                scatterChart.destroy();
-                renderScatterPlot();
-            }
-            if (liqChart) {
-                liqChart.destroy();
-                renderLiqScatterPlot();
-            }
-        });
+        eventManager.on(maxEntryCcy, 'input', debouncedChartUpdate);
     }
 
     // Currency selectors - use getElement and eventManager

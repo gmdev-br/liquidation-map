@@ -204,13 +204,13 @@ function renderAggregationTableBase(options = {}) {
         bandsWithPosCount = workerData.bandsWithPosCount;
     } else {
         // Fallback for manual updates or missing worker data
-        const { bands, totalLongNotional: tl, totalShortNotional: ts, bandsWithPosCount: bc } = buildBands(
+        const { bandArray: ba, totalLongNotional: tl, totalShortNotional: ts, bandsWithPosCount: bc } = buildBands(
             rows, currentPrices, fxRates, activeEntryCurrency, bandSize,
             isResumida ? getLiquidationMinPriceSummary() : getLiquidationMinPriceFull(),
             isResumida ? getLiquidationMaxPriceSummary() : getLiquidationMaxPriceFull(),
             currentBand
         );
-        bandArray = Object.values(bands).sort((a, b) => b.faixaDe - a.faixaDe);
+        bandArray = ba.sort((a, b) => b.faixaDe - a.faixaDe);
         totalLongNotional = tl;
         totalShortNotional = ts;
         bandsWithPosCount = bc;
@@ -394,6 +394,57 @@ function initializeControls(isResumida, state, minPriceInputId, maxPriceInputId,
 }
 
 /**
+ * QuickSelect algorithm to find top N elements in O(N) average time
+ * Much faster than full sort when only top N elements are needed
+ * @param {Array} arr - Array to select from
+ * @param {number} n - Number of top elements to return
+ * @param {Function} compare - Comparison function (a, b) => b - a for descending
+ * @returns {Array} - Top N elements sorted
+ */
+function quickSelectTopN(arr, n, compare) {
+    if (arr.length <= n) return arr.sort(compare);
+
+    // Partition function for QuickSelect
+    function partition(left, right, pivotIndex) {
+        const pivotValue = arr[pivotIndex];
+        // Move pivot to end
+        [arr[pivotIndex], arr[right]] = [arr[right], arr[pivotIndex]];
+        let storeIndex = left;
+        for (let i = left; i < right; i++) {
+            if (compare(arr[i], pivotValue) > 0) {
+                [arr[storeIndex], arr[i]] = [arr[i], arr[storeIndex]];
+                storeIndex++;
+            }
+        }
+        // Move pivot to its final place
+        [arr[right], arr[storeIndex]] = [arr[storeIndex], arr[right]];
+        return storeIndex;
+    }
+
+    // QuickSelect to find the n-th largest element
+    function select(left, right, k) {
+        if (left === right) return arr[left];
+        let pivotIndex = left + Math.floor(Math.random() * (right - left + 1));
+        pivotIndex = partition(left, right, pivotIndex);
+        if (k === pivotIndex) {
+            return arr[k];
+        } else if (k < pivotIndex) {
+            return select(left, pivotIndex - 1, k);
+        } else {
+            return select(pivotIndex + 1, right, k);
+        }
+    }
+
+    // Clone array to avoid mutating original
+    const arrCopy = arr.slice();
+    const k = n - 1; // 0-indexed position of n-th largest
+    select(0, arrCopy.length - 1, k);
+
+    // Return top N elements, sorted
+    return arrCopy.slice(0, n).sort(compare);
+}
+
+/**
  * Build bands data structure
  */
 
@@ -524,19 +575,30 @@ function buildBands(rows, currentPrices, fxRates, activeEntryCurrency, bandSize,
         }
     }
 
-    // PERFORMANCE: Pre-sort positions for tooltips once per buildBands instead of in the renderer (O(B log B))
-    Object.values(bands).forEach(b => {
+    // PERFORMANCE: Use QuickSelect to get only top 15 positions per band instead of full sort (O(B×N) instead of O(B×N log N))
+    const MAX_TOOLTIP_POSITIONS = 15;
+    const bandArray = [];
+
+    for (const key in bands) {
+        const b = bands[key];
         if (b.positionsLong.length > 0) {
-            b.positionsLong.sort((x, y) => y.positionValue - x.positionValue);
+            b.positionsLong = quickSelectTopN(b.positionsLong, MAX_TOOLTIP_POSITIONS, (x, y) => y.positionValue - x.positionValue);
         }
         if (b.positionsShort.length > 0) {
-            b.positionsShort.sort((x, y) => y.positionValue - x.positionValue);
+            b.positionsShort = quickSelectTopN(b.positionsShort, MAX_TOOLTIP_POSITIONS, (x, y) => y.positionValue - x.positionValue);
         }
-    });
 
-    const bandsWithPosCount = Object.values(bands).filter(b => !b.isEmpty).length;
+        // PERFORMANCE: Pre-calculate string operations for renderer
+        b.ativosLongStr = Array.from(b.ativosLong).join(', ');
+        b.ativosShortStr = Array.from(b.ativosShort).join(', ');
 
-    return { bands, totalLongNotional, totalShortNotional, bandsWithPosCount };
+        bandArray.push(b);
+    }
+
+    const bandsWithPosCount = bandArray.filter(b => !b.isEmpty).length;
+
+    // PERFORMANCE: Return array directly instead of Object.values conversion in caller
+    return { bandArray, totalLongNotional, totalShortNotional, bandsWithPosCount };
 }
 
 /**
@@ -570,6 +632,9 @@ function renderStatsBar(statsBarId, totalLongNotional, totalShortNotional, posCo
  */
 function createRowRenderer(context) {
     const { aggZoneColors, aggHighlightColor, showAggSymbols, decimalPlaces, activeEntryCurrency, currentPrices, fxRates, btcPrice, aggVolumeUnit, currentBtcPos, isResumida, rowHeight, autoFit } = context;
+
+    // PERFORMANCE: State lookup moved outside the row-by-row renderer loop (O(1) instead of O(N×R))
+    const savedOrder = isResumida ? getAggColumnOrderResumida() : getAggColumnOrder();
 
     return (b, _index) => {
         const totalNotional = b.notionalLong + b.notionalShort;
@@ -867,12 +932,9 @@ function createRowRenderer(context) {
             'th-agg-pctDom': `<td class="col-agg-pct ${autoFitClass}" style="color:${domColor}; font-weight:${fwBold}">${wrap(domPct > 0 ? domPct.toFixed(1) + '%' : '—')}</td>`,
             'th-agg-intensidade': `<td class="col-agg-int ${autoFitClass}" style="color:${intColor}; font-size:11px; font-weight:${fwSemi}">${wrap(intType)}</td>`,
             'th-agg-tipoZona': `<td class="col-agg-zone ${autoFitClass}" style="color:${zoneColor}; font-weight:${fwSemi}">${wrap(zoneType)}</td>`,
-            'th-agg-ativosLong': `<td class="col-agg-assets ${autoFitClass}" style="color:${colorLong}; font-size:11px; max-width:150px;" title="${Array.from(b.ativosLong).join(', ')}">${wrap(Array.from(b.ativosLong).join(', '))}</td>`,
-            'th-agg-ativosShort': `<td class="col-agg-assets ${autoFitClass}" style="color:${colorShort}; font-size:11px; max-width:150px;" title="${Array.from(b.ativosShort).join(', ')}">${wrap(Array.from(b.ativosShort).join(', '))}</td>`
+            'th-agg-ativosLong': `<td class="col-agg-assets ${autoFitClass}" style="color:${colorLong}; font-size:11px; max-width:150px;" title="${b.ativosLongStr}">${wrap(b.ativosLongStr)}</td>`,
+            'th-agg-ativosShort': `<td class="col-agg-assets ${autoFitClass}" style="color:${colorShort}; font-size:11px; max-width:150px;" title="${b.ativosShortStr}">${wrap(b.ativosShortStr)}</td>`
         };
-
-        // PERFORMANCE: Lifted state lookup outside the row-by-row renderer loop
-        const savedOrder = isResumida ? getAggColumnOrderResumida() : getAggColumnOrder();
 
         // Build content in the correct order
         let newContent;

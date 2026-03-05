@@ -514,10 +514,19 @@ export function updateLeverageColors(e) {
     });
 
     // Sync all color inputs and update CSS variables
-    document.querySelectorAll('.js-color-long-low').forEach(el => el.value = longLow);
-    document.querySelectorAll('.js-color-long-high').forEach(el => el.value = longHigh);
-    document.querySelectorAll('.js-color-short-low').forEach(el => el.value = shortLow);
-    document.querySelectorAll('.js-color-short-high').forEach(el => el.value = shortHigh);
+    // Batch update color inputs - avoid unnecessary DOM writes
+    const colorUpdates = new Map([
+        ['.js-color-long-low', longLow],
+        ['.js-color-long-high', longHigh],
+        ['.js-color-short-low', shortLow],
+        ['.js-color-short-high', shortHigh]
+    ]);
+
+    colorUpdates.forEach((value, selector) => {
+        document.querySelectorAll(selector).forEach(el => {
+            if (el.value !== value) el.value = value;
+        });
+    });
 
     document.documentElement.style.setProperty('--long-low-color', longLow);
     document.documentElement.style.setProperty('--long-high-color', longHigh);
